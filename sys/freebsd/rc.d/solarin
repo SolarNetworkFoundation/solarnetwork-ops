@@ -1,15 +1,15 @@
 #!/bin/sh
-# 
-# SysV init script for the SolarIn daemon for Eclipse Virgo. 
+#
+# SysV init script for the SolarIn daemon for Eclipse Virgo.
 # Designed to be run as an /etc/init.d service by the root user.
 #
 # chkconfig: 3456 99 01
 # description: Control the SolarIn server
 #
 # Set JAVA_HOME to the path to your JDK or JRE.
-# 
+#
 # Set SOLARNET_HOME to the directory that contains the following:
-# 
+#
 # + <SOLARNET_HOME>/
 # |
 # +--+ virgo/                   <-- Virgo install dir
@@ -17,16 +17,15 @@
 # +--+ run/                     <-- runtime status dir
 #
 #
-# Set PID_FILE to the path to the same path as specified in 
+# Set PID_FILE to the path to the same path as specified in
 # config.ini for the solarnetwork.pidfile setting.
-# 
+#
 # Set RUNAS to the name of the user to run the process as. The script
 # will use "su" to run the node as this user, in the background.
-# 
+#
 # Modify the APP_ARGS and JVM_ARGS variables as necessary.
 
 export JAVA_HOME=/usr/local
-#export JAVA_HOME=/usr/local/openjdk7/jre
 SOLARNET_HOME=/var/projects/sn/solarin
 VIRGO_HOME=${SOLARNET_HOME}/virgo
 PID_FILE=/var/cache/solarnet/in/solarnet.pid
@@ -94,7 +93,7 @@ wait_all_jobs_complete () {
 		json=`executing_jobs`
 		echo -n '.'
 	done
-	if [ -n "$saw_job" ];then 
+	if [ -n "$saw_job" ];then
 		echo ' done.'
 	fi
 }
@@ -136,7 +135,7 @@ case $1 in
 		do_job_status
 		wait_all_jobs_complete
 		;;
-	
+
 	resume-jobs)
 		resume_scheduler
 		do_job_status
@@ -150,7 +149,7 @@ case $1 in
 			echo 'No jobs running.'
 		fi
 		;;
-	
+
 	stop)
 		pid=
 		run=
