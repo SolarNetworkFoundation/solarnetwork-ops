@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- https://groups.google.com/forum/#!topic/killbilling-users/KU7HMv5bBRk -->
+<catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="killbill-catalog.xsd">
+
+	<effectiveDate>2008-01-01T00:00:00+00:00</effectiveDate>
+	<catalogName>SolarNetwork</catalogName>
+
+	<recurringBillingMode>IN_ADVANCE</recurringBillingMode>
+	<currencies>
+		<currency>NZD</currency>
+	</currencies>
+
+	<units>
+		<unit name="DatumMetrics"/>
+		<unit name="SolarNodes"/>
+	</units>
+
+	<products>
+		<product name="SolarNodeService">
+			<category>BASE</category>
+		</product>
+
+		<!-- Resources IN_ARREAR -->
+		<product name="PostedDatumMetrics">
+			<category>BASE</category>
+		</product>
+
+	</products>
+
+	<rules>
+		<changePolicy>
+			<changePolicyCase>
+				<policy>IMMEDIATE</policy>
+			</changePolicyCase>
+		</changePolicy>
+		<changeAlignment>
+			<changeAlignmentCase>
+				<alignment>START_OF_BUNDLE</alignment>
+			</changeAlignmentCase>
+		</changeAlignment>
+		<cancelPolicy>
+			<cancelPolicyCase>
+				<policy>IMMEDIATE</policy>
+			</cancelPolicyCase>
+		</cancelPolicy>
+		<createAlignment>
+			<createAlignmentCase>
+				<alignment>START_OF_BUNDLE</alignment>
+			</createAlignmentCase>
+		</createAlignment>
+		<billingAlignment>
+			<billingAlignmentCase>
+				<alignment>ACCOUNT</alignment>
+			</billingAlignmentCase>
+		</billingAlignment>
+		<priceList>
+			<priceListCase>
+				<toPriceList>DEFAULT</toPriceList>
+			</priceListCase>
+		</priceList>
+	</rules>
+
+	<plans>
+		<plan name="solarnode-tiered-monthly">
+			<product>SolarNodeService</product>
+			<initialPhases>
+				<phase type="TRIAL">
+					<duration>
+						<unit>DAYS</unit>
+						<number>90</number>
+					</duration>
+					<fixed>
+						<fixedPrice/>
+					</fixed>
+				</phase>
+			</initialPhases>
+			<finalPhase type="EVERGREEN">
+				<duration>
+					<unit>UNLIMITED</unit>
+				</duration>
+				<usages>
+					<usage name="solarnodes" billingMode="IN_ARREAR" usageType="CAPACITY">
+						<billingPeriod>MONTHLY</billingPeriod>
+						<tiers>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>SolarNodes</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>8</value>
+											</price>
+										</prices>
+										<max>5</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>SolarNodes</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>7</value>
+											</price>
+										</prices>
+										<max>20</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>SolarNodes</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>6</value>
+											</price>
+										</prices>
+										<max>50</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>SolarNodes</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>5</value>
+											</price>
+										</prices>
+										<max>100</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>SolarNodes</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>4.5</value>
+											</price>
+										</prices>
+										<max>500</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>SolarNodes</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>4</value>
+											</price>
+										</prices>
+										<max>1000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+						</tiers>
+					</usage>
+				</usages>
+			</finalPhase>
+		</plan>
+
+		<plan name="api-posted-datum-metric-monthly-usage">
+			<product>PostedDatumMetrics</product>
+			<initialPhases>
+				<phase type="TRIAL">
+					<duration>
+						<unit>DAYS</unit>
+						<number>30</number>
+					</duration>
+					<fixed>
+						<fixedPrice/>
+					</fixed>
+				</phase>
+			</initialPhases>
+			<finalPhase type="EVERGREEN">
+				<duration>
+					<unit>UNLIMITED</unit>
+				</duration>
+				<usages>
+					<usage name="posted-datum-metric-daily-usage" billingMode="IN_ARREAR" usageType="CONSUMABLE">
+						<billingPeriod>MONTHLY</billingPeriod>
+						<tiers>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumMetrics</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.00001</value>
+											</price>
+										</prices>
+										<max>999999999</max>
+										<!-- as high as possible -->
+									</tieredBlock>
+								</blocks>
+							</tier>
+						</tiers>
+					</usage>
+				</usages>
+			</finalPhase>
+		</plan>
+	</plans>
+
+	<priceLists>
+		<defaultPriceList name="DEFAULT">
+			<plans>
+				<plan>api-posted-datum-metric-monthly-usage</plan>
+				<plan>solarnode-tiered-monthly</plan>
+			</plans>
+		</defaultPriceList>
+	</priceLists>
+
+</catalog>
