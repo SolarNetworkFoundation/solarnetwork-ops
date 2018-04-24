@@ -2,12 +2,13 @@
 <!-- https://groups.google.com/forum/#!topic/killbilling-users/KU7HMv5bBRk -->
 <catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="killbill-catalog.xsd">
 
-	<effectiveDate>2008-01-01T00:00:00+00:00</effectiveDate>
+	<effectiveDate>2018-04-01T00:00:00+12:00</effectiveDate>
 	<catalogName>SolarNetwork</catalogName>
 
 	<recurringBillingMode>IN_ADVANCE</recurringBillingMode>
 	<currencies>
 		<currency>NZD</currency>
+		<currency>USD</currency>
 	</currencies>
 
 	<units>
@@ -92,6 +93,10 @@
 												<currency>NZD</currency>
 												<value>8</value>
 											</price>
+											<price>
+												<currency>USD</currency>
+												<value>8</value>
+											</price>
 										</prices>
 										<max>5</max>
 									</tieredBlock>
@@ -105,6 +110,10 @@
 										<prices>
 											<price>
 												<currency>NZD</currency>
+												<value>7</value>
+											</price>
+											<price>
+												<currency>USD</currency>
 												<value>7</value>
 											</price>
 										</prices>
@@ -122,6 +131,10 @@
 												<currency>NZD</currency>
 												<value>6</value>
 											</price>
+											<price>
+												<currency>USD</currency>
+												<value>6</value>
+											</price>
 										</prices>
 										<max>50</max>
 									</tieredBlock>
@@ -135,6 +148,10 @@
 										<prices>
 											<price>
 												<currency>NZD</currency>
+												<value>5</value>
+											</price>
+											<price>
+												<currency>USD</currency>
 												<value>5</value>
 											</price>
 										</prices>
@@ -152,6 +169,10 @@
 												<currency>NZD</currency>
 												<value>4.5</value>
 											</price>
+											<price>
+												<currency>USD</currency>
+												<value>4.5</value>
+											</price>
 										</prices>
 										<max>500</max>
 									</tieredBlock>
@@ -165,6 +186,10 @@
 										<prices>
 											<price>
 												<currency>NZD</currency>
+												<value>4</value>
+											</price>
+											<price>
+												<currency>USD</currency>
 												<value>4</value>
 											</price>
 										</prices>
@@ -207,6 +232,10 @@
 										<prices>
 											<price>
 												<currency>NZD</currency>
+												<value>0.00001</value>
+											</price>
+											<price>
+												<currency>USD</currency>
 												<value>0.00001</value>
 											</price>
 										</prices>
