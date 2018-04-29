@@ -90,7 +90,7 @@ BEGIN
 		WHERE
 			chunk_schema_name = chunk_schema::name
 			AND chunk_table_name = chunk_table::name
-			AND chunk_index_name = chunk_Index::name
+			AND chunk_index_name = chunk_index::name
 	LOOP
 		IF not_dry_run THEN
 			RAISE NOTICE 'Reindexing chunk index % on table %', mtn.chunk_index_name, mtn.chunk_table_name;
@@ -99,7 +99,8 @@ BEGIN
 
 			RAISE NOTICE 'Clustering chunk table %', mtn.chunk_table_name;
 
-			EXECUTE 'CLUSTER ' || quote_ident(mtn.chunk_schema_name) || '.' || quote_ident(mtn.chunk_table_name);
+			EXECUTE 'CLUSTER ' || quote_ident(mtn.chunk_schema_name) || '.' || quote_ident(mtn.chunk_table_name)
+				|| ' USING ' || quote_ident(mtn.chunk_index_name);
 
 			RAISE NOTICE 'Analyzing chunk table %', mtn.chunk_table_name;
 
