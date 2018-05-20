@@ -9,16 +9,19 @@
 # be printed out.
 
 PSQL=$(which psql)
+PG_REPACK=$(which pg_repack)
 PSQL_CONN_ARGS='-h tsdb -d solarnetwork -U postgres'
+PG_REPACK_ARGS='--no-kill-backend --wait-timeout=60 --jobs=2'
 CHUNK_MIN_AGE='1 week'
 CHUNK_MAX_AGE='24 weeks'
 REINDEX_MIN_AGE='11 weeks'
 NOT_DRY_RUN='FALSE'
 
-while getopts ":c:e:np:r:s:" opt; do
+while getopts ":c:e:k:np:r:s:" opt; do
 	case $opt in
 		c) PSQL_CONN_ARGS="${OPTARG}";;
 		e) CHUNK_MAX_AGE="${OPTARG}";;
+		k) PG_REPACK_ARGS="${OPTARG}";;
 		n) NOT_DRY_RUN='TRUE';;
 		p) PSQL="${OPTARG}";;
 		r) REINDEX_MIN_AGE="${OPTARG}";;
@@ -36,9 +39,22 @@ echo "$maint_tables" |while read c_schema c_table c_index; do
 	if [ -z "${c_schema}" ]; then
 		continue;
 	fi
+
 	if [ "${NOT_DRY_RUN}" = 'FALSE' ]; then
 		printf '[DRY RUN] '
 	fi
 	echo "Performing maintenance on ${c_schema}.${c_table} [${c_index}]"
-	$PSQL ${PSQL_CONN_ARGS} -c "SELECT * FROM _timescaledb_solarnetwork.perform_one_chunk_reindex_maintenance('${c_schema}','${c_table}','${c_index}',$NOT_DRY_RUN)"
+
+	repack_args="${PSQL_CONN_ARGS} ${PG_REPACK_ARGS}"
+	if [ "${NOT_DRY_RUN}" = 'FALSE' ]; then
+		repack_args="${repack_args} --dry-run"
+	fi
+	$PG_REPACK ${repack_args} --table=${c_schema}.${c_table}
+
+	if [ "${NOT_DRY_RUN}" = 'FALSE' ]; then
+		printf '[DRY RUN] '
+	fi
+	echo "Marking maintenance complete on ${c_schema}.${c_table} [${c_index}]"
+
+	$PSQL ${PSQL_CONN_ARGS} -c "SELECT * FROM _timescaledb_solarnetwork.external_chunk_reindex_maintenance_complete('${c_schema}','${c_table}','${c_index}',$NOT_DRY_RUN)"
 done
