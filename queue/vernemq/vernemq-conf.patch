@@ -1,0 +1,90 @@
+--- vernemq.conf	2018-06-12 19:18:54.173230524 +0000
++++ vernemq.conf.orig	2018-05-25 13:27:26.000000000 +0000
+@@ -4,7 +4,7 @@
+ ##
+ ## Acceptable values:
+ ##   - on or off
+-allow_anonymous = on
++allow_anonymous = off
+
+ ## Allow new client connections even when a VerneMQ cluster is inconsistent.
+ ##
+@@ -76,7 +76,7 @@
+ ##
+ ## Acceptable values:
+ ##   - text
+-persistent_client_expiration = 1m
++## persistent_client_expiration = 1w
+
+ ## The maximum number of QoS 1 or 2 messages that can be in the process of being
+ ## transmitted simultaneously. This includes messages currently going through handshakes
+@@ -112,7 +112,7 @@
+ ##
+ ## Acceptable values:
+ ##   - an integer
+-max_offline_messages = 10000
++max_offline_messages = 1000
+
+ ## This option sets the maximum MQTT size that VerneMQ will
+ ## allow.  Messages that exceed this size will not be accepted by
+@@ -124,7 +124,7 @@
+ ##
+ ## Acceptable values:
+ ##   - an integer
+-max_message_size = 8192
++max_message_size = 0
+
+ ## If a message is published with a QoS lower than the QoS of the subscription it is
+ ## delivered to, VerneMQ can upgrade the outgoing QoS. This is a non-standard option.
+@@ -187,7 +187,7 @@
+ ##
+ ## Acceptable values:
+ ##   - an IP/port pair, e.g. 127.0.0.1:10011
+-listener.tcp.default = 0.0.0.0:1883
++listener.tcp.default = 127.0.0.1:1883
+
+ ## listener.vmq.clustering is the IP address and TCP port that
+ ## the broker will bind to accept connections from other cluster
+@@ -576,7 +576,7 @@
+ ##
+ ## Acceptable values:
+ ##   - an integer
+-vmq_acl.acl_reload_interval = 60
++vmq_acl.acl_reload_interval = 10
+
+ ## Set the path to a password file.
+ ##
+@@ -593,7 +593,7 @@
+ ##
+ ## Acceptable values:
+ ##   - an integer
+-vmq_passwd.password_reload_interval = 60
++vmq_passwd.password_reload_interval = 10
+
+ ## Configure the vmq_diversity plugin script dir. The script dir
+ ## is searched for Lua scripts which are automatically loaded when the
+@@ -1078,7 +1078,7 @@
+ ##
+ ## Acceptable values:
+ ##   - text
+-nodename = VerneMQ-01
++nodename = VerneMQ@127.0.0.1
+
+ ## Cookie for distributed node communication.  All nodes in the
+ ## same cluster should use the same cookie or they will not be able to
+@@ -1089,7 +1089,7 @@
+ ##
+ ## Acceptable values:
+ ##   - text
+-distributed_cookie = <<dist-cookie-here>>
++distributed_cookie = vmq
+
+ ## Sets the number of threads in async thread pool, valid range
+ ## is 0-1024. If thread support is available, the default is 64.
+@@ -1164,7 +1164,3 @@
+ ##   - an integer
+ leveldb.maximum_memory.percent = 70
+
+-# Cluster inter-comm configuration
+-erlang.distribution.port_range.minimum = 6000
+-erlang.distribution.port_range.maximum = 7999
