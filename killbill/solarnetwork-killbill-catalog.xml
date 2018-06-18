@@ -2,7 +2,7 @@
 <!-- https://groups.google.com/forum/#!topic/killbilling-users/KU7HMv5bBRk -->
 <catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="killbill-catalog.xsd">
 
-	<effectiveDate>2018-04-01T00:00:00+12:00</effectiveDate>
+	<effectiveDate>2018-05-01T01:00:00+12:00</effectiveDate>
 	<catalogName>SolarNetwork</catalogName>
 
 	<recurringBillingMode>IN_ADVANCE</recurringBillingMode>
@@ -13,6 +13,7 @@
 
 	<units>
 		<unit name="DatumMetrics"/>
+		<unit name="DatumQueried"/>
 		<unit name="SolarNodes"/>
 	</units>
 
@@ -24,6 +25,14 @@
 		<!-- Resources IN_ARREAR -->
 		<product name="PostedDatumMetrics">
 			<category>BASE</category>
+			<available>
+				<addonProduct>QueriedDatum</addonProduct>
+			</available>
+		</product>
+
+		<!-- Resources IN_ARREAR -->
+		<product name="QueriedDatum">
+			<category>ADD_ON</category>
 		</product>
 
 	</products>
@@ -232,11 +241,58 @@
 										<prices>
 											<price>
 												<currency>NZD</currency>
-												<value>0.00001</value>
+												<value>0.000009</value>
 											</price>
 											<price>
 												<currency>USD</currency>
-												<value>0.00001</value>
+												<value>0.000009</value>
+											</price>
+										</prices>
+										<max>999999999</max>
+										<!-- as high as possible -->
+									</tieredBlock>
+								</blocks>
+							</tier>
+						</tiers>
+					</usage>
+				</usages>
+			</finalPhase>
+		</plan>
+
+		<plan name="api-queried-datum-monthly-usage">
+			<product>QueriedDatum</product>
+			<initialPhases>
+				<phase type="TRIAL">
+					<duration>
+						<unit>DAYS</unit>
+						<number>30</number>
+					</duration>
+					<fixed>
+						<fixedPrice/>
+					</fixed>
+				</phase>
+			</initialPhases>
+			<finalPhase type="EVERGREEN">
+				<duration>
+					<unit>UNLIMITED</unit>
+				</duration>
+				<usages>
+					<usage name="queried-datum-daily-usage" billingMode="IN_ARREAR" usageType="CONSUMABLE">
+						<billingPeriod>MONTHLY</billingPeriod>
+						<tiers>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumQueried</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.000005</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.000005</value>
 											</price>
 										</prices>
 										<max>999999999</max>
@@ -255,6 +311,7 @@
 		<defaultPriceList name="DEFAULT">
 			<plans>
 				<plan>api-posted-datum-metric-monthly-usage</plan>
+				<plan>api-queried-datum-monthly-usage</plan>
 				<plan>solarnode-tiered-monthly</plan>
 			</plans>
 		</defaultPriceList>
