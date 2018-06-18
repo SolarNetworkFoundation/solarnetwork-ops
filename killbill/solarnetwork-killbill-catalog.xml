@@ -2,7 +2,7 @@
 <!-- https://groups.google.com/forum/#!topic/killbilling-users/KU7HMv5bBRk -->
 <catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="killbill-catalog.xsd">
 
-	<effectiveDate>2018-05-01T01:00:00+12:00</effectiveDate>
+	<effectiveDate>2018-05-01T00:00:00+12:00</effectiveDate>
 	<catalogName>SolarNetwork</catalogName>
 
 	<recurringBillingMode>IN_ADVANCE</recurringBillingMode>
@@ -241,11 +241,11 @@
 										<prices>
 											<price>
 												<currency>NZD</currency>
-												<value>0.000009</value>
+												<value>0.00001</value>
 											</price>
 											<price>
 												<currency>USD</currency>
-												<value>0.000009</value>
+												<value>0.00001</value>
 											</price>
 										</prices>
 										<max>999999999</max>
