@@ -23,6 +23,8 @@ settings.set_enable_plugins(False)
 settings.set_enable_java(False)
 settings.set_enable_write_console_messages_to_stdout(True)
 
+web.get_context().set_cache_model(WebKit2.CacheModel.DOCUMENT_BROWSER)
+
 scroller = Gtk.ScrolledWindow()
 scroller.add(web)
 win.add(scroller)
