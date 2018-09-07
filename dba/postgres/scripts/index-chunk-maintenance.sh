@@ -32,6 +32,15 @@ while getopts ":c:e:np:r:s:" opt; do
 done
 shift $(($OPTIND - 1))
 
+# pull in solar-jobs.sh so we can pause/resume the SolarNet job scheduler during the maintenance
+NETRC_FILE="/usr/local/pgsql/netrc/solarjobs-admin"
+PRETTYJSON="/usr/local/bin/python2.7 -m json.tool"
+if [ -e /solar93/share/solar-jobs.sh ]; then
+	. /solar93/share/solar-jobs.sh
+fi
+
+paused=
+
 maint_tables=$($PSQL -A -t ${PSQL_CONN_ARGS} -F ' ' -c "SELECT schema_name,table_name,index_name FROM _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(chunk_max_age => interval '${CHUNK_MAX_AGE}', chunk_min_age => interval '${CHUNK_MIN_AGE}', reindex_min_age => interval '${REINDEX_MIN_AGE}')")
 
 echo "$maint_tables" |while read c_schema c_table c_index; do
@@ -40,6 +49,12 @@ echo "$maint_tables" |while read c_schema c_table c_index; do
 	fi
 	if [ "${NOT_DRY_RUN}" = 'FALSE' ]; then
 		printf '[DRY RUN] '
+	elif [ -z "${paused}" -a -n "${JOBAPI_BASE}" ]; then
+		echo "Pausing SolarNet job scheduler..."
+		pause_scheduler
+		do_job_status
+		wait_all_jobs_complete
+		paused=1
 	fi
 	echo "Performing reindex maintenance on ${c_schema}.${c_table} [${c_index}]"
 	$PSQL ${PSQL_CONN_ARGS} -c "SELECT * FROM _timescaledb_solarnetwork.perform_one_chunk_reindex_maintenance('${c_schema}','${c_table}','${c_index}',$NOT_DRY_RUN)"
@@ -57,3 +72,8 @@ echo "$maint_tables" |while read c_schema c_table c_index; do
 	echo "Performing cluster maintenance on ${c_schema}.${c_table} [${c_index}]"
 	$PSQL ${PSQL_CONN_ARGS} -c "SELECT * FROM _timescaledb_solarnetwork.perform_one_chunk_cluster_maintenance('${c_schema}','${c_table}','${c_index}',$NOT_DRY_RUN)"
 done
+
+if [ -n "${paused}" ]; then
+	echo "Resuming SolarNet job scheduler..."
+	resume_scheduler
+fi
