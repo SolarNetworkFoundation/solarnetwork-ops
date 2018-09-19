@@ -3,7 +3,7 @@
         <style type="text/css">
         	body {font-family:sans-serif;}
 			footer {border-top:2px solid #F7C819;color:#666;margin-top:2rem;}
-			footer > p {margin-top:4px;}
+			footer > p {margin-top:4px; margin-bottom: 4px;}
 			h1 {font-size:1.5rem;}
 			img.logo {width:300px; margin-bottom: 1rem;}
 			kbd {font-size:1.2rem;font-weight:bold;}
@@ -16,7 +16,7 @@
 			.items td {padding-top: 2px; padding-bottom: 2px; vertical-align: top;}
 			.items th:nth-child(1) {width: 155px;}
 			.items th:nth-child(2) {width: 70px;}
-			.item .custom-field.nodeId {display: inherit;}
+			.item .custom-field.nodeId {display: inline;}
 			.right {text-align:right;}
 			.head.right {padding-right: 0.5rem;}
         </style>
@@ -128,8 +128,8 @@
         </table>
 
         <footer>
-        	<p><b>Bank details</b>: SolarNetwork Foundation, <kbd>38-9018-0514203-00</kbd>. Please put <kbd>INV-{{invoice.invoiceNumber}}</kbd> in the reference field.</p>
-
+        	<p><b>Bank details</b>: SolarNetwork Foundation, <kbd>38-9018-0514203-00</kbd>, SWIFT code <kbd>KIWINZ22</kbd>.</p>
+        	<p>Please put <kbd>INV-{{invoice.invoiceNumber}}</kbd> in the reference field.</p>
         </footer>
     </body>
 </html>
