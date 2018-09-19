@@ -1,0 +1,17 @@
+#!/usr/bin/env sh
+
+apt-get -qq update
+
+useradd -c 'SolarKiosk' -m -U kiosk -G video -s /bin/bash
+cp -a /etc/skel/.bash_logout /etc/skel/.bashrc /home/kiosk
+
+chown -R kiosk:kiosk /home/kiosk
+
+apt-get -qq remove --purge oracle-java8-jdk
+apt-get -qq install --no-install-recommends gir1.2-webkit2-4.0 python-gi openbox xserver-xorg xinit
+apt-get -qq autoremove
+apt-get clean
+
+# fix hardware GL for webkit
+ln -sf /opt/vc/lib/libbrcmEGL.so /usr/lib/arm-linux-gnueabihf/libEGL.so.1
+ln -sf /opt/vc/lib/libbrcmGLESv2.so /usr/lib/arm-linux-gnueabihf/libGLESv2.so.2

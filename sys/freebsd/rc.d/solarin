@@ -42,6 +42,10 @@ START_CMD="${VIRGO_HOME}/bin/startup.sh"
 STOP_CMD="${VIRGO_HOME}/bin/shutdown.sh"
 START_SLEEP=20
 
+if [ -e /usr/jails/postgres96/solar93/share/solar-jobs.sh ]; then
+	. /usr/jails/postgres96/solar93/share/solar-jobs.sh
+fi
+
 # function to check status
 do_status () {
 	pid=
@@ -55,52 +59,6 @@ do_status () {
 	else
 		echo "SolarIn does not appear to be running."
 	fi
-}
-
-# functions for job scheduler
-scheduler_status() {
-	json=`$CURL -s -H "Accept: application/json" --netrc-file "$NETRC_FILE" "$JOBAPI_BASE/api/v1/sec/scheduler/status"`
-	status=unknown
-	case "$json" in
-		*Paused*) status=paused ;;
-		*Running*) status=running ;;
-		*Starting*) status=running ;;
-	esac
-	echo $status
-}
-
-pause_scheduler () {
-	json=`$CURL -s -H "Accept: application/json" --netrc-file "$NETRC_FILE" "$JOBAPI_BASE/api/v1/sec/scheduler/status" -d status=Paused`
-}
-
-resume_scheduler () {
-	json=`$CURL -s -H "Accept: application/json" --netrc-file "$NETRC_FILE" "$JOBAPI_BASE/api/v1/sec/scheduler/status" -d status=Running`
-}
-
-executing_jobs () {
-	$CURL -s -H "Accept: application/json" --netrc-file "$NETRC_FILE" "$JOBAPI_BASE/api/v1/sec/scheduler/jobs?executing=true" |grep jobStatus
-}
-
-wait_all_jobs_complete () {
-	json=`executing_jobs`
-	saw_job=
-	if [ -n "$json" ]; then
-		echo -n 'Waiting for jobs to complete...'
-		saw_job=1
-	fi
-	while [ -n "$json" ]; do
-		sleep 5
-		json=`executing_jobs`
-		echo -n '.'
-	done
-	if [ -n "$saw_job" ];then
-		echo ' done.'
-	fi
-}
-
-do_job_status () {
-	sched_status=`scheduler_status`
-	echo "Job scheduler is $sched_status"
 }
 
 # Parse command line parameters.
@@ -141,6 +99,15 @@ case $1 in
 		do_job_status
 		;;
 
+	configured-jobs)
+		json=`configured_jobs`
+		if [ -n "$json" ]; then
+			echo  "$json" |$PRETTYJSON
+		else
+			echo 'No jobs configured.'
+		fi
+		;;
+
 	running-jobs)
 		json=`executing_jobs`
 		if [ -n "$json" ]; then
@@ -178,7 +145,7 @@ case $1 in
 
 	*)
 		# Print help
-		echo "Usage: $0 {start|stop|restart|status|jobs-status|pause-jobs|resume-jobs|running-jobs|pause-jobs-wait}" 1>&2
+		echo "Usage: $0 {start|stop|restart|status|jobs-status|pause-jobs|resume-jobs|configured-jobs|running-jobs|pause-jobs-wait}" 1>&2
 		exit 1
 		;;
 esac

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openbox_menu xmlns="http://openbox.org/">
+  <menu id="root-menu" label="Openbox 3">
+    <item label="Web browser">
+      <action name="Execute">
+        <execute>web.sh</execute>
+      </action>
+    </item>
+    <menu id="Debian" />
+    <separator />
+    <menu id="client-list-menu" />
+    <separator />
+    <item label="Restart">
+      <action name="Restart" />
+    </item>
+  </menu>
+</openbox_menu>
+
