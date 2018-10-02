@@ -90,7 +90,7 @@
             <tr>
                 <th colspan=6 class="hr"></th>
             </tr>
-            {{#invoice.nonTaxInvoiceItems}}
+            {{#invoice.nonTaxInvoiceItemsSortedBySubscriptionCustomFields}}
             <tr class="item">
                 <td>{{description}}</td>
                 <td>
@@ -103,7 +103,7 @@
                 <td class="right">{{invoice.currency}}</td>
                 <td class="right">{{formattedAmount}}</td>
             </tr>
-            {{/invoice.nonTaxInvoiceItems}}
+            {{/invoice.nonTaxInvoiceItemsSortedBySubscriptionCustomFields}}
             <tr>
                 <td colspan=6 class="hr"/>
             </tr>
