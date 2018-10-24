@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+# This script is designed to be used as a NIM "firstboot" script to update the JDK
+# on a Raspberry Pi to a more recent version, using the Ubuntu webupd8team PPA that
+# works with Debian Stretch.
+
+# Expand the FS if possible
+if [ -z "$(find /var/local -maxdepth 1 -name 'solarnode-expandfs.saved*' -print -quit)" -a -x /usr/share/solarnode/expandfs.sh ]; then
+	/usr/share/solarnode/expandfs.sh -v -o /var/local/solarnode-expandfs.saved
+fi
+
+# Add webupd8team key
+cat << '__EOF__' >/tmp/ppa-key.txt
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: SKS 1.1.5
+Comment: Hostname: keyserver.ubuntu.com
+
+mI0ES9/P3AEEAPbI+9BwCbJucuC78iUeOPKl/HjAXGV49FGat0PcwfDd69MVp6zUtIMbLgkU
+OxIlhiEkDmlYkwWVS8qy276hNg9YKZP37ut5+GPObuS6ZWLpwwNus5PhLvqeGawVJ/obu7d7
+gM8mBWTgvk0ErnZDaqaU2OZtHataxbdeW8qH/9FJABEBAAG0DUxhdW5jaHBhZCBWTEOImwQQ
+AQIABgUCVsN4HQAKCRAEC6TrO3+B2tJkA/jM3b7OysTwptY7P75sOnIu+nXLPlzvja7qH7Wn
+A23itdSker6JmyJrlQeQZu7b9x2nFeskNYlnhCp9mUGu/kbAKOx246pBtlaipkZdGmL4qXBi
++bi6+5Rw2AGgKndhXdEjMxx6aDPq3dftFXS68HyBM3HFSJlf7SmMeJCkhNRwiLYEEwECACAF
+Akvfz9wCGwMGCwkIBwMCBBUCCAMEFgIDAQIeAQIXgAAKCRDCUYJI7qFIhucGBADQnY4V1xKT
+1Gz+3ERly+nBb61BSqRx6KUgvTSEPasSVZVCtjY5MwghYU8T0h1PCx2qSir4nt3vpZL1luW2
+xTdyLkFCrbbIAZEHtmjXRgQu3VUcSkgHMdn46j/7N9qtZUcXQ0TOsZUJRANY/eHsBvUg1cBm
+3RnCeN4C8QZrir1CeA==
+=CziK
+-----END PGP PUBLIC KEY BLOCK-----
+__EOF__
+
+
+apt-key add /tmp/ppa-key.txt
+
+# Add webupd8team java source
+cat << '__EOF__' >/etc/apt/sources.list.d/webupd8team-java.list
+deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main
+__EOF__
+
+# Update package cache
+apt-get -y update
+
+# Stop solarnode
+systemctl stop solarnode
+
+# Remove existing java
+apt-get -y purge oracle-java8-jdk
+
+# Install new java
+echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
+echo debconf shared/accepted-oracle-license-v1-1 seen true | debconf-set-selections
+apt-get -y install oracle-java8-installer
+
+apt-get -y autoremove
+apt-get -y clean
+
+# Restart solarnode
+systemctl start solarnode
