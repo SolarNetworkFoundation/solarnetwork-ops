@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Perform chunk index maintenance by iterating over the rows returned from
 # the find_chunk_index_need_reindex_maint() function and
