@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+        <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+        <property name="LOG_FILE" value="${LOG_FILE:-${LOG_PATH:-${LOG_TEMP:-${java.io.tmpdir:-/tmp}}/}spring.log}"/>
+        <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
+
+		<appender name="AUDIT" class="ch.qos.logback.core.rolling.RollingFileAppender">
+			<encoder>
+				<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} : %m%n</pattern>
+			</encoder>
+			<file>/var/log/fluxhook/audit.log</file>
+			<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+				<fileNamePattern>/var/log/fluxhook/audit.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
+				<maxHistory>30</maxHistory>
+				<totalSizeCap>3GB</totalSizeCap>
+			</rollingPolicy>
+		</appender>
+
+        <logger name="net.solarnetwork" level="INFO"/>
+        
+        <logger name="net.solarnetwork.flux.vernemq.webhook.AUDIT" additivity="false" level="INFO">
+        	<appender-ref ref="AUDIT" />
+		</logger>
+
+        <root level="INFO">
+            <appender-ref ref="FILE" />
+        </root>
+</configuration>
