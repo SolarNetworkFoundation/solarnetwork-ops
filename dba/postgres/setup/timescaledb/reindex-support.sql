@@ -101,6 +101,8 @@ ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(int
 /**
  * Find all chunk indexes needing cluster maintenance.
  *
+ * This will cluster chunks by their FIRST index, where indexes are ordered alphabetically by name.
+ *
  * @param chunk_max_age		the maximum age of a chunk to consider
  * @param chunk_min_age		the minimum age of a chunk to consider
  * @param redindex_min_age	the minimum interval before reindexing an index
@@ -112,13 +114,27 @@ CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_clust
     )
 	RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE sql STABLE AS
 $$
+WITH ranked AS (
+	SELECT
+		chunk_id,
+		chunk_schema_name,
+		chunk_table_name,
+		chunk_index_name,
+		chunk_upper_range,
+		chunk_index_last_cluster,
+		rank() OVER idx AS pos
+	FROM _timescaledb_solarnetwork.chunk_time_index_maint
+	WINDOW idx AS (PARTITION BY chunk_id ORDER BY chunk_index_name)
+	ORDER BY chunk_id
+)
 SELECT
 	chunk_schema_name,
 	chunk_table_name,
 	chunk_index_name
-FROM _timescaledb_solarnetwork.chunk_time_index_maint
-WHERE chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
-AND (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age)
+FROM ranked
+WHERE pos = 1
+	AND chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
+	AND (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age)
 ORDER BY chunk_id
 $$;
 
@@ -169,7 +185,6 @@ BEGIN
 
 		rec.chunk_id := mtn.chunk_id;
 		rec.index_name := mtn.chunk_index_name;
-		rec.last_cluster := mtn.chunk_index_last_cluster;
 		RETURN NEXT rec;
 	END LOOP;
 	RETURN;
@@ -178,6 +193,7 @@ $$;
 
 ALTER FUNCTION _timescaledb_solarnetwork.perform_one_chunk_reindex_maintenance(text, text, text, boolean)
   OWNER TO solarnet;
+
 
 /**
  * Perform cluster maintenance on one specific chunk table.
@@ -228,7 +244,6 @@ BEGIN
 
 		rec.chunk_id := mtn.chunk_id;
 		rec.index_name := mtn.chunk_index_name;
-		rec.last_reindex := mtn.chunk_index_last_reindex;
 		RETURN NEXT rec;
 	END LOOP;
 	RETURN;
