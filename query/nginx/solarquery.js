@@ -25,7 +25,6 @@ function addAuthorization(request, digest) {
 		match = header.match(SNWS_V1_KEY_PATTERN);
 	}
 	if ( match ) {
-		request.log('Auth = ' +match[1]);
 		digest.update(match[1]);
 		digest.update('@');
 	}
@@ -38,7 +37,6 @@ function addQueryParam(request, digest, first, key, val) {
 	} else {
 		digest.update('&');
 	}
-	request.log('Query param ' +key +' = ' +decodeURIComponent(val));
 	digest.update(key);
 	digest.update('=');
 	digest.update(decodeURIComponent(val));
@@ -88,8 +86,6 @@ function addNormalizedAccept(request, digest) {
 		return;
 	}
 	
-	request.log('Accept = ' +header);
-	
 	if ( header.match(/application\/json/i) ) {
 		digest.update('+json');
 	} else if ( header.match(/text\/csv/i) ) {
@@ -121,7 +117,6 @@ function addNormalizedAcceptEncoding(request, digest) {
 		enc = '>gzip';
 	}
 	if ( enc ) {
-		request.log('Accept-Encoding = ' +enc);
 		digest.update(enc);
 	}
 }
@@ -130,7 +125,6 @@ function keyForRequest(request) {
 	var digest = crypto.createHash('md5');
 	addAuthorization(request, digest);
 	digest.update(request.method);
-	request.log('URI = ' +request.uri);
 	digest.update(request.uri);
 	addNormalizedQueryParameters(request, digest);
 	addNormalizedAccept(request, digest);
