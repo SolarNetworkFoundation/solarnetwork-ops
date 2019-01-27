@@ -80,6 +80,7 @@ done <<< "$maint_tables"
 if [ "${PAUSED}" -eq 1 ]; then
 	echo "Resuming SolarNet job scheduler..."
 	resume_scheduler
+	do_job_status
 else
 	echo "SolarNet job scheduler was not paused, no need to resume."
 fi
