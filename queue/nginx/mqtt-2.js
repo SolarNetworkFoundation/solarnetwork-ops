@@ -1,24 +1,10 @@
-// NOTE this code is for njs < 0.2.4
+// NOTE this code is for njs >= 0.2.4
 
 var messageCount = 0;
 var clientId = '';
 
 function getClientId(s) {
     return clientId;
-}
-
-function hexEncode(str) {
-    var hex,
-        i,
-        result = '';
-    for ( i = 0; i < str.length; i += 1 ) {
-        hex = str.charCodeAt(i).toString(16);
-        if ( result.length > 0 ) {
-            result += " ";
-        }
-        result += ('0'+hex).slice(-2);
-    }
-    return result
 }
 
 function parseDnAttribute(dn, att) {
@@ -56,47 +42,47 @@ function extractVariableLengthString(buffer, p) {
 }
 
 function discoverClientId(s) {
-    if ( !s.fromUpstream ) {
-        if ( s.buffer.toString().length == 0  ) {
-            return s.AGAIN;
-        } else if ( messageCount < 1 ) {
+    s.on('upload', function(data, flags) {
+        if ( messageCount > 0 || data.length < 1 ) {
+            return;
+        }
+        if ( messageCount < 1 ) {
             // upper 4 bits of byte 0 is packet type
-            var packetType = s.buffer.charCodeAt(0) >> 4;
+            var packetType = data.charCodeAt(0) >> 4;
 
             /*
             s.log('MQTT packet type = ' + packetType
-                + ', buffer(32) = ' + hexEncode(s.buffer.slice(0, 32))
-                +', len = ' +s.buffer.slice(0,32).length
-                + ', s = ' +s.buffer.slice(0,32));
+                + ', data = ' + data.slice(0, 32).toString('hex')
+                +', len = ' +data.slice(0,32).length
+                + ', s = ' +data.slice(0,32));
             */
-
+            
             if ( packetType === 1 ) { // CONNECT
-                // Calculate remaining length with variable encoding scheme
-                var lenPos = decodeRemainingLength(s.buffer, 1);
+                var lenPos = decodeRemainingLength(data, 1);
 
                 // Support v3 & v4, which have different protocol names (MQIsdp vs MQTT)
-                var protoNameLength = variableLengthStringLength(s.buffer, lenPos[1]);
+                var protoNameLength = variableLengthStringLength(data, lenPos[1]);
 
                 var clientIdPos = lenPos[1]
                     + 2                 // variable length string length bytes
                     + protoNameLength   // proto name variable length string
                     + 4;                // version byte, conn flags byte, timer bytes
 
-                // CONNECT variable length header 10 bytes, client ID follows
-                clientId = extractVariableLengthString(s.buffer, clientIdPos);
+                clientId = extractVariableLengthString(data, clientIdPos);
 
                 // If client authentication then check certificate CN matches ClientId
                 var certificateClientId = parseDnAttribute(s.variables.ssl_client_s_dn, 'UID');
-                if ( certificateClientId && certificateClientId != clientId ) {
+                if ( !certificateClientId || certificateClientId != clientId ) {
                     s.log('Certificate client ID [' + certificateClientId
                         + '] does not match MQTT client ID [' +clientId +']');
-                    return s.ERROR;
+                    s.deny();
+                } else {
+                    s.allow();
                 }
             } else {
                 s.log('Received unexpected MQTT packet type: ' + packetType);
             }
         }
         messageCount++;
-    }
-    return s.OK;
+    });
 }

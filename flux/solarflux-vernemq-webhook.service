@@ -1,0 +1,25 @@
+[Unit]
+Description=SolarFlux VerneMQ Webhook Server
+After=network.target
+
+[Service]
+Type=simple
+
+WorkingDirectory=/var/lib/fluxhook
+ExecStart=/usr/bin/java -Xmx128m -server \
+	-Djava.awt.headless=true \
+	-Djava.security.egd=file:/dev/./urandom \
+	-Djava.net.preferIPv4Stack=true \
+	-Dserver.contextPath=/ \
+	-Dserver.port=8280 \
+	-Dspring.profiles.active=production \
+	-jar /var/lib/fluxhook/solarflux-vernemq-webhook.war
+SuccessExitStatus=143
+
+User=fluxhook
+Group=fluxhook
+RestartSec=10
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

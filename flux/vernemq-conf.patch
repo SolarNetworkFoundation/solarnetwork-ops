@@ -1,0 +1,89 @@
+--- vernemq.conf.orig	2018-12-16 21:51:03.523461558 +0000
++++ vernemq.conf	2018-12-16 05:43:09.338782056 +0000
+@@ -139,7 +139,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - an integer
+-max_message_size = 0
++max_message_size = 8192
+ 
+ ## If a message is published with a QoS lower than the QoS of the subscription it is
+ ## delivered to, VerneMQ can upgrade the outgoing QoS. This is a non-standard option.
+@@ -202,7 +202,8 @@
+ ## 
+ ## Acceptable values:
+ ##   - an IP/port pair, e.g. 127.0.0.1:10011
+-listener.tcp.default = 127.0.0.1:1883
++listener.tcp.default = 0.0.0.0:1883
++listener.ws.default = 0.0.0.0:8080
+ 
+ ## 'listener.tcp.allowed_protocol_versions' configures which
+ ## protocol versions are allowed for an MQTT listener. The allowed
+@@ -587,7 +588,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - on or off
+-plugins.vmq_webhooks = off
++plugins.vmq_webhooks = on
+ 
+ ## The VerneMQ bridge plugin.
+ ## 
+@@ -612,7 +613,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - an integer
+-vmq_acl.acl_reload_interval = 10
++vmq_acl.acl_reload_interval = 0
+ 
+ ## Set the path to a password file.
+ ## 
+@@ -629,7 +630,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - an integer
+-vmq_passwd.password_reload_interval = 10
++vmq_passwd.password_reload_interval = 60
+ 
+ ## Configure the vmq_diversity plugin script dir. The script dir
+ ## is searched for Lua scripts which are automatically loaded when the
+@@ -836,6 +837,15 @@
+ ##   - text
+ ## vmq_webhooks.webhook1.endpoint = http://localhost/myendpoints
+ 
++vmq_webhooks.solarflux1.hook = auth_on_register
++vmq_webhooks.solarflux1.endpoint = http://localhost:8280/hook
++
++vmq_webhooks.solarflux2.hook = auth_on_subscribe
++vmq_webhooks.solarflux2.endpoint = http://localhost:8280/hook
++
++vmq_webhooks.solarflux3.hook = auth_on_publish
++vmq_webhooks.solarflux3.endpoint = http://localhost:8280/hook
++
+ ## Specify the address and port of the bridge to connect to. Several
+ ## bridges can configured by using different bridge names (e.g. br0). If the
+ ## connection supports SSL encryption bridge.ssl.<name> can be used.
+@@ -1116,7 +1126,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - text
+-nodename = VerneMQ@127.0.0.1
++nodename = FluxMQ-01
+ 
+ ## Cookie for distributed node communication.  All nodes in the
+ ## same cluster should use the same cookie or they will not be able to
+@@ -1127,7 +1137,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - text
+-distributed_cookie = vmq
++distributed_cookie = flux-48998284e92f
+ 
+ ## Sets the number of threads in async thread pool, valid range
+ ## is 0-1024. If thread support is available, the default is 64.
+@@ -1202,3 +1212,6 @@
+ ##   - an integer
+ leveldb.maximum_memory.percent = 70
+ 
++erlang.distribution.port_range.minimum = 6000
++erlang.distribution.port_range.maximum = 7999
++

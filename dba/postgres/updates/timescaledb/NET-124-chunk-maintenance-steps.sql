@@ -29,6 +29,116 @@ WHERE chs.partitioning_column_types[1] = 'timestamp with time zone'::regtype;
 ALTER TABLE _timescaledb_solarnetwork.chunk_time_index_maint
   OWNER TO solarnet;
 
+
+/**
+ * Find all chunk indexes needing reindex OR cluster maintenance.
+ *
+ * @param chunk_max_age		the maximum age of a chunk to consider
+ * @param chunk_min_age		the minimum age of a chunk to consider
+ * @param redindex_min_age	the minimum interval before reindexing an index
+ */
+CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_maint(
+    chunk_max_age interval DEFAULT interval '24 weeks',
+    chunk_min_age interval DEFAULT interval '1 week',
+    reindex_min_age interval DEFAULT interval '11 weeks'
+    )
+	RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE sql STABLE AS
+$$
+SELECT
+	chunk_schema_name,
+	chunk_table_name,
+	chunk_index_name
+FROM _timescaledb_solarnetwork.chunk_time_index_maint
+WHERE chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
+AND (
+		(chunk_index_last_reindex IS NULL OR chunk_index_last_reindex < CURRENT_TIMESTAMP - reindex_min_age)
+		OR (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age)
+	)
+ORDER BY chunk_id
+$$;
+
+ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_maint(interval, interval, interval)
+  OWNER TO solarnet;
+
+
+/**
+ * Find all chunk indexes needing reindex maintenance.
+ *
+ * @param chunk_max_age		the maximum age of a chunk to consider
+ * @param chunk_min_age		the minimum age of a chunk to consider
+ * @param redindex_min_age	the minimum interval before reindexing an index
+ */
+CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(
+    chunk_max_age interval DEFAULT interval '24 weeks',
+    chunk_min_age interval DEFAULT interval '1 week',
+    reindex_min_age interval DEFAULT interval '11 weeks'
+    )
+	RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE sql STABLE AS
+$$
+SELECT
+	chunk_schema_name,
+	chunk_table_name,
+	chunk_index_name
+FROM _timescaledb_solarnetwork.chunk_time_index_maint
+WHERE chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
+AND (chunk_index_last_reindex IS NULL OR chunk_index_last_reindex < CURRENT_TIMESTAMP - reindex_min_age)
+ORDER BY chunk_id
+$$;
+
+ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(interval, interval, interval)
+  OWNER TO solarnet;
+
+/**
+ * Find all chunk indexes needing cluster maintenance.
+ *
+ * This will cluster chunks by their FIRST index, where indexes are ordered alphabetically by name.
+ *
+ * @param chunk_max_age		the maximum age of a chunk to consider
+ * @param chunk_min_age		the minimum age of a chunk to consider
+ * @param redindex_min_age	the minimum interval before reindexing an index
+ */
+CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(
+    chunk_max_age interval DEFAULT interval '24 weeks',
+    chunk_min_age interval DEFAULT interval '1 week',
+    reindex_min_age interval DEFAULT interval '11 weeks'
+    )
+	RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE sql STABLE AS
+$$
+WITH ranked AS (
+	SELECT
+		chunk_id,
+		chunk_schema_name,
+		chunk_table_name,
+		chunk_index_name,
+		chunk_upper_range,
+		chunk_index_last_cluster,
+		rank() OVER idx AS pos
+	FROM _timescaledb_solarnetwork.chunk_time_index_maint
+	WINDOW idx AS (PARTITION BY chunk_id ORDER BY chunk_index_name)
+	ORDER BY chunk_id
+)
+SELECT
+	chunk_schema_name,
+	chunk_table_name,
+	chunk_index_name
+FROM ranked
+WHERE pos = 1
+	AND chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
+	AND (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age)
+ORDER BY chunk_id
+$$;
+
+ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(interval, interval, interval)
+  OWNER TO solarnet;
+
+/**
+ * Perform reindex maintenance on one specific chunk table.
+ *
+ * @param chunk_schema		the name of the schema of the chunk
+ * @param chunk_table		the name of the chunk table
+ * @param chunk_index		the name of the chunk index
+ * @param not_dry_run		when false, do not perform actual maintenance, just return the indexes that match
+ */
 CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.perform_one_chunk_reindex_maintenance(
     chunk_schema text,
     chunk_table text,
@@ -74,6 +184,15 @@ $$;
 ALTER FUNCTION _timescaledb_solarnetwork.perform_one_chunk_reindex_maintenance(text, text, text, boolean)
   OWNER TO solarnet;
 
+
+/**
+ * Perform cluster maintenance on one specific chunk table.
+ *
+ * @param chunk_schema		the name of the schema of the chunk
+ * @param chunk_table		the name of the chunk table
+ * @param chunk_index		the name of the chunk index
+ * @param not_dry_run		when false, do not perform actual maintenance, just return the indexes that match
+ */
 CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.perform_one_chunk_cluster_maintenance(
     chunk_schema text,
     chunk_table text,
@@ -124,66 +243,49 @@ $$;
 ALTER FUNCTION _timescaledb_solarnetwork.perform_one_chunk_cluster_maintenance(text, text, text, boolean)
   OWNER TO solarnet;
 
-CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_maint(
+
+/**
+ * Find all chunk indexes needing maintenance and perform the maintenance on them.
+ *
+ * @param chunk_max_age		the maximum age of a chunk to consider
+ * @param chunk_min_age		the minimum age of a chunk to consider
+ * @param redindex_min_age	the minimum interval before reindexing an index
+ * @param not_dry_run		when false, do not perform actual maintenance, just return the indexes that match
+ */
+CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.perform_chunk_reindex_maintenance(
     chunk_max_age interval DEFAULT interval '24 weeks',
     chunk_min_age interval DEFAULT interval '1 week',
-    reindex_min_age interval DEFAULT interval '11 weeks'
+    reindex_min_age interval DEFAULT interval '11 weeks',
+    not_dry_run boolean DEFAULT FALSE
     )
-	RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE sql STABLE AS
+    RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE plpgsql AS
 $$
-SELECT
-	chunk_schema_name,
-	chunk_table_name,
-	chunk_index_name
-FROM _timescaledb_solarnetwork.chunk_time_index_maint
-WHERE chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
-AND (
-		(chunk_index_last_reindex IS NULL OR chunk_index_last_reindex < CURRENT_TIMESTAMP - reindex_min_age)
-		OR (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age)
-	)
-ORDER BY chunk_id
+DECLARE
+    mtn RECORD;
+BEGIN
+	FOR mtn IN
+		SELECT * FROM _timescaledb_solarnetwork.find_chunk_index_need_maint(chunk_max_age, chunk_min_age, reindex_min_age)
+	LOOP
+		EXECUTE 'SELECT _timescaledb_solarnetwork.perform_one_chunk_reindex_maintenance($1,$2,$3)'
+		USING mtn.schema_name, mtn.table_name, mtn.index_name;
+
+		schema_name := mtn.schema_name;
+		table_name := mtn.table_name;
+		index_name := mtn.index_name;
+		RETURN NEXT;
+	END LOOP;
+	RETURN;
+END
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_maint(interval, interval, interval)
+ALTER FUNCTION _timescaledb_solarnetwork.perform_chunk_reindex_maintenance(interval, interval, interval, boolean)
   OWNER TO solarnet;
 
+/* Example call:
 
-CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(
-    chunk_max_age interval DEFAULT interval '24 weeks',
-    chunk_min_age interval DEFAULT interval '1 week',
-    reindex_min_age interval DEFAULT interval '11 weeks'
-    )
-	RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE sql STABLE AS
-$$
-SELECT
-	chunk_schema_name,
-	chunk_table_name,
-	chunk_index_name
-FROM _timescaledb_solarnetwork.chunk_time_index_maint
-WHERE chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
-AND (chunk_index_last_reindex IS NULL OR chunk_index_last_reindex < CURRENT_TIMESTAMP - reindex_min_age)
-ORDER BY chunk_id
-$$;
-
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(interval, interval, interval)
-  OWNER TO solarnet;
-
-CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(
-    chunk_max_age interval DEFAULT interval '24 weeks',
-    chunk_min_age interval DEFAULT interval '1 week',
-    reindex_min_age interval DEFAULT interval '11 weeks'
-    )
-	RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE sql STABLE AS
-$$
-SELECT
-	chunk_schema_name,
-	chunk_table_name,
-	chunk_index_name
-FROM _timescaledb_solarnetwork.chunk_time_index_maint
-WHERE chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
-AND (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age)
-ORDER BY chunk_id
-$$;
-
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(interval, interval, interval)
-  OWNER TO solarnet;
+SELECT * FROM _timescaledb_solarnetwork.perform_chunk_reindex_maintenance(
+	chunk_max_age => interval '3 months',
+	chunk_min_age => interval '1 week',
+	reindex_min_age => interval '1 day',
+	not_dry_run => TRUE);
+*/

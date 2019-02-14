@@ -1,7 +1,7 @@
 <html>
     <head>
         <style type="text/css">
-        	body {font-family:sans-serif;}
+        	body {font-family:sans-serif; background-color:#FFF;}
 			footer {border-top:2px solid #F7C819;color:#666;margin-top:2rem;}
 			footer > p {margin-top:4px; margin-bottom: 4px;}
 			h1 {font-size:1.5rem;}
@@ -90,7 +90,7 @@
             <tr>
                 <th colspan=6 class="hr"></th>
             </tr>
-            {{#invoice.nonTaxInvoiceItems}}
+            {{#invoice.nonTaxInvoiceItemsSortedBySubscriptionCustomFields}}
             <tr class="item">
                 <td>{{description}}</td>
                 <td>
@@ -103,7 +103,7 @@
                 <td class="right">{{invoice.currency}}</td>
                 <td class="right">{{formattedAmount}}</td>
             </tr>
-            {{/invoice.nonTaxInvoiceItems}}
+            {{/invoice.nonTaxInvoiceItemsSortedBySubscriptionCustomFields}}
             <tr>
                 <td colspan=6 class="hr"/>
             </tr>
