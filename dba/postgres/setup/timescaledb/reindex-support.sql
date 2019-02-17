@@ -118,7 +118,7 @@ ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(int
  * @param chunk_max_age		the maximum age of a chunk to consider
  * @param chunk_min_age		the minimum age of a chunk to consider
  * @param redindex_min_age	the minimum interval before reindexing an index
- * @param mod_threshold		the minimum modification threshold
+ * @param mod_threshold		the minimum modification threshold (dead tuples)
  */
 CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(
     chunk_max_age interval DEFAULT interval '24 weeks',
@@ -136,7 +136,7 @@ WITH ranked AS (
 		chunk_index_name,
 		chunk_upper_range,
 		chunk_index_last_cluster,
-		mod_tup_percent
+		n_dead_tup
 	FROM _timescaledb_solarnetwork.chunk_time_index_maint
 	ORDER BY chunk_id, chunk_index_name
 )
@@ -147,11 +147,11 @@ SELECT
 FROM ranked
 WHERE (chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
 		AND (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age))
-	OR (chunk_upper_range < CURRENT_TIMESTAMP - chunk_min_age AND mod_tup_percent >= mod_threshold)
+	OR (chunk_upper_range < CURRENT_TIMESTAMP - chunk_min_age AND n_dead_tup >= mod_threshold)
 ORDER BY chunk_id
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(interval, interval, interval)
+ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(interval, interval, interval, integer)
   OWNER TO solarnet;
 
 /**
