@@ -68,3 +68,5 @@ while [ "$dEpoch" -ge "$endEpoch" ]; do
 	d=$(date -j -r $dEpoch -v -1m '+%Y-%m-%d')
 	dEpoch=$(date -j -f '%Y-%m-%d %H:%M:%S %Z' "$d 00:00:00 GMT" '+%s')
 done
+
+tsMsg "Done."
