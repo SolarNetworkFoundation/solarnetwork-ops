@@ -34,7 +34,7 @@ tsMsgIntermediate () {
 waitForStaleProcessed () {
 	stale_count=$(psql $psql_args -t -A -c "$stale_count_sql")
 	while [ "$stale_count" -gt "$stale_done_threshold" ]; do
-		tsMsg "Waiting for $stale_count stale records to fall below $stale_done_threshold"
+		tsMsg "Waiting for $stale_count stale records to fall below $stale_done_threshold $1"
 		sleep $stale_check_delay_secs
 		stale_count=$(psql $psql_args -t -A -c "$stale_count_sql")
 	done
@@ -60,7 +60,7 @@ while [ "$dEpoch" -ge "$endEpoch" ]; do
 	# create d2 as d + 1 month
 	d2=$(date -j -r $dEpoch -v +1m '+%Y-%m-%d')
 	
-	waitForStaleProcessed
+	waitForStaleProcessed "before processing $d"
 	
 	handleDateRange "$d" "$d2"
 	
@@ -68,3 +68,5 @@ while [ "$dEpoch" -ge "$endEpoch" ]; do
 	d=$(date -j -r $dEpoch -v -1m '+%Y-%m-%d')
 	dEpoch=$(date -j -f '%Y-%m-%d %H:%M:%S %Z' "$d 00:00:00 GMT" '+%s')
 done
+
+tsMsg "Done."

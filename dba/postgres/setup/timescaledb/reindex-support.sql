@@ -22,19 +22,30 @@ SELECT ht.id AS hypertable_id
 	, ht.table_name AS hypertable_table_name
 	, ch.id AS chunk_id, ch.schema_name AS chunk_schema_name
 	, ch.table_name AS chunk_table_name
-	, to_timestamp(upper(chs.ranges[1])::double precision / 1000000) AS chunk_upper_range
+    , to_timestamp(dims.range_start::double precision / 1000000::double precision) AS chunk_lower_range
+    , to_timestamp(dims.range_end::double precision / 1000000::double precision) AS chunk_upper_range
 	, chi.index_name AS chunk_index_name
 	, chm.last_reindex AS chunk_index_last_reindex
 	, chm.last_cluster AS chunk_index_last_cluster
 	, pgi.indexdef AS chunk_index_def
 	, pgi.tablespace AS chunk_index_tablespace
+	, pgs.n_tup_ins
+	, pgs.n_tup_upd
+	, pgs.n_tup_del
+	, pgs.n_dead_tup
+	, pgs.n_live_tup
+	, ((pgs.n_dead_tup::double precision / pgs.n_live_tup::double precision) * 100)::integer AS dead_tup_percent
+	, (((pgs.n_tup_ins + pgs.n_tup_upd + pgs.n_tup_del)::double precision / pgs.n_live_tup::double precision) * 100)::integer AS mod_tup_percent
 FROM _timescaledb_catalog.chunk ch
+INNER JOIN _timescaledb_catalog.chunk_constraint chs ON chs.chunk_id = ch.id
+INNER JOIN _timescaledb_catalog.dimension dim ON ch.hypertable_id = dim.hypertable_id
+INNER JOIN _timescaledb_catalog.dimension_slice dims ON dims.dimension_id = dim.id AND dims.id = chs.dimension_slice_id
+INNER JOIN pg_catalog.pg_stat_user_tables pgs ON pgs.schemaname = ch.schema_name AND pgs.relname = ch.table_name
 INNER JOIN _timescaledb_catalog.hypertable ht ON ht.id = ch.hypertable_id
-INNER JOIN chunk_relation_size(ht.schema_name::text||'.'||ht.table_name::text) chs ON chs.chunk_id = ch.id
 INNER JOIN _timescaledb_catalog.chunk_index chi ON chi.chunk_id = ch.id
 INNER JOIN pg_indexes pgi ON pgi.schemaname = ch.schema_name AND pgi.tablename = ch.table_name AND pgi.indexname = chi.index_name
 LEFT OUTER JOIN _timescaledb_solarnetwork.chunk_index_maint chm ON chm.chunk_id = ch.id AND chm.index_name = chi.index_name
-WHERE chs.partitioning_column_types[1] = 'timestamp with time zone'::regtype;
+WHERE dim.column_type = 'timestamp with time zone'::regtype;
 
 ALTER TABLE _timescaledb_solarnetwork.chunk_time_index_maint
   OWNER TO solarnet;
@@ -102,43 +113,45 @@ ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(int
  * Find all chunk indexes needing cluster maintenance.
  *
  * This will cluster chunks by their FIRST index, where indexes are ordered alphabetically by name.
+ * The mod_threshold factor applies to any chunk older than chunk_min_age.
  *
  * @param chunk_max_age		the maximum age of a chunk to consider
  * @param chunk_min_age		the minimum age of a chunk to consider
  * @param redindex_min_age	the minimum interval before reindexing an index
+ * @param mod_threshold		the minimum modification threshold (dead tuples)
  */
 CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(
     chunk_max_age interval DEFAULT interval '24 weeks',
     chunk_min_age interval DEFAULT interval '1 week',
-    reindex_min_age interval DEFAULT interval '11 weeks'
+    reindex_min_age interval DEFAULT interval '11 weeks',
+    mod_threshold integer DEFAULT 50
     )
 	RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE sql STABLE AS
 $$
 WITH ranked AS (
-	SELECT
+	SELECT DISTINCT ON (chunk_id)
 		chunk_id,
 		chunk_schema_name,
 		chunk_table_name,
 		chunk_index_name,
 		chunk_upper_range,
 		chunk_index_last_cluster,
-		rank() OVER idx AS pos
+		n_dead_tup
 	FROM _timescaledb_solarnetwork.chunk_time_index_maint
-	WINDOW idx AS (PARTITION BY chunk_id ORDER BY chunk_index_name)
-	ORDER BY chunk_id
+	ORDER BY chunk_id, chunk_index_name
 )
 SELECT
 	chunk_schema_name,
 	chunk_table_name,
 	chunk_index_name
 FROM ranked
-WHERE pos = 1
-	AND chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
-	AND (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age)
+WHERE (chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
+		AND (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age))
+	OR (chunk_upper_range < CURRENT_TIMESTAMP - chunk_min_age AND n_dead_tup >= mod_threshold)
 ORDER BY chunk_id
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(interval, interval, interval)
+ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(interval, interval, interval, integer)
   OWNER TO solarnet;
 
 /**
