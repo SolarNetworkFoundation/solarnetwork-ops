@@ -3,10 +3,11 @@
         <style type="text/css">
         	body {font-family:sans-serif; background-color:#FFF;}
 			footer {border-top:2px solid #F7C819;color:#666;margin-top:2rem;}
-			footer > p {margin-top:4px; margin-bottom: 4px;}
+			footer > p {margin-top:4px; margin-bottom: 4px; font-size:0.8rem;}
+			footer > p + p {border-top: 1px solid #ccc; padding-top: 2px;}
 			h1 {font-size:1.5rem;}
 			img.logo {width:300px; margin-bottom: 1rem;}
-			kbd {font-size:1.2rem;font-weight:bold;}
+			kbd {font-size:1.1rem;font-weight:bold;}
 			table.overall td:first-child {color:#666;}
 			th.hr {border-top: 2px solid black;}
 			td.hr {border-top: 1px solid #ccc;}
@@ -128,7 +129,8 @@
         </table>
 
         <footer>
-        	<p><b>Bank details</b>: SolarNetwork Foundation, <kbd>38-9018-0514203-00</kbd>, SWIFT code <kbd>KIWINZ22</kbd>.</p>
+        	<p><b>NZD bank details</b>: SolarNetwork Foundation, <kbd>38-9018-0514203-00</kbd>, SWIFT code <kbd>KIWINZ22</kbd>.</p>
+        	<p><b>USD bank details</b>: KB2050621USD1SOLARNETWORK, <kbd>GB70CITI18500810683213</kbd>, SWIFT code <kbd>CITIGB2L</kbd>.</p>
         	<p>Please put <kbd>INV-{{invoice.invoiceNumber}}</kbd> in the reference field.</p>
         </footer>
     </body>
