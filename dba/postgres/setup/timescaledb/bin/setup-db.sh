@@ -23,6 +23,7 @@ PG_ADMIN_USER="postgres"
 PG_ADMIN_DB="postgres"
 PG_TEMPLATE_DB="template0"
 USER_ROLE_SCRIPT="tsdb-init-roles.sql"
+PERMISSION_SCRIPT="tsdb-init-permissions.sql"
 RECREATE_DB=""
 CREATE_USER=""
 DRY_RUN=""
@@ -34,6 +35,7 @@ while getopts ":c:d:D:mrtT:u:U:v" opt; do
 		d) PG_DB="${OPTARG}";;
 		D) PG_ADMIN_DB="${OPTARG}";;
 		m) CREATE_USER='TRUE';;
+		P) PERMISSION_SCRIPT="${OPTARG}";;
 		r) RECREATE_DB='TRUE';;
 		R) USER_ROLE_SCRIPT="${OPTARG}";;
 		t) DRY_RUN='TRUE';;
@@ -65,8 +67,9 @@ fi
 
 
 if [ -n "$RECREATE_DB" ]; then
+	echo
 	if [ -n "$VERBOSE" ]; then
-		echo "Dropping database [$PG_DB]"
+		echo "Dropping database [$PG_DB]..."
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'DROP DATABASE IF EXISTS $PG_DB'"
@@ -76,18 +79,24 @@ if [ -n "$RECREATE_DB" ]; then
 fi
 
 if [ -n "$CREATE_USER" ]; then
+	echo
+	if [ ! -e "$USER_ROLE_SCRIPT" ]; then
+		echo "$USER_ROLE_SCRIPT DDL not found.";
+		exit 4;
+	fi
 	if [ -n "$VERBOSE" ]; then
-		echo "Creating database users via [$USER_ROLE_SCRIPT]"
+		echo "Creating database users via [$USER_ROLE_SCRIPT]..."
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -f $USER_ROLE_SCRIPT"
 	else
-		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -f "$USER_ROLE_SCRIPT" || exit 4
+		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtf "$USER_ROLE_SCRIPT" || exit 4
 	fi
 fi
 
+echo
 if [ -n "$VERBOSE" ]; then
-	echo "Creating database [$PG_DB] with owner [$PG_DB_OWNER]"
+	echo "Creating database [$PG_DB] with owner [$PG_DB_OWNER]..."
 fi
 if [ -n "$DRY_RUN" ]; then
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE DATABASE $PG_DB WITH ENCODING='UTF8' OWNER=$PG_DB_OWNER TEMPLATE=$PG_TEMPLATE_DB LC_COLLATE='C' LC_CTYPE='C''"
@@ -101,8 +110,9 @@ else
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public" || exit 8
 fi
 
+echo
 if [ -n "$VERBOSE" ]; then
-	echo "Creating plv8 scripts"
+	echo "Creating plv8 scripts..."
 fi
 if [ -n "$DRY_RUN" ]; then
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -f postgres-init-plv8.sql"
@@ -114,21 +124,36 @@ else
 	cd ..
 fi
 
+echo
 if [ -n "$VERBOSE" ]; then
-	echo "Creating SolarNetwork database tables and functions"
+	echo "Creating SolarNetwork database tables and functions..."
 fi
 if [ -n "$DRY_RUN" ]; then
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -f tsdb-init.sql"
 else		
-	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtf tsdb-init.sql || exit 10
+	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -Atf tsdb-init.sql || exit 10
 fi
 
+echo
 if [ -n "$VERBOSE" ]; then
-	echo "Applying production permissions"
+	echo "Setting ownership of database objects..."
 fi
 if [ -n "$DRY_RUN" ]; then
-	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['quartz', 'solaragg', 'solarcommon', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res;"
+	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solaragg', 'solarcommon', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res;"
 else		
-	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['quartz', 'solaragg', 'solarcommon', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res;" || exit 11
+	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solaragg', 'solarcommon', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res;" || exit 11
 fi
 
+echo
+if [ ! -e "$PERMISSION_SCRIPT" ]; then
+	echo "$PERMISSION_SCRIPT DDL not found.";
+	exit 11;
+fi
+if [ -n "$VERBOSE" ]; then
+	echo "Applying database permissions via [$PERMISSION_SCRIPT]..."
+fi
+if [ -n "$DRY_RUN" ]; then
+	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -f $PERMISSION_SCRIPT"
+else
+	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -Atf "$PERMISSION_SCRIPT" || exit 11
+fi
