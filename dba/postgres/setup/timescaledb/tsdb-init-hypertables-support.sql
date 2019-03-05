@@ -1,6 +1,6 @@
-GRANT REFERENCES ON TABLE _timescaledb_catalog.chunk TO public;
+CREATE SCHEMA IF NOT EXISTS _timescaledb_solarnetwork;
 
-ALTER SCHEMA _timescaledb_solarnetwork OWNER TO solarnet;
+GRANT REFERENCES ON TABLE _timescaledb_catalog.chunk TO PUBLIC;
 
 CREATE TABLE IF NOT EXISTS _timescaledb_solarnetwork.chunk_index_maint (
 	chunk_id integer NOT NULL,
@@ -12,9 +12,6 @@ CREATE TABLE IF NOT EXISTS _timescaledb_solarnetwork.chunk_index_maint (
       REFERENCES _timescaledb_catalog.chunk (id) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE CASCADE
 );
-
-ALTER TABLE _timescaledb_solarnetwork.chunk_index_maint
-  OWNER TO solarnet;
 
 CREATE OR REPLACE VIEW _timescaledb_solarnetwork.chunk_time_index_maint AS
 SELECT ht.id AS hypertable_id
@@ -47,9 +44,6 @@ INNER JOIN pg_indexes pgi ON pgi.schemaname = ch.schema_name AND pgi.tablename =
 LEFT OUTER JOIN _timescaledb_solarnetwork.chunk_index_maint chm ON chm.chunk_id = ch.id AND chm.index_name = chi.index_name
 WHERE dim.column_type = 'timestamp with time zone'::regtype;
 
-ALTER TABLE _timescaledb_solarnetwork.chunk_time_index_maint
-  OWNER TO solarnet;
-
 
 /**
  * Find all chunk indexes needing reindex OR cluster maintenance.
@@ -78,9 +72,6 @@ AND (
 ORDER BY chunk_id
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_maint(interval, interval, interval)
-  OWNER TO solarnet;
-
 
 /**
  * Find all chunk indexes needing reindex maintenance.
@@ -106,8 +97,6 @@ AND (chunk_index_last_reindex IS NULL OR chunk_index_last_reindex < CURRENT_TIME
 ORDER BY chunk_id
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(interval, interval, interval)
-  OWNER TO solarnet;
 
 /**
  * Find all chunk indexes needing cluster maintenance.
@@ -151,8 +140,6 @@ WHERE (chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_T
 ORDER BY chunk_id
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(interval, interval, interval, integer)
-  OWNER TO solarnet;
 
 /**
  * Perform reindex maintenance on one specific chunk table.
@@ -203,9 +190,6 @@ BEGIN
 	RETURN;
 END
 $$;
-
-ALTER FUNCTION _timescaledb_solarnetwork.perform_one_chunk_reindex_maintenance(text, text, text, boolean)
-  OWNER TO solarnet;
 
 
 /**
@@ -263,9 +247,6 @@ BEGIN
 END
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.perform_one_chunk_cluster_maintenance(text, text, text, boolean)
-  OWNER TO solarnet;
-
 
 /**
  * Find all chunk indexes needing maintenance and perform the maintenance on them.
@@ -301,8 +282,6 @@ BEGIN
 END
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.perform_chunk_reindex_maintenance(interval, interval, interval, boolean)
-  OWNER TO solarnet;
 
 /* Example call:
 
