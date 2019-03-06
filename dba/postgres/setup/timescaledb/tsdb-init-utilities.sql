@@ -136,3 +136,22 @@ BEGIN
 END
 $$;
 
+
+CREATE OR REPLACE FUNCTION public.set_index_tablespace(schem_name text, tblspace_name text)
+RETURNS TABLE(schemaname text, objname text, stmt text) LANGUAGE plpgsql VOLATILE AS
+$$
+BEGIN
+	schemaname := schem_name;
+	FOR objname, stmt IN
+		(SELECT o.indexname AS objname, 
+			format('ALTER INDEX %I.%I SET TABLESPACE %I', schem_name, o.indexname, tblspace_Name) AS stmt
+		FROM pg_catalog.pg_indexes o
+		WHERE o.schemaname = schem_name
+		ORDER BY o.indexname)
+	LOOP
+		EXECUTE stmt;
+		RETURN NEXT;
+	END LOOP;
+	RETURN;
+END
+$$;
