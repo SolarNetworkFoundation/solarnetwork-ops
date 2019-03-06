@@ -46,3 +46,12 @@ CREATE ROLE solaruser WITH
   NOCREATEROLE
   NOREPLICATION;
 GRANT solar TO solaruser;
+
+-- group for bare-minimum authentication/authorization requests
+CREATE ROLE solarauthn WITH
+  NOLOGIN
+  NOSUPERUSER
+  INHERIT
+  NOCREATEDB
+  NOCREATEROLE
+  NOREPLICATION;

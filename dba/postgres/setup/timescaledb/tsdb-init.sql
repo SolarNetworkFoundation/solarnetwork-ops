@@ -39,5 +39,4 @@
 \i tsdb-init-quartz-schema.sql
 \i init/postgres-init-quartz.sql
 
-\i tsdb-init-hypertables.sql
 \i tsdb-init-hypertables-support.sql
