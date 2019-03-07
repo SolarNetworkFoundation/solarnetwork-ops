@@ -29,6 +29,8 @@ if [ -z "$VIRGO_HOME" ]; then
 	exit 1;
 fi
 
+SETUP_HOME=$(pwd)
+
 shaFileHash=
 
 sha512File () {
@@ -66,4 +68,29 @@ if [ ! -L "$VIRGO_HOME/$APP_NAME" ]; then
 	echo "Making link $VIRGO_HOME/$APP_NAME -> virgo-tomcat-server-${virgoVersion}"
 	cd "$VIRGO_HOME"
 	ln -s "virgo-tomcat-server-${virgoVersion}" "$APP_NAME"
+fi
+
+#
+# Setup "env.plan" support
+#
+cd "$SETUP_HOME"
+if ! grep -q 'net.solarnetwork.central.env.plan' "$VIRGO_HOME/$APP_NAME/configuration/org.eclipse.virgo.kernel.userregion.properties"; then
+	if [ -n "$VERBOSE" ]; then
+		echo "Adding net.solarnetwork.central.env.plan to initial artifacts"
+	fi
+	sed -i '' -E "s/^initialArtifacts=(.*)/initialArtifacts=\1,repository:plan\/net.solarnetwork.central.env.plan/" "$VIRGO_HOME/$APP_NAME/configuration/org.eclipse.virgo.kernel.userregion.properties"
+fi
+
+#
+# Add Java8 support
+#
+if ! grep -q 'com.sun.org.apache.bcel.internal' "$VIRGO_HOME/$APP_NAME/configuration/java-server.profile"; then
+	if [ -n "$VERBOSE" ]; then
+		echo "Adding additional system packages from defs/sys-packages-add.txt"
+	fi
+	if [ ! -e defs/sys-packages-add.txt ]; then
+		echo "Missing defs/sys-packages-add.txt file!"
+		exit 1	
+	fi
+	sed -i '' -E '/org.osgi.framework.system.packages/r defs/sys-packages-add.txt' "$VIRGO_HOME/$APP_NAME/configuration/java-server.profile"
 fi
