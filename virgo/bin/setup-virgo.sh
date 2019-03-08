@@ -151,7 +151,10 @@ fi
 if [ -n "$VERBOSE" ]; then
 	echo "Assembling base usr Virgo repository -> $VIRGO_HOME/$APP_NAME/repository/usr"
 fi
-ant -buildfile "$SN_BUILD_HOME/solarnet-deploy/virgo/build.xml" -Divy.file="$IVY_FILE" clean assemble
+ant -buildfile "$SN_BUILD_HOME/solarnet-deploy/virgo/build.xml" -Divy.file="$IVY_FILE" \
+	-Divy.resolve.refresh=true \
+	-Divy.cache.ttl.default=1m \
+	clean assemble
 if [ -d "$SN_BUILD_HOME/solarnet-deploy/virgo/build/assemble/repository/usr" ]; then
 	if [ -n "$VERBOSE" ]; then
 		echo "Copying $SN_BUILD_HOME/solarnet-deploy/virgo/build/assemble/repository/usr contents -> $VIRGO_HOME/$APP_NAME/repository/usr"
