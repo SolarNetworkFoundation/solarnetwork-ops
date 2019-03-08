@@ -1,0 +1,36 @@
+bootstrap_path="bootstrap.sh"
+
+vm_define="solardb"
+vm_name="SolarNet DB"
+vm_box="freebsd/FreeBSD-11.2-RELEASE"
+vm_box_version=">= 2018.06.22"
+
+cpu_count=1
+memory_size=2048
+gui=false
+
+# Read any user specific configuration overrides - cater for this file not existing
+local_env_config_file="Vagrantfile.local"
+begin
+  localsettings = File.read local_env_config_file
+  eval localsettings
+  rescue Errno::ENOENT
+end
+
+Vagrant.configure("2") do |config|
+  config.vm.define vm_define
+  config.vm.box = vm_box
+  config.vm.box_version = vm_box_version
+  config.vm.guest = :freebsd
+  config.vm.synced_folder ".", "/vagrant", type: "rsync", id: "vagrant-root", :mount_options => ["dmode=755"]
+  
+  config.ssh.shell = "sh"
+
+  config.vm.provider "vmware_desktop" do |v|
+    v.gui = gui
+    v.vmx["memsize"] = memory_size
+    v.vmx["numvcpus"] = cpu_count
+  end
+
+end
+
