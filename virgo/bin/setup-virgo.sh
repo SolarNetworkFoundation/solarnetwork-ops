@@ -90,11 +90,11 @@ fi
 # Setup "env.plan" support
 #
 cd "$SETUP_HOME"
-if ! grep -q 'net.solarnetwork.central.env.plan' "$VIRGO_HOME/$APP_NAME/configuration/org.eclipse.virgo.kernel.userregion.properties"; then
+if ! grep -q "net.solarnetwork.$APP_NAME.env.plan" "$VIRGO_HOME/$APP_NAME/configuration/org.eclipse.virgo.kernel.userregion.properties"; then
 	if [ -n "$VERBOSE" ]; then
-		echo "Adding net.solarnetwork.central.env.plan to initial artifacts"
+		echo "Adding net.solarnetwork.$APP_NAME.env.plan to initial artifacts"
 	fi
-	sed -i '' "s/^initialArtifacts=\(.*\)/initialArtifacts=\1,repository:plan\/net.solarnetwork.$APP_NAME.env/" "$VIRGO_HOME/$APP_NAME/configuration/org.eclipse.virgo.kernel.userregion.properties"
+	sed -i '' "s/^initialArtifacts=\(.*\)/initialArtifacts=\1,repository:plan\/net.solarnetwork.$APP_NAME.env.plan/" "$VIRGO_HOME/$APP_NAME/configuration/org.eclipse.virgo.kernel.userregion.properties"
 fi
 
 #
