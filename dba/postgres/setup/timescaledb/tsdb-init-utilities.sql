@@ -102,33 +102,33 @@ BEGIN
 	schemaname := schem_name;
 	FOR objtype, objname, stmt IN
 		(SELECT 'S' AS objtype, schem_name AS objname, 
-			format('GRANT USAGE ON SCHEMA %I TO %I;', schem_name, role_name) AS stmt
+			format('GRANT USAGE ON SCHEMA %I TO %I', schem_name, role_name) AS stmt
 		)
 
 		UNION ALL
 		(SELECT 't' AS objtype, o.tablename AS objname, 
-			format('GRANT ALL ON TABLE %I.%I TO %I;', schem_name, o.tablename, role_name) AS stmt
+			format('GRANT ALL ON TABLE %I.%I TO %I', schem_name, o.tablename, role_name) AS stmt
 		FROM pg_catalog.pg_tables o
 		WHERE o.schemaname = schem_name
 		ORDER BY o.tablename)
 
 		UNION ALL 
 		(SELECT 's' AS objtype, o.sequence_name AS objname,
-			format('GRANT ALL ON SEQUENCE %I.%I TO %I;', schem_name, o.sequence_name, role_name) AS stmt
+			format('GRANT ALL ON SEQUENCE %I.%I TO %I', schem_name, o.sequence_name, role_name) AS stmt
 		FROM information_schema.sequences o
 		WHERE o.sequence_schema = schem_name
 		ORDER BY o.sequence_name)
 		
 		UNION ALL 
 		(SELECT 'v' AS objtype, o.table_name AS objname,
-			format('GRANT ALL ON TABLE %I.%I TO %I;', schem_name, o.table_name, role_name) AS stmt
+			format('GRANT ALL ON TABLE %I.%I TO %I', schem_name, o.table_name, role_name) AS stmt
 		FROM information_schema.views o
 		WHERE o.table_schema = schem_name
 		ORDER BY o.table_name)
 		
 		UNION ALL
 		(SELECT 'f' AS objtype, o.proname || '(' || pg_catalog.pg_get_function_identity_arguments(o.oid) || ')' AS objname,
-			format('GRANT EXECUTE ON FUNCTION %I.%I(%s) TO %I;', schem_name, o.proname, pg_catalog.pg_get_function_identity_arguments(o.oid), role_name) AS stmt
+			format('GRANT EXECUTE ON FUNCTION %I.%I(%s) TO %I', schem_name, o.proname, pg_catalog.pg_get_function_identity_arguments(o.oid), role_name) AS stmt
 		FROM pg_catalog.pg_proc o
 		JOIN pg_catalog.pg_namespace n ON n.oid = o.pronamespace
 		WHERE n.nspname = schem_name
