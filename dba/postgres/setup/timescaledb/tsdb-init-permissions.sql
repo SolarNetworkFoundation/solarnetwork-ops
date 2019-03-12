@@ -4,3 +4,4 @@ FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solaragg', 'so
 LATERAL (SELECT * FROM public.revoke_all_public(s.schem)) AS res;
 
 \i tsdb-init-permissions-solarauthn.sql
+\i tsdb-init-permissions-solarjobs.sql
