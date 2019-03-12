@@ -26,6 +26,7 @@ PG_ADMIN_USER="postgres"
 PG_ADMIN_DB="postgres"
 PG_TEMPLATE_DB="template0"
 USER_ROLE_SCRIPT="tsdb-init-roles.sql"
+USER_SCRIPT=""
 PERMISSION_SCRIPT="tsdb-init-permissions.sql"
 RECREATE_DB=""
 CREATE_USER=""
@@ -35,7 +36,7 @@ INDEX_TABLESPACE_OPTS=""
 DRY_RUN=""
 VERBOSE=""
 
-while getopts ":a:c:d:D:e:E:f:i:I:j:mrtT:u:U:v" opt; do
+while getopts ":a:c:d:D:e:E:f:i:I:j:L:mrtT:u:U:v" opt; do
 	case $opt in
 		c) PSQL_CONN_ARGS="${OPTARG}";;
 		d) PG_DB="${OPTARG}";;
@@ -46,6 +47,7 @@ while getopts ":a:c:d:D:e:E:f:i:I:j:mrtT:u:U:v" opt; do
 		i) INDEX_TABLESPACE="${OPTARG}";;
 		I) INDEX_TABLESPACE_PATH="${OPTARG}";;
 		j) INDEX_TABLESPACE_OPTS="${OPTARG}";;
+		L) USER_SCRIPT="${OPTARG}";;
 		m) CREATE_USER='TRUE';;
 		P) PERMISSION_SCRIPT="${OPTARG}";;
 		r) RECREATE_DB='TRUE';;
@@ -273,4 +275,21 @@ if [ -n "$DRY_RUN" ]; then
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -f $PERMISSION_SCRIPT"
 else
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -Atf "$PERMISSION_SCRIPT" || exit 11
+fi
+
+
+if [ -n "$USER_SCRIPT" ]; then
+	echo
+	if [ ! -e "$USER_SCRIPT" ]; then
+		echo "$USER_SCRIPT DDL not found.";
+		exit 12
+	fi
+	if [ -n "$VERBOSE" ]; then
+		echo "Executing user script [$USER_SCRIPT]..."
+	fi
+	if [ -n "$DRY_RUN" ]; then
+		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -f $USER_SCRIPT"
+	else
+		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -Atf "$USER_SCRIPT" || exit 12
+	fi
 fi
