@@ -118,16 +118,16 @@ if ! grep -q 'JavaSE-1.8' "$VIRGO_HOME/$APP_NAME/configuration/java-server.profi
 fi
 
 #
-# Add local repository
+# Add env repository
 #
-if ! grep -q 'local.type' "$VIRGO_HOME/$APP_NAME/configuration/org.eclipse.virgo.repository.properties"; then
+if ! grep -q 'etc.type' "$VIRGO_HOME/$APP_NAME/configuration/org.eclipse.virgo.repository.properties"; then
 	if [ -n "$VERBOSE" ]; then
-		echo "Adding 'local' respository to configuration/org.eclipse.virgo.repository.properties"
+		echo "Adding 'etc' respository to configuration/org.eclipse.virgo.repository.properties"
 	fi
-	sed -i '' -e '1 { s@^@local.type=external+local.searchPattern=repository/local/{artifact}++@; y/+/\n/; }' \
+	sed -i '' -e '1 { s@^@etc.type=external+etc.searchPattern=repository/etc/{artifact}++@; y/+/\n/; }' \
 		-e 's/usr.type=watched/usr.type=external/' \
 		-e 's@usr.watchDirectory=repository/usr@usr.searchPattern=repository/usr/{artifact}@' \
-		-e 's/chain=ext,usr/chain=local,ext,usr/' \
+		-e 's/chain=ext,usr/chain=etc,ext,usr/' \
 		"$VIRGO_HOME/$APP_NAME/configuration/org.eclipse.virgo.repository.properties"
 fi
 
