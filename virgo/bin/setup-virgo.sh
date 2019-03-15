@@ -48,13 +48,13 @@ sha512File () {
 #
 # Download/install Virgo
 #
-if [ -d "$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}" -a -n "$CLEAN" ]; then
+if [ -d "$VIRGO_HOME/$APP_NAME" -a -n "$CLEAN" ]; then
 	if [ -n "$VERBOSE" ]; then
-		echo "Deleting existing Virgo home [$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}]"
+		echo "Deleting existing Virgo home [$VIRGO_HOME/$APP_NAME]"
 	fi
-	rm -rf "$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}"
+	rm -rf "$VIRGO_HOME/$APP_NAME"
 fi
-if [ -d "$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}" ]; then
+if [ -d "$VIRGO_HOME/$APP_NAME" ]; then
 	echo "Virgo already installed at [$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}]"
 else
 	if [ -e "$virgoDownloadPath" ]; then
@@ -74,16 +74,21 @@ else
 	fi
 
 	echo "Extracting $virgoDownloadPath -> $VIRGO_HOME"
+	if [ -d "$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}" ]; then
+		rm -rf "$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}"
+	fi
 	unzip -q -d "$VIRGO_HOME" "$virgoDownloadPath"
+	mv "$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}" "$VIRGO_HOME/$APP_NAME"
 fi
 
-if [ "$(readlink $VIRGO_HOME/$APP_NAME)" != "virgo-tomcat-server-${virgoVersion}" ]; then
-	echo "Making link $VIRGO_HOME/$APP_NAME -> virgo-tomcat-server-${virgoVersion}"
-	cd "$VIRGO_HOME"
-	if [ -L "$APP_NAME" ]; then
-		rm 	"$APP_NAME"
+#
+# Remove splash webapp
+#
+if [ -e "$VIRGO_HOME/$APP_NAME/pickup/org.eclipse.virgo.apps.splash_${virgoVersion}.jar" ];then
+	if [ -n "$VERBOSE" ]; then
+		echo "Removing Virgo splash webapp pickup/org.eclipse.virgo.apps.splash_${virgoVersion}.jar"
 	fi
-	ln -s "virgo-tomcat-server-${virgoVersion}" "$APP_NAME"
+	rm -f "$VIRGO_HOME/$APP_NAME/pickup/org.eclipse.virgo.apps.splash_${virgoVersion}.jar"
 fi
 
 #
