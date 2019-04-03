@@ -17,4 +17,6 @@ BEGIN
 END;$$;
 
 \i tsdb-init-permissions-solarauthn.sql
+\i tsdb-init-permissions-solarinput.sql
+\i tsdb-init-permissions-solarquery.sql
 \i tsdb-init-permissions-solarjobs.sql
