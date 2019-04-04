@@ -15,6 +15,25 @@ SN_BUILD_HOME="solarnetwork-build"
 VIRGO_HOME=""
 VERBOSE=""
 
+do_help () {
+	cat 1>&2 <<EOF
+Usage: $0 -a <app name> -h <dest> -i <ivy conf> [-b <build home>] [-rtv]
+
+Arguments:
+
+ -a <app name>       - the application to deploy; must be a directory in the apphome/ directory
+ -b <sn build home>  - the path to the solarnetwork-build repository directory
+ -h <dest home>      - a directory to deploy the application to; a directory named <app name> will
+                       be created here
+ -i <ivy path>       - the Ivy build file that defines all the application's dependencies; this is
+                       relative to the -b <sn build home> directory
+ -r                  - clean and recreate the application from scratch; this deletes any existing
+                       deployment directory <virgo home>/<app name> and then deploys a new copy
+ -t                  - test mode; do not deploy the application
+ -v                  - verbose mode; print out more verbose messages
+EOF
+}
+
 while getopts ":a:b:h:i:rtv" opt; do
 	case $opt in
 		a) APP_NAME="${OPTARG}";;
@@ -26,6 +45,7 @@ while getopts ":a:b:h:i:rtv" opt; do
 		v) VERBOSE='TRUE';;
 		?)
 			echo "Unknown argument ${OPTARG}"
+			do_help
 			exit 1
 	esac
 done
