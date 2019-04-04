@@ -1,0 +1,1 @@
+# SolarQuery: SolarNetwork data access
