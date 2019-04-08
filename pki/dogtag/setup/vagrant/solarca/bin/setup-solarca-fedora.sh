@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 
 CA_CONF="example/ca.cfg"
+CA_ADMIN_P12_PASS="Secret.123"
 DRY_RUN=""
 DS_INST_NAME="ca"
 DS_ROOT_PW="admin"
 DS_SUFFIX="dc=solarnetworkdev,dc=net"
 HOSTNAME="ca.solarnetworkdev.net"
+SN_PROFILE_CONF="example/SolarNode.cfg"
 UPDATE_PKGS=""
 VERBOSE=""
 
@@ -15,6 +17,9 @@ Usage: $0 [-nuv]
 
 Arguments:
  -c <CA config path> - path to the Dogtag CA configuration file to use; defaults to example/ca.cfg
+ -d <profile path>   - path to the Dogtag SolarNode profile configuration file to use; defaults to
+                       example/SolarNode.cfg
+ -e <admin p12 pw>   - the PKI Admin PKCS#12 password, i.e. from ca.cfg; defaults to Secret.123
  -h <host name>      - the FQDN for the machine; defaults to ca.solarnetworkdev.net
  -n                  - dry run; do not make any actual changes
  -o <DS inst name>   - the Directory Server instance name; defaults to ca
@@ -25,10 +30,12 @@ Arguments:
 EOF
 }
 
-while getopts ":c:h:no:p:s:uv" opt; do
+while getopts ":c:d:e:h:no:p:s:uv" opt; do
 	case $opt in
 		
 		c) CA_CONF="${OPTARG}";;
+		d) SN_PROFILE_CONF="${OPTARG}";;
+		e) CA_ADMIN_P12_PASS="${OPTARG}";;
 		h) HOSTNAME="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
 		o) DS_INST_NAME="${OPTARG}";;
@@ -266,7 +273,7 @@ setup_pki () {
 	if [ -d /var/lib/pki/pki-tomcat ]; then
 		echo 'Dogtag CA already present.'
 	else
-		echo 'Creating Dogtag CA system using configuration $CA_CONF...'
+		echo "Creating Dogtag CA system using configuration $CA_CONF..."
 		if [ -z "$DRY_RUN" ]; then
 			if [ ! -e "/vagrant/$CA_CONF" ]; then
 				echo "Dogtag CA config $CA_CONF not found; cannot create Dogtag CA system."
@@ -274,6 +281,46 @@ setup_pki () {
 			else
  				sudo pkispawn -s CA -f "/vagrant/$CA_CONF"
 			fi
+		fi
+	fi
+	
+	# the system is enabled via pki-tomcatd.target now
+	sudo systemctl enable pki-tomcatd.target
+	sudo systemctl start pki-tomcatd.target
+	
+	# Give Dogtag chance to come up - -TODO: only if just started it
+	sleep 5
+	
+	if sudo certutil -L -d /root/.dogtag/nssdb -n "CA Certificate" -a &>/dev/null; then
+		echo "CA Root Certificate already imported into nssdb."
+	else
+		echo "Importing CA Root Certificate into nssdb..."
+		sudo pki client-cert-import "CA Certificate" --ca-server
+	fi
+	
+	# Import cert for caadmin's pkiconsole
+	if sudo -u caadmin certutil -L -d /home/caadmin/.dogtag-idm-console -n "CA Certificate" -a &>/dev/null; then
+		echo "CA Root Certificate already imported into caadmin's pkiconsole nssdb."
+	else
+		echo "Importing CA Root Certificate into caadmin's pkiconsole nssdb..."
+		sudo -u caadmin pki -d /home/caadmin/.dogtag-idm-console client-cert-import "CA Certificate" --ca-server
+	fi
+	
+	local admin_nickname=$(sudo pki pkcs12-cert-find --pkcs12-file /root/.dogtag/pki-tomcat/ca_admin_cert.p12 --pkcs12-password "$CA_ADMIN_P12_PASS" |grep 'Friendly Name:' |cut -d : -f 2 |xargs)
+	if [ -n "$admin_nickname" ]; then
+		if sudo certutil -L -d .dogtag/nssdb -n "$admin_nickname" -a &>/dev/null; then
+			echo "CA Admin Certificate '$admin_nickname' already imported into nssdb."
+		else
+			echo "Importing CA Admin Certificate '$admin_nickname' into nssdb..."
+			sudo pki client-cert-import "$admin_nickname" --pkcs12 /root/.dogtag/pki-tomcat/ca_admin_cert.p12 --pkcs12-password "$CA_ADMIN_P12_PASS"
+		fi
+	
+		if sudo pki -n "$admin_nickname" ca-profile-show SolarNode &>/dev/null; then
+			echo "CA profile SolarNode already exists."
+		else
+			echo "Configuring CA profile SolarNode..."
+			sudo pki -n "$admin_nickname" ca-profile-add "/vagrant/$SN_PROFILE_CONF" --raw
+			sudo pki -n "$admin_nickname" ca-profile-enable SolarNode
 		fi
 	fi
 }
