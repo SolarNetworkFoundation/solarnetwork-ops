@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+CA_CONF="example/ca.cfg"
 DRY_RUN=""
 DS_INST_NAME="ca"
 DS_ROOT_PW="admin"
@@ -13,6 +14,7 @@ do_help () {
 Usage: $0 [-nuv]
 
 Arguments:
+ -c <CA config path> - path to the Dogtag CA configuration file to use; defaults to example/ca.cfg
  -h <host name>      - the FQDN for the machine; defaults to ca.solarnetworkdev.net
  -n                  - dry run; do not make any actual changes
  -o <DS inst name>   - the Directory Server instance name; defaults to ca
@@ -23,9 +25,10 @@ Arguments:
 EOF
 }
 
-while getopts ":h:no:p:s:uv" opt; do
+while getopts ":c:h:no:p:s:uv" opt; do
 	case $opt in
 		
+		c) CA_CONF="${OPTARG}";;
 		h) HOSTNAME="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
 		o) DS_INST_NAME="${OPTARG}";;
@@ -40,6 +43,24 @@ while getopts ":h:no:p:s:uv" opt; do
 	esac
 done
 shift $(($OPTIND - 1))
+
+# install package if not already installed
+pkg_install () {	
+	if dpkg -s $1 >/dev/null 2>/dev/null; then
+		echo "Package $1 already installed."
+	else
+		echo "Installing package $1 ..."
+		if [ -z "$DRY_RUN" ]; then
+			sudo apt-get -y install $1
+		fi
+	fi
+}
+
+setup_pkgs () {
+	if [ -n "$UPDATE_PKGS" ]; then
+		sudo apt-get update
+	fi
+}
 
 setup_hostname () {
 	if hostnamectl status --static |grep -q "$HOSTNAME"; then
@@ -81,30 +102,24 @@ setup_osuser () {
 	fi
 }
 
-# install package if not already installed
-apt_install () {	
-	if dpkg -s $1 >/dev/null 2>/dev/null; then
-		echo "Package $1 already installed."
+setup_swap () {
+
+	if grep -q '/swapfile' /etc/fstab; then
+		echo 'Swapfile already configured.'
 	else
-		echo "Installing package $1 ..."
+		echo 'Creating swapfile...'
 		if [ -z "$DRY_RUN" ]; then
-			sudo apt-get -y -q install $1
+			sudo fallocate -l 1G /swapfile
+			sudo chmod 600 /swapfile
+			sudo mkswap /swapfile
+			sudo swapon /swapfile
+			echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 		fi
 	fi
 }
 
-setup_pkgs () {
-	if [ -n "$UPDATE_PKGS" ]; then
-		sudo apt-get update
-	fi
-}
-
-setup_desktop () {
-	apt_install xfce4
-}
-
 setup_vnc () {
-	apt_install tigervnc-standalone-server
+	pkg_install tigervnc-standalone-server
 	
 	if sudo ls -d /home/caadmin/.vnc >/dev/null 2>&1; then
 		echo 'caadmin VNC configuration dir already exists.'
@@ -119,7 +134,13 @@ setup_vnc () {
 	else
 		echo 'Setting up VNC password for caadmin...'
 		if [ -z "$DRY_RUN" ]; then
-			sudo /sbin/runuser -u caadmin vncpasswd
+			local conf=$(cat <<-EOF
+				caadmin
+				caadmin
+				n
+				EOF
+				)
+			echo "$conf" |sudo /sbin/runuser -u caadmin vncpasswd
 		fi
 	fi
 	
@@ -162,9 +183,9 @@ setup_vnc () {
 	fi
 	
 	if [ -e /etc/systemd/system/vncserver@:1.service ]; then
-		echo 'VNC service already exists.'
+		echo 'caadmin VNC service already exists.'
 	else
-		echo 'Configuring VNC server for caadmin...'
+		echo 'Setting up caadmin VNC service...'
 		if [ -z "$DRY_RUN" ]; then
 			local conf=$(cat <<-"EOF"
 				[Unit]
@@ -177,7 +198,6 @@ setup_vnc () {
 				Group=caadmin
 				WorkingDirectory=/home/caadmin
 
-				PIDFile=/home/caadmin/.vnc/%H%i.pid
 				ExecStartPre=-/usr/bin/vncserver -kill %i > /dev/null 2>&1
 				ExecStart=/usr/bin/vncserver -depth 24 -geometry 1280x1024 %i
 				ExecStop=/usr/bin/vncserver -kill %i
@@ -189,44 +209,74 @@ setup_vnc () {
 			echo "$conf" |sudo tee /etc/systemd/system/vncserver@:1.service
 			sudo systemctl daemon-reload
 			sudo systemctl enable vncserver@:1
+			sudo systemctl start vncserver@:1
 		fi
 	fi
 }
 
+setup_desktop () {
+	pkg_install xfce4
+	pkg_install firefox
+}
+
 setup_ds () {
-	apt_install 389-ds
-	
-	if [ -e ds.inf ]; then
-		echo 'DS inf already exists.'
+	pkg_install 389-ds
+	pkg_install cockpit-389-ds
+
+	if dsctl -l |grep "slapd-$DS_INST_NAME"; then
+		echo "DS $DS_INST_NAME exists already."
 	else
-		echo 'Configuring DS inf...'
-		if [ -z "$DRY_RUN" ]; then
-			dscreate create-template ds.tmp
-			echo 'instance_name = ca' >>ds.tmp
-			sed \
-				-e "s/;instance_name = .*/instance_name = $DS_INST_NAME/" \
-				-e "s/;full_machine_name = .*/full_machine_name = $HOSTNAME/" \
-				-e "s/;suffix = .*/suffix = $DS_SUFFIX/" \
-				-e "s/;root_password = .*/root_password = $DS_ROOT_PW/" \
-				ds.tmp >ds.inf
-		fi
-	fi
-	if [ -e ds.inf ]; then
-		echo 'Configuring DS from ds.inf...'
-		if [ ! -e /usr/bin/systemctl ]; then
-			echo 'Adding /usr/bin/systemctl -> /bin/systemctl to work around dscreate bug...'
+		if [ -e ds.inf ]; then
+			echo 'DS inf already exists.'
+		else
+			echo 'Configuring DS inf...'
 			if [ -z "$DRY_RUN" ]; then
-				sudo ln -s /bin/systemctl /usr/bin/systemctl
+				dscreate create-template ds.tmp
+				echo 'instance_name = ca' >>ds.tmp
+				sed \
+					-e "s/;instance_name = .*/instance_name = $DS_INST_NAME/" \
+					-e "s/;full_machine_name = .*/full_machine_name = $HOSTNAME/" \
+					-e "s/;suffix = .*/suffix = $DS_SUFFIX/" \
+					-e "s/;root_password = .*/root_password = $DS_ROOT_PW/" \
+					ds.tmp >ds.inf
 			fi
 		fi
-		if [ -z "$DRY_RUN" ]; then
-			sudo dscreate -v fromfile ds.inf
+		if [ -e ds.inf ]; then
+			echo 'Configuring DS from ds.inf...'
+			if [ ! -e /usr/bin/systemctl ]; then
+				echo 'Adding /usr/bin/systemctl -> /bin/systemctl to work around dscreate bug...'
+				if [ -z "$DRY_RUN" ]; then
+					sudo ln -s /bin/systemctl /usr/bin/systemctl
+				fi
+			fi
+			if [ -z "$DRY_RUN" ]; then
+				sudo dscreate from-file ds.inf
+				mv ds.inf ds-ca.inf
+			fi
 		fi
 	fi
 }
 
 setup_pki () {
-	apt_install dogtag-pki
+	pkg_install pki-ca
+	
+	# non-headless Java needed for console
+	pkg_install java-1.8.0-openjdk
+	pkg_install pki-console
+	
+	if [ -d /var/lib/pki/pki-tomcat ]; then
+		echo 'Dogtag CA already present.'
+	else
+		echo 'Creating Dogtag CA system using configuration $CA_CONF...'
+		if [ -z "$DRY_RUN" ]; then
+			if [ ! -e "/vagrant/$CA_CONF" ]; then
+				echo "Dogtag CA config $CA_CONF not found; cannot create Dogtag CA system."
+				exit 1
+			else
+ 				sudo pkispawn -s CA -f "/vagrant/$CA_CONF"
+			fi
+		fi
+	fi
 }
 
 setup_pkgs

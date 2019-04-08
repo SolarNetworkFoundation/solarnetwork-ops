@@ -45,7 +45,7 @@ done
 shift $(($OPTIND - 1))
 
 # install package if not already installed
-yum_install () {	
+pkg_install () {	
 	if rpm -q $1 >/dev/null 2>&1; then
 		echo "Package $1 already installed."
 	else
@@ -133,7 +133,7 @@ setup_swap () {
 }
 
 setup_vnc () {
-	yum_install tigervnc-server
+	pkg_install tigervnc-server
 	
 	if sudo ls -d /home/caadmin/.vnc >/dev/null 2>&1; then
 		echo 'caadmin VNC configuration dir already exists.'
@@ -200,37 +200,27 @@ setup_vnc () {
 		echo 'caadmin VNC service already exists.'
 	else
 		echo 'Setting up caadmin VNC service...'
-		sudo cp /lib/systemd/system/vncserver@.service  /etc/systemd/system/vncserver@:1.service
-		sudo sed -i \
-			-e 's/<USER>/caadmin/' \
-			-e '/^PIDFile=/d' \
-			/etc/systemd/system/vncserver@\:1.service
-		sudo systemctl daemon-reload
-		sudo systemctl enable vncserver@:1
-		sudo systemctl start vncserver@:1
-	fi
-}
-
-setup_cockpit () {
-	if systemctl status cockpit.socket |grep ' disabled;'; then
-		echo 'Enabling cockpit service...'
 		if [ -z "$DRY_RUN" ]; then
-			sudo systemctl enable cockpit.socket
-			sudo systemctl start cockpit.socket
+			sudo cp /lib/systemd/system/vncserver@.service  /etc/systemd/system/vncserver@:1.service
+			sudo sed -i \
+				-e 's/<USER>/caadmin/' \
+				-e '/^PIDFile=/d' \
+				/etc/systemd/system/vncserver@\:1.service
+			sudo systemctl daemon-reload
+			sudo systemctl enable vncserver@:1
+			sudo systemctl start vncserver@:1
 		fi
-	else
-		echo 'Cockpit service already enabled.'
 	fi
 }
 
 setup_desktop () {
 	yum_groupinstall "Xfce Desktop"
-	yum_install firefox
+	pkg_install firefox
 }
 
 setup_ds () {
-	yum_install 389-ds
-	yum_install cockpit-389-ds
+	pkg_install 389-ds
+	pkg_install cockpit-389-ds
 
 	if dsctl -l |grep "slapd-$DS_INST_NAME"; then
 		echo "DS $DS_INST_NAME exists already."
@@ -267,11 +257,11 @@ setup_ds () {
 }
 
 setup_pki () {
-	yum_install pki-ca
+	pkg_install pki-ca
 	
 	# non-headless Java needed for console
-	yum_install java-1.8.0-openjdk
-	yum_install pki-console
+	pkg_install java-1.8.0-openjdk
+	pkg_install pki-console
 	
 	if [ -d /var/lib/pki/pki-tomcat ]; then
 		echo 'Dogtag CA already present.'
@@ -288,6 +278,18 @@ setup_pki () {
 	fi
 }
 
+setup_cockpit () {
+	if systemctl status cockpit.socket |grep ' disabled;'; then
+		echo 'Enabling cockpit service...'
+		if [ -z "$DRY_RUN" ]; then
+			sudo systemctl enable cockpit.socket
+			sudo systemctl start cockpit.socket
+		fi
+	else
+		echo 'Cockpit service already enabled.'
+	fi
+}
+
 setup_pkgs
 setup_hostname
 setup_dns
@@ -297,4 +299,5 @@ setup_desktop
 setup_vnc
 setup_ds
 setup_pki
+
 setup_cockpit
