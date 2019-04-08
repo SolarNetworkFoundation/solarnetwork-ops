@@ -21,10 +21,10 @@ Vagrant.configure(2) do |config|
 	config.vm.box = vm_box
 	config.vm.box_version = vm_box_version
 	config.vm.define vm_define
-	config.vm.guest = :linux
 	#config.vm.hostname = vm_define
-	config.vm.synced_folder ".", "/vagrant", type: "rsync", id: "vagrant-root", :mount_options => ["dmode=755"]
+	config.vm.network "private_network", type: "dhcp"
 #	config.vm.network "forwarded_port", guest: 5901, host: 9901
+	config.vm.synced_folder ".", "/vagrant", type: "rsync", id: "vagrant-root", :mount_options => ["dmode=755"]
 
 	config.vm.provision :shell, path: bootstrap_path, :args => [
 		"-u"
