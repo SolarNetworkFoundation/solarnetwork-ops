@@ -2,12 +2,12 @@ vm_define="solarca"
 vm_name="SolarNet CA"
 #vm_box="centos/7"
 #vm_box_version=">= 1902.01"
-vm_box="ubuntu/cosmic64"
-vm_box_version=">= 20190403.0.0"
+vm_box="fedora/29-cloud-base"
+vm_box_version=">= 29.20181024.1"
 cpu_count=1
 memory_size=1024
 gui=false
-bootstrap_path="bin/setup-solarca-debian.sh"
+bootstrap_path="bin/setup-solarca-fedora.sh"
 
 # Read any user specific configuration overrides - cater for this file not existing
 local_env_config_file="Vagrantfile.local"
