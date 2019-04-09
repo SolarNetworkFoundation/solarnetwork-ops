@@ -308,7 +308,7 @@ setup_pki () {
 	
 	local admin_nickname=$(sudo pki pkcs12-cert-find --pkcs12-file /root/.dogtag/pki-tomcat/ca_admin_cert.p12 --pkcs12-password "$CA_ADMIN_P12_PASS" |grep 'Friendly Name:' |cut -d : -f 2 |xargs)
 	if [ -n "$admin_nickname" ]; then
-		if sudo certutil -L -d .dogtag/nssdb -n "$admin_nickname" -a &>/dev/null; then
+		if sudo certutil -L -d /root/.dogtag/nssdb -n "$admin_nickname" -a &>/dev/null; then
 			echo "CA Admin Certificate '$admin_nickname' already imported into nssdb."
 		else
 			echo "Importing CA Admin Certificate '$admin_nickname' into nssdb..."
