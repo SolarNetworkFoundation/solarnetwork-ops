@@ -4,6 +4,10 @@ CA_CONF="example/ca.cfg"
 CA_SEC_DOMAIN_NAME="SolarNetworkDev"
 CA_SEC_DOMAIN_PASS="Secret.123"
 CA_ADMIN_P12_PASS="Secret.123"
+CA_AGENT_UID="suagent"
+CA_AGENT_NAME="SolarUser Agent"
+CA_AGENT_EMAIL="sugagent@solarnetworkdev.net"
+CA_AGENT_P12_PASS="Secret.123"
 DRY_RUN=""
 DS_INST_NAME="ca"
 DS_ROOT_PW="admin"
@@ -27,6 +31,10 @@ Arguments:
  -f <sec domain pw>  - the PKI security domain password, i.e. from ca.cfg; defaults to Secret.123
  -h <host name>      - the FQDN for the machine; defaults to ca.solarnetworkdev.net
  -i <in DNS name>    - the SoalrIn DNS name; defaults to in.solarentworkdev.net
+ -J <agent uid>      - the SolarUser agent UID; defaults to suagent
+ -j <agent name>     - the SolarUser agent name; defaults to "SolarUser Agent"
+ -K <agent email>    - the SolarUser agent email; defaults to "suagent@solarnetworkdev.net"
+ -k <agent p12 pw>   - the SolarUser agent PKCS#12 password; defaults to Secret.123
  -n                  - dry run; do not make any actual changes
  -o <DS inst name>   - the Directory Server instance name; defaults to ca
  -p <DS root pw>     - the Directory Server root user password; defaults to admin
@@ -36,7 +44,7 @@ Arguments:
 EOF
 }
 
-while getopts ":c:d:e:F:f:h:i:no:p:s:uv" opt; do
+while getopts ":c:d:e:F:f:h:i:J:j:K:k:no:p:s:uv" opt; do
 	case $opt in
 		
 		c) CA_CONF="${OPTARG}";;
@@ -46,6 +54,10 @@ while getopts ":c:d:e:F:f:h:i:no:p:s:uv" opt; do
 		f) CA_SEC_DOMAIN_PASS="${OPTARG}";;
 		h) HOSTNAME="${OPTARG}";;
 		i) HOSTNAME="${OPTARG}";;
+		J) CA_AGENT_UID="${OPTARG}";;
+		j) CA_AGENT_NAME="${OPTARG}";;
+		K) CA_AGENT_EMAIL="${OPTARG}";;
+		k) CA_AGENT_P12_PASS="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
 		o) DS_INST_NAME="${OPTARG}";;
 		p) DS_ROOT_PW="${OPTARG}";;
@@ -358,6 +370,11 @@ setup_pki () {
 		fi
 	fi	
 	
+	# SolarIn server certificate creation
+	#
+	# SolarIn requires a server certificate. The following block creates one based on the SN_IN_DNS_NAME
+	# value. The certificate and private key will be exported as a PKCS#12 file at .dogtag/pki-tomcat/SN_IN_DNS_NAME.p12
+	
 	if sudo ls "/home/caadmin/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" 2>/dev/null; then
 		echo "$SN_IN_DNS_NAME certificate already exists."
 	else
@@ -384,13 +401,64 @@ setup_pki () {
 					echo "Importing approved $SN_IN_DNS_NAME certificate $cert_id to nssdb..."
 					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$SN_IN_DNS_NAME" --serial $cert_id
 					
-					echo "Exporting approved $SN_IN_DNS_NAME certificate and private key to $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.nssdb.p12..."
+					echo "Exporting approved $SN_IN_DNS_NAME certificate and private key $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.nssdb.p12..."
 					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_IN_DNS_NAME" \
 						--pkcs12-file "/home/caadmin/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" --pkcs12-password "$CA_ADMIN_P12_PASS"
 					
-					echo "Exporting approved $SN_IN_DNS_NAME certificate and private key to $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12..."
+					echo "Exporting approved $SN_IN_DNS_NAME certificate and private key $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12..."
 					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_IN_DNS_NAME" \
 						--pkcs12-file "/home/caadmin/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" --pkcs12-password "$CA_ADMIN_P12_PASS" \
+						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
+				fi
+			fi	
+		fi
+	fi
+	
+	# SolarUser agent certificate creation
+	#
+	# SolarUser requires an "agent" user and associated client certificate to manage SolarNode certificates.
+	# The following block creates a `suagent` PKI user, adds them to the `Certificate Manager Agents` group,
+	# and then creates a certificate for the user. The certificate and private key will be exported as a 
+	# PKCS#12 file at .dogtag/pki-tomcat/suagent.p12
+	
+	if sudo ls "/home/caadmin/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" 2>/dev/null; then
+		echo "$CA_AGENT_UID certificate already exists."
+	else
+		echo "Creating SolarUser agent user $CA_AGENT_UID..."
+		if [ -z "$DRY_RUN" ]; then
+			sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-add "$CA_AGENT_UID" \
+				--fullName "$CA_AGENT_NAME" --email "$CA_AGENT_EMAIL"
+				
+			echo "Adding $CA_AGENT_UID agent user to group..."
+			sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname"  ca-group-member-add \
+				"Certificate Manager Agents" "$CA_AGENT_UID"
+		fi
+				
+		echo "Creating $CA_AGENT_UID certificate..."
+		if [ -z "$DRY_RUN" ]; then
+			local req_id=$(sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
+				"UID=$CA_AGENT_UID,E=$CA_AGENT_EMAIL,CN=$CA_AGENT_NAME,OU=SolarUser,O=$CA_SEC_DOMAIN_NAME" --profile caUserCert \
+				|grep 'Request ID:' |cut -d : -f 2 |xargs)
+			if [ -z "$req_id" ]; then
+				echo "ERROR: unable to request $CA_AGENT_UID certificate."
+				exit 1
+			else
+				echo "Approving $CA_AGENT_UID certificate request $req_id..."
+				local cert_id=$(sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
+					|grep 'Certificate ID:'|cut -d : -f 2 |xargs)
+				if [ -z "$cert_id" ]; then
+					echo "ERROR: unable to approve $CA_AGENT_UID certificate."
+					exit 1
+				else
+					echo "Adding $CA_AGENT_UID certificate to user..."
+					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$CA_AGENT_UID" --serial "$cert_id"
+					
+					echo "Importing approved $CA_AGENT_UID certificate $cert_id to nssdb..."
+					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$CA_AGENT_UID" --serial $cert_id
+					
+					echo "Exporting approved $CA_AGENT_UID certificate and private key $cert_id to .dogtag/pki-tomcat/$CA_AGENT_UID.p12..."
+					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$CA_AGENT_UID" \
+						--pkcs12-file "/home/caadmin/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" --pkcs12-password "$CA_AGENT_P12_PASS" \
 						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
 				fi
 			fi	
