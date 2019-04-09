@@ -72,6 +72,8 @@ while getopts ":c:d:e:F:f:h:i:J:j:K:k:no:p:s:uv" opt; do
 done
 shift $(($OPTIND - 1))
 
+did_pki=""
+
 # install package if not already installed
 pkg_install () {	
 	if rpm -q $1 >/dev/null 2>&1; then
@@ -163,7 +165,7 @@ setup_swap () {
 setup_vnc () {
 	pkg_install tigervnc-server
 	
-	if sudo ls -d /home/caadmin/.vnc >/dev/null 2>&1; then
+	if sudo ls -d /home/caadmin/.vnc &>/dev/null; then
 		echo 'caadmin VNC configuration dir already exists.'
 	else
 		if [ -z "$DRY_RUN" ]; then
@@ -171,7 +173,7 @@ setup_vnc () {
 		fi
 	fi
 	
-	if sudo ls /home/caadmin/.vnc/passwd >/dev/null 2>&1; then
+	if sudo ls /home/caadmin/.vnc/passwd &>/dev/null; then
 		echo 'caadmin VNC password already exists.'
 	else
 		echo 'Setting up VNC password for caadmin...'
@@ -186,7 +188,7 @@ setup_vnc () {
 		fi
 	fi
 	
-	if sudo ls /home/caadmin/.vnc/config >/dev/null 2>&1; then
+	if sudo ls /home/caadmin/.vnc/config &>/dev/null; then
 		echo 'caadmin VNC config already exists.'
 	else
 		echo 'Setting up VNC config for caadmin...'
@@ -201,7 +203,7 @@ setup_vnc () {
 		fi
 	fi
 
-	if sudo ls /home/caadmin/.vnc/xstartup >/dev/null 2>&1; then
+	if sudo ls /home/caadmin/.vnc/xstartup &>/dev/null; then
 		echo 'caadmin VNC xstartup already exists.'
 	else
 		echo 'Setting up VNC xstartup for caadmin...'
@@ -302,6 +304,7 @@ setup_pki () {
 				exit 1
 			else
  				sudo pkispawn -s CA -f "/vagrant/$CA_CONF"
+ 				did_pki=1
 			fi
 		fi
 	fi
@@ -324,8 +327,10 @@ setup_pki () {
 		fi
 	fi
 	
-	echo "-----CA Root Certificate .dogtag/pki-tomcat/ca-root.crt-----"
-	sudo certutil -L -d /root/.dogtag/nssdb -n "CA Certificate" -a |sudo tee /root/.dogtag/pki-tomcat/ca-root.crt
+	if [ -z "$DRY_RUN" ]; then
+		echo "-----CA Root Certificate .dogtag/pki-tomcat/ca-root.crt-----"
+		sudo certutil -L -d /root/.dogtag/nssdb -n "CA Certificate" -a |sudo tee /root/.dogtag/pki-tomcat/ca-root.crt
+	fi
 	
 	# Import cert for caadmin's pkiconsole
 	if sudo -u caadmin certutil -L -d /home/caadmin/.dogtag-idm-console -n "CA Certificate" -a &>/dev/null; then
@@ -360,7 +365,7 @@ setup_pki () {
 	fi
 	
 	# Copy entire pki nssdb to caadmin
-	if sudo ls /home/caadmin/.dogtag >/dev/null 2>&1; then
+	if sudo ls /home/caadmin/.dogtag &>/dev/null; then
 		echo 'caadmin pki data exists.'
 	else
 		echo 'Setting up caadmin pki data...'
@@ -368,14 +373,25 @@ setup_pki () {
 			sudo rsync -a /root/.dogtag /home/caadmin
 			sudo chown -R caadmin:caadmin /home/caadmin/.dogtag
 		fi
-	fi	
+	fi
+
+	if sudo ls /home/caadmin/.dogtag/pki-tomcat/central-trust.jks &>/dev/null; then
+		echo 'central-trust.jks keystore already exists.'
+	else
+		echo 'Setting up central-trust.jks keystore...'
+		if [ -z "$DRY_RUN" ]; then
+			sudo -u caadmin keytool -importcert -trustcacerts -alias ca \
+				-keystore /home/caadmin/.dogtag/pki-tomcat/central-trust.jks -storetype jks -storepass dev123 \
+				-file /home/caadmin/.dogtag/pki-tomcat/ca-root.crt -noprompt
+		fi
+	fi
 	
 	# SolarIn server certificate creation
 	#
 	# SolarIn requires a server certificate. The following block creates one based on the SN_IN_DNS_NAME
 	# value. The certificate and private key will be exported as a PKCS#12 file at .dogtag/pki-tomcat/SN_IN_DNS_NAME.p12
 	
-	if sudo ls "/home/caadmin/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" 2>/dev/null; then
+	if sudo ls "/home/caadmin/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" &>/dev/null; then
 		echo "$SN_IN_DNS_NAME certificate already exists."
 	else
 		echo "Creating $SN_IN_DNS_NAME certificate..."
@@ -421,7 +437,7 @@ setup_pki () {
 	# and then creates a certificate for the user. The certificate and private key will be exported as a 
 	# PKCS#12 file at .dogtag/pki-tomcat/suagent.p12
 	
-	if sudo ls "/home/caadmin/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" 2>/dev/null; then
+	if sudo ls "/home/caadmin/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" &>/dev/null; then
 		echo "$CA_AGENT_UID certificate already exists."
 	else
 		echo "Creating SolarUser agent user $CA_AGENT_UID..."
@@ -464,10 +480,24 @@ setup_pki () {
 			fi	
 		fi
 	fi
+
+	if sudo ls /home/caadmin/.dogtag/pki-tomcat/dogtag-client.jks &>/dev/null; then
+		echo 'dogtag-client.jks keystore already exists.'
+	else
+		echo 'Setting up dogtag-client.jks keystore...'
+		if [ -z "$DRY_RUN" ]; then
+			sudo -u caadmin keytool -importkeystore -srckeystore /home/caadmin/.dogtag/pki-tomcat/suagent.p12 \
+				-srcstoretype pkcs12 -srcstorepass "$CA_AGENT_P12_PASS" \
+				-destkeystore /home/caadmin/.dogtag/pki-tomcat/dogtag-client.jks \
+				-deststoretype jks -deststorepass dev123 -noprompt
+		fi
+	fi
 }
 
 setup_firewall() {
-	firewall-cmd --quiet --zone=public --add-port=8443/tcp --permanent 
+	firewall-cmd --quiet --zone=public --add-port=8080/tcp --permanent
+	firewall-cmd --quiet --zone=public --add-port=8080/tcp
+	firewall-cmd --quiet --zone=public --add-port=8443/tcp --permanent
 	firewall-cmd --quiet --zone=public --add-port=8443/tcp
 }
 
@@ -483,6 +513,48 @@ setup_cockpit () {
 	fi
 }
 
+show_results () {
+	if [ -n "$did_pki" ]; then
+		cat <<-EOF
+			
+			Dogtag PKI has been setup at https://$HOSTNAME:8443/ca.
+			You may need to add a hosts entry for $HOSTNAME from one of these IP addresses:
+			
+			  `hostname -I`
+				
+			The Dogtag root CA certificate has been saved to:
+			
+			  /home/caadmin/.dogtag/pki-tomcat/ca-root.crt
+				
+			You can import this certificate as a trusted CA. The certificate has been copied into
+			a Java keystore for use by SolarNetwork applications, with a password 'dev123':
+			
+			  /home/caadmin/.dogtag/pki-tomcat/central-trust.jks
+
+			You need an admin certificate to access Dogtag, which as been created as the PKCS#12 file
+
+			  /home/caadmin/.dogtag/pki-tomcat/ca_admin_cert.p12
+			
+			that contains the private key and certificate you can import into your browser. The 
+			password used was specified in the 'pki_client_pkcs12_password' property in the PKI
+			configuration file $CA_CONF.
+			
+			A CA Agent user 'suagent' has been created for SolarUser to integrate with Dogtag. This
+			user has been added to the 'Certificate Manager Agents' group. A PKCS#12 file for this
+			user has been created as
+			
+			  /home/caadmin/.dogtag/pki-tomcat/suagent.p12
+				
+			The suagent.p12 file has been copied into a Java keystore for use by SolarNetwork
+			applications, with a store password 'dev123':
+			
+			  /home/caadmin/.dogtag/pki-tomcat/dogtag-client.jks
+
+			
+		EOF
+	fi
+}
+
 setup_pkgs
 setup_hostname
 setup_dns
@@ -495,3 +567,5 @@ setup_pki
 setup_firewall
 
 setup_cockpit
+
+show_results
