@@ -306,6 +306,17 @@ setup_pki () {
 		sudo -u caadmin pki -d /home/caadmin/.dogtag-idm-console client-cert-import "CA Certificate" --ca-server
 	fi
 	
+	# Copy entire pki nssdb to caadmin
+	if sudo ls /home/caadmin/.dogtag >/dev/null 2>&1; then
+		echo 'caadmin pki data exists.'
+	else
+		echo 'Setting up caadmin pki data...'
+		if [ -z "$DRY_RUN" ]; then
+			sudo rsync -a /root/.dogtag /home/caadmin
+			sudo chown -R caadmin:caadmin /home/caadmin/.dogtag
+		fi
+	fi	
+	
 	local admin_nickname=$(sudo pki pkcs12-cert-find --pkcs12-file /root/.dogtag/pki-tomcat/ca_admin_cert.p12 --pkcs12-password "$CA_ADMIN_P12_PASS" |grep 'Friendly Name:' |cut -d : -f 2 |xargs)
 	if [ -n "$admin_nickname" ]; then
 		if sudo certutil -L -d /root/.dogtag/nssdb -n "$admin_nickname" -a &>/dev/null; then
