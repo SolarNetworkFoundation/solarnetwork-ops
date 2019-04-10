@@ -3,14 +3,17 @@
 CA_CONF="example/ca.cfg"
 CA_SEC_DOMAIN_NAME="SolarNetworkDev"
 CA_SEC_DOMAIN_PASS="Secret.123"
-CA_ADMIN_P12_PASS="Secret.123"
+CA_ADMIN_LOGIN="caadmin"
+CA_ADMIN_HOME="/home/caadmin"
+CA_ADMIN_PASS="caadmin"
+PKI_ADMIN_P12_PASS="Secret.123"
 CA_AGENT_UID="suagent"
 CA_AGENT_NAME="SolarUser Agent"
 CA_AGENT_EMAIL="sugagent@solarnetworkdev.net"
 CA_AGENT_P12_PASS="Secret.123"
 DRY_RUN=""
 DS_INST_NAME="ca"
-DS_ROOT_PW="admin"
+DS_ROOT_PASS="admin"
 DS_SUFFIX="dc=solarnetworkdev,dc=net"
 HOSTNAME="ca.solarnetworkdev.net"
 SN_PROFILE_CONF="example/SolarNode.cfg"
@@ -18,38 +21,48 @@ SN_IN_DNS_NAME="in.solarnetworkdev.net"
 UPDATE_PKGS=""
 VERBOSE=""
 
+if [ $(id -u) -ne 0 ]; then
+	echo "This script must be run as root."
+	exit 1
+fi
+
 do_help () {
 	cat 1>&2 <<EOF
 Usage: $0 [-nuv]
 
 Arguments:
- -c <CA config path> - path to the Dogtag CA configuration file to use; defaults to example/ca.cfg
- -d <profile path>   - path to the Dogtag SolarNode profile configuration file to use; defaults to
-                       example/SolarNode.cfg
- -e <admin p12 pw>   - the PKI Admin PKCS#12 password, i.e. from ca.cfg; defaults to Secret.123
- -F <sec domain pw>  - the PKI security domain name, i.e. from ca.cfg; defaults to SolarNetworkDev
- -f <sec domain pw>  - the PKI security domain password, i.e. from ca.cfg; defaults to Secret.123
- -h <host name>      - the FQDN for the machine; defaults to ca.solarnetworkdev.net
- -i <in DNS name>    - the SoalrIn DNS name; defaults to in.solarentworkdev.net
- -J <agent uid>      - the SolarUser agent UID; defaults to suagent
- -j <agent name>     - the SolarUser agent name; defaults to "SolarUser Agent"
- -K <agent email>    - the SolarUser agent email; defaults to "suagent@solarnetworkdev.net"
- -k <agent p12 pw>   - the SolarUser agent PKCS#12 password; defaults to Secret.123
- -n                  - dry run; do not make any actual changes
- -o <DS inst name>   - the Directory Server instance name; defaults to ca
- -p <DS root pw>     - the Directory Server root user password; defaults to admin
- -s <DN suffix>      - the Directory Server DN suffix to use; defaults to dc=solarnetworkdev,dc=net
- -u                  - update package cache
- -v                  - verbose mode; print out more verbose messages
+ -A <admin username>    - the CA Admin OS username; defaults to caadmin
+ -a <admin home>        - the CA Admin OS home; defafults to $CA_ADMIN_HOME
+ -c <PKI config path>   - path to the Dogtag CA configuration file to use; defaults to example/ca.cfg
+ -d <profile path>      - path to the Dogtag SolarNode profile configuration file to use; defaults to
+                          example/SolarNode.cfg
+ -E <admin pw>          - the CA admin OS user password; defaults to caadmin
+ -e <pki admin p12 pw>  - the PKI Admin PKCS#12 password, i.e. from ca.cfg; defaults to Secret.123
+ -F <sec domain pw>     - the PKI security domain name, i.e. from ca.cfg; defaults to SolarNetworkDev
+ -f <sec domain pw>     - the PKI security domain password, i.e. from ca.cfg; defaults to Secret.123
+ -h <host name>         - the FQDN for the machine; defaults to ca.solarnetworkdev.net
+ -i <in DNS name>       - the SoalrIn DNS name; defaults to in.solarentworkdev.net
+ -J <agent uid>         - the SolarUser agent UID; defaults to suagent
+ -j <agent name>        - the SolarUser agent name; defaults to "SolarUser Agent"
+ -K <agent email>       - the SolarUser agent email; defaults to "suagent@solarnetworkdev.net"
+ -k <agent p12 pw>      - the SolarUser agent PKCS#12 password; defaults to Secret.123
+ -n                     - dry run; do not make any actual changes
+ -o <DS inst name>      - the Directory Server instance name; defaults to ca
+ -p <DS root pw>        - the Directory Server root user password; defaults to admin
+ -s <DN suffix>         - the Directory Server DN suffix to use; defaults to dc=solarnetworkdev,dc=net
+ -u                     - update package cache
+ -v                     - verbose mode; print out more verbose messages
 EOF
 }
 
-while getopts ":c:d:e:F:f:h:i:J:j:K:k:no:p:s:uv" opt; do
-	case $opt in
-		
+while getopts ":A:a:c:d:E:e:F:f:h:i:J:j:K:k:no:p:s:uv" opt; do
+	case $opt in		
+		A) CA_ADMIN_LOGIN="${OPTARG}";;
+		a) CA_ADMIN_HOME="${OPTARG}";;
 		c) CA_CONF="${OPTARG}";;
 		d) SN_PROFILE_CONF="${OPTARG}";;
-		e) CA_ADMIN_P12_PASS="${OPTARG}";;
+		E) CA_ADMIN_PASS="${OPTARG}";;
+		e) PKI_ADMIN_P12_PASS="${OPTARG}";;
 		F) CA_SEC_DOMAIN_NAME="${OPTARG}";;
 		f) CA_SEC_DOMAIN_PASS="${OPTARG}";;
 		h) HOSTNAME="${OPTARG}";;
@@ -60,7 +73,7 @@ while getopts ":c:d:e:F:f:h:i:J:j:K:k:no:p:s:uv" opt; do
 		k) CA_AGENT_P12_PASS="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
 		o) DS_INST_NAME="${OPTARG}";;
-		p) DS_ROOT_PW="${OPTARG}";;
+		p) DS_ROOT_PASS="${OPTARG}";;
 		s) DS_SUFFIX="${OPTARG}";;
 		u) UPDATE_PKGS='TRUE';;
 		v) VERBOSE='TRUE';;
@@ -73,6 +86,7 @@ done
 shift $(($OPTIND - 1))
 
 did_pki=""
+did_vnc=""
 
 # install package if not already installed
 pkg_install () {	
@@ -81,7 +95,7 @@ pkg_install () {
 	else
 		echo "Installing package $1 ..."
 		if [ -z "$DRY_RUN" ]; then
-			sudo yum -y install $1
+			yum -y install $1
 		fi
 	fi
 }
@@ -94,15 +108,18 @@ yum_groupinstall () {
 	else
 		echo "Installing package group $1 ..."
 		if [ -z "$DRY_RUN" ]; then
-			sudo yum -y groupinstall "$1"
+			yum -y groupinstall "$1"
 		fi
 	fi
 }
 
 setup_pkgs () {
 	if [ -n "$UPDATE_PKGS" ]; then
-		sudo yum upgrade -y
-		sudo yum makecache
+		echo 'Upgrading OS packages...'
+		if [ -z "$DRY_RUN" ]; then
+			yum upgrade -y
+			yum makecache
+		fi
 	fi
 }
 
@@ -111,7 +128,7 @@ setup_hostname () {
 		echo "Hostname already set to $HOSTNAME."
 	else
 		echo "Setting hostname to $HOSTNAME..."
-		sudo hostnamectl set-hostname "$HOSTNAME"
+		hostnamectl set-hostname "$HOSTNAME"
 	fi
 }
 
@@ -127,37 +144,36 @@ setup_dns () {
 		fi
 		if [ "$(diff /etc/hosts /tmp/hosts.new)" ]; then
 			chmod 644 /tmp/hosts.new
-			sudo chown root:root /tmp/hosts.new
-			sudo cp -a /etc/hosts /etc/hosts.bak
-			sudo mv -f /tmp/hosts.new /etc/hosts
+			chown root:root /tmp/hosts.new
+			cp -a /etc/hosts /etc/hosts.bak
+			mv -f /tmp/hosts.new /etc/hosts
 		fi
 	fi
 }
 
 setup_osuser () {
-	if getent passwd caadmin >/dev/null; then
-		echo 'caadmin user already exists.'
+	if getent passwd $CA_ADMIN_LOGIN >/dev/null; then
+		echo "$CA_ADMIN_LOGIN user already exists."
 	else
-		echo 'Adding caadmin user.'
+		echo "Adding $CA_ADMIN_LOGIN user."
 		if [ -z "$DRY_RUN" ]; then
-			sudo useradd -c 'CA Admin' -s /bin/bash -m -U caadmin
-			sudo sh -c 'echo "caadmin:caadmin" |chpasswd'
+			useradd -c 'CA Admin' -s /bin/bash -m -U "$CA_ADMIN_LOGIN" -d "$CA_ADMIN_HOME"
+			echo "$CA_ADMIN_PASS:$CA_ADMIN_PASS" |chpasswd
 		fi
 	fi
 }
 
 setup_swap () {
-
 	if grep -q '/swapfile' /etc/fstab; then
 		echo 'Swapfile already configured.'
 	else
 		echo 'Creating swapfile...'
 		if [ -z "$DRY_RUN" ]; then
-			sudo fallocate -l 1G /swapfile
-			sudo chmod 600 /swapfile
-			sudo mkswap /swapfile
-			sudo swapon /swapfile
-			echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+			fallocate -l 1G /swapfile
+			chmod 600 /swapfile
+			mkswap /swapfile
+			swapon /swapfile
+			echo '/swapfile none swap sw 0 0' >>/etc/fstab
 		fi
 	fi
 }
@@ -165,33 +181,33 @@ setup_swap () {
 setup_vnc () {
 	pkg_install tigervnc-server
 	
-	if sudo ls -d /home/caadmin/.vnc &>/dev/null; then
-		echo 'caadmin VNC configuration dir already exists.'
+	if  [ -d "$CA_ADMIN_HOME/.vnc" ]; then
+		echo "$CA_ADMIN_LOGIN VNC configuration dir already exists."
 	else
 		if [ -z "$DRY_RUN" ]; then
-			sudo -u caadmin mkdir /home/caadmin/.vnc
+			sudo -u $CA_ADMIN_LOGIN mkdir "$CA_ADMIN_HOME/.vnc"
 		fi
 	fi
 	
-	if sudo ls /home/caadmin/.vnc/passwd &>/dev/null; then
-		echo 'caadmin VNC password already exists.'
+	if [ -e "$CA_ADMIN_HOME/.vnc/passwd" ]; then
+		echo "$CA_ADMIN_LOGIN VNC password already exists."
 	else
-		echo 'Setting up VNC password for caadmin...'
+		echo "Setting up VNC password for $CA_ADMIN_LOGIN..."
 		if [ -z "$DRY_RUN" ]; then
 			local conf=$(cat <<-EOF
-				caadmin
-				caadmin
+				$CA_ADMIN_PASS
+				$CA_ADMIN_PASS
 				n
 				EOF
 				)
-			echo "$conf" |sudo /sbin/runuser -u caadmin vncpasswd
+			echo "$conf" |/sbin/runuser -u $CA_ADMIN_LOGIN vncpasswd
 		fi
 	fi
 	
-	if sudo ls /home/caadmin/.vnc/config &>/dev/null; then
-		echo 'caadmin VNC config already exists.'
+	if [ -e "$CA_ADMIN_HOME/.vnc/config" ]; then
+		echo "$CA_ADMIN_LOGIN VNC config already exists."
 	else
-		echo 'Setting up VNC config for caadmin...'
+		echo "Setting up VNC config for $CA_ADMIN_LOGIN..."
 		if [ -z "$DRY_RUN" ]; then
 			local conf=$(cat <<-EOF
 				localhost
@@ -199,14 +215,14 @@ setup_vnc () {
 				geometry=1280x1024
 				EOF
 				)
-			echo "$conf" |sudo -u caadmin tee /home/caadmin/.vnc/config
+			echo "$conf" |sudo -u $CA_ADMIN_LOGIN tee "$CA_ADMIN_HOME/.vnc/config"
 		fi
 	fi
 
-	if sudo ls /home/caadmin/.vnc/xstartup &>/dev/null; then
-		echo 'caadmin VNC xstartup already exists.'
+	if [ -e "$CA_ADMIN_HOME/.vnc/xstartup" ]; then
+		echo "$CA_ADMIN_LOGIN VNC xstartup already exists."
 	else
-		echo 'Setting up VNC xstartup for caadmin...'
+		echo "Setting up VNC xstartup for $CA_ADMIN_LOGIN..."
 		if [ -z "$DRY_RUN" ]; then
 			local conf=$(cat <<-"EOF"
 				#!/bin/sh
@@ -220,25 +236,26 @@ setup_vnc () {
 				twm &
 			EOF
 			)
-			echo "$conf" |sudo -u caadmin tee /home/caadmin/.vnc/xstartup
+			echo "$conf" |sudo -u $CA_ADMIN_LOGIN tee "$CA_ADMIN_HOME/.vnc/xstartup"
 		
-			sudo chmod 755 /home/caadmin/.vnc/xstartup
+			chmod 755 "$CA_ADMIN_HOME/.vnc/xstartup"
 		fi
 	fi
 	
 	if [ -e /etc/systemd/system/vncserver@:1.service ]; then
-		echo 'caadmin VNC service already exists.'
+		echo "$CA_ADMIN_LOGIN VNC service already exists."
 	else
-		echo 'Setting up caadmin VNC service...'
+		echo "Setting up $CA_ADMIN_LOGIN VNC service..."
 		if [ -z "$DRY_RUN" ]; then
-			sudo cp /lib/systemd/system/vncserver@.service  /etc/systemd/system/vncserver@:1.service
-			sudo sed -i \
-				-e 's/<USER>/caadmin/' \
+			cp /lib/systemd/system/vncserver@.service  /etc/systemd/system/vncserver@:1.service
+			sed -i \
+				-e "s/<USER>/$CA_ADMIN_LOGIN/" \
 				-e '/^PIDFile=/d' \
 				/etc/systemd/system/vncserver@\:1.service
-			sudo systemctl daemon-reload
-			sudo systemctl enable vncserver@:1
-			sudo systemctl start vncserver@:1
+			systemctl daemon-reload
+			systemctl enable vncserver@:1
+			systemctl start vncserver@:1
+			did_vnc="1"
 		fi
 	fi
 }
@@ -266,7 +283,7 @@ setup_ds () {
 					-e "s/;instance_name = .*/instance_name = $DS_INST_NAME/" \
 					-e "s/;full_machine_name = .*/full_machine_name = $HOSTNAME/" \
 					-e "s/;suffix = .*/suffix = $DS_SUFFIX/" \
-					-e "s/;root_password = .*/root_password = $DS_ROOT_PW/" \
+					-e "s/;root_password = .*/root_password = $DS_ROOT_PASS/" \
 					ds.tmp >ds.inf
 			fi
 		fi
@@ -275,11 +292,11 @@ setup_ds () {
 			if [ ! -e /usr/bin/systemctl ]; then
 				echo 'Adding /usr/bin/systemctl -> /bin/systemctl to work around dscreate bug...'
 				if [ -z "$DRY_RUN" ]; then
-					sudo ln -s /bin/systemctl /usr/bin/systemctl
+					ln -s /bin/systemctl /usr/bin/systemctl
 				fi
 			fi
 			if [ -z "$DRY_RUN" ]; then
-				sudo dscreate from-file ds.inf
+				dscreate from-file ds.inf
 				mv ds.inf ds-ca.inf
 			fi
 		fi
@@ -303,7 +320,7 @@ setup_pki () {
 				echo "Dogtag CA config $CA_CONF not found; cannot create Dogtag CA system."
 				exit 1
 			else
- 				sudo pkispawn -s CA -f "/vagrant/$CA_CONF"
+ 				pkispawn -s CA -f "/vagrant/$CA_CONF"
  				did_pki=1
 			fi
 		fi
@@ -311,78 +328,78 @@ setup_pki () {
 	
 	# the system is enabled via pki-tomcatd.target now
 	if [ -z "$DRY_RUN" ]; then
-		sudo systemctl enable pki-tomcatd.target
-		sudo systemctl start pki-tomcatd.target
+		systemctl enable pki-tomcatd.target
+		systemctl start pki-tomcatd.target
 	fi
 	
 	# Give Dogtag chance to come up - -TODO: only if just started it
 	sleep 5
 	
-	if sudo certutil -L -d /root/.dogtag/nssdb -n "CA Certificate" -a &>/dev/null; then
+	if certutil -L -d /root/.dogtag/nssdb -n "CA Certificate" -a &>/dev/null; then
 		echo "CA Root Certificate already imported into nssdb."
 	else
 		echo "Importing CA Root Certificate into nssdb..."
 		if [ -z "$DRY_RUN" ]; then
-			sudo pki client-cert-import "CA Certificate" --ca-server
+			pki client-cert-import "CA Certificate" --ca-server
 		fi
 	fi
 	
 	if [ -z "$DRY_RUN" ]; then
 		echo "-----CA Root Certificate .dogtag/pki-tomcat/ca-root.crt-----"
-		sudo certutil -L -d /root/.dogtag/nssdb -n "CA Certificate" -a |sudo tee /root/.dogtag/pki-tomcat/ca-root.crt
+		certutil -L -d /root/.dogtag/nssdb -n "CA Certificate" -a |tee /root/.dogtag/pki-tomcat/ca-root.crt
 	fi
 	
-	# Import cert for caadmin's pkiconsole
-	if sudo -u caadmin certutil -L -d /home/caadmin/.dogtag-idm-console -n "CA Certificate" -a &>/dev/null; then
-		echo "CA Root Certificate already imported into caadmin's pkiconsole nssdb."
+	# Import cert for admin's pkiconsole
+	if sudo -u $CA_ADMIN_LOGIN certutil -L -d "$CA_ADMIN_HOME/.dogtag-idm-console" -n "CA Certificate" -a &>/dev/null; then
+		echo "CA Root Certificate already imported into $CA_ADMIN_LOGIN's pkiconsole nssdb."
 	else
-		echo "Importing CA Root Certificate into caadmin's pkiconsole nssdb..."
+		echo "Importing CA Root Certificate into $CA_ADMIN_LOGIN's pkiconsole nssdb..."
 		if [ -z "$DRY_RUN" ]; then
-			sudo -u caadmin pki -d /home/caadmin/.dogtag-idm-console client-cert-import "CA Certificate" --ca-server
+			sudo -u $CA_ADMIN_LOGIN pki -d "$CA_ADMIN_HOME/.dogtag-idm-console" client-cert-import "CA Certificate" --ca-server
 		fi
 	fi
 	
-	local admin_nickname=$(sudo pki pkcs12-cert-find --pkcs12-file /root/.dogtag/pki-tomcat/ca_admin_cert.p12 --pkcs12-password "$CA_ADMIN_P12_PASS" |grep 'Friendly Name:' |cut -d : -f 2 |xargs)
+	local admin_nickname=$(pki pkcs12-cert-find --pkcs12-file /root/.dogtag/pki-tomcat/ca_admin_cert.p12 --pkcs12-password "$PKI_ADMIN_P12_PASS" |grep 'Friendly Name:' |cut -d : -f 2 |xargs)
 	if [ -n "$admin_nickname" ]; then
-		if sudo certutil -L -d /root/.dogtag/nssdb -n "$admin_nickname" -a &>/dev/null; then
+		if certutil -L -d /root/.dogtag/nssdb -n "$admin_nickname" -a &>/dev/null; then
 			echo "CA Admin Certificate '$admin_nickname' already imported into nssdb."
 		else
 			echo "Importing CA Admin Certificate '$admin_nickname' into nssdb..."
 			if [ -z "$DRY_RUN" ]; then
-				sudo pki client-cert-import "$admin_nickname" --pkcs12 /root/.dogtag/pki-tomcat/ca_admin_cert.p12 --pkcs12-password "$CA_ADMIN_P12_PASS"
+				pki client-cert-import "$admin_nickname" --pkcs12 /root/.dogtag/pki-tomcat/ca_admin_cert.p12 --pkcs12-password "$PKI_ADMIN_P12_PASS"
 			fi
 		fi
 	
-		if sudo pki -n "$admin_nickname" ca-profile-show SolarNode &>/dev/null; then
+		if pki -n "$admin_nickname" ca-profile-show SolarNode &>/dev/null; then
 			echo "CA profile SolarNode already exists."
 		else
 			echo "Configuring CA profile SolarNode..."
 			if [ -z "$DRY_RUN" ]; then
-				sudo pki -n "$admin_nickname" ca-profile-add "/vagrant/$SN_PROFILE_CONF" --raw
-				sudo pki -n "$admin_nickname" ca-profile-enable SolarNode
+				pki -n "$admin_nickname" ca-profile-add "/vagrant/$SN_PROFILE_CONF" --raw
+				pki -n "$admin_nickname" ca-profile-enable SolarNode
 			fi
 		fi
 	fi
 	
-	# Copy entire pki nssdb to caadmin
-	if sudo ls /home/caadmin/.dogtag &>/dev/null; then
-		echo 'caadmin pki data exists.'
+	# Copy entire pki nssdb to admin user
+	if [ -d "$CA_ADMIN_HOME/.dogtag" ]; then
+		echo "$CA_ADMIN_LOGIN pki data exists."
 	else
-		echo 'Setting up caadmin pki data...'
+		echo "Setting up $CA_ADMIN_LOGIN pki data..."
 		if [ -z "$DRY_RUN" ]; then
-			sudo rsync -a /root/.dogtag /home/caadmin
-			sudo chown -R caadmin:caadmin /home/caadmin/.dogtag
+			rsync -a /root/.dogtag "$CA_ADMIN_HOME"
+			chown -R "$CA_ADMIN_LOGIN:$CA_ADMIN_LOGIN" "$CA_ADMIN_HOME/.dogtag"
 		fi
 	fi
 
-	if sudo ls /home/caadmin/.dogtag/pki-tomcat/central-trust.jks &>/dev/null; then
+	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/central-trust.jks" ]; then
 		echo 'central-trust.jks keystore already exists.'
 	else
 		echo 'Setting up central-trust.jks keystore...'
 		if [ -z "$DRY_RUN" ]; then
-			sudo -u caadmin keytool -importcert -trustcacerts -alias ca \
-				-keystore /home/caadmin/.dogtag/pki-tomcat/central-trust.jks -storetype jks -storepass dev123 \
-				-file /home/caadmin/.dogtag/pki-tomcat/ca-root.crt -noprompt
+			sudo -u $CA_ADMIN_LOGIN keytool -importcert -trustcacerts -alias ca \
+				-keystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/central-trust.jks" -storetype jks -storepass dev123 \
+				-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/ca-root.crt" -noprompt
 		fi
 	fi
 	
@@ -391,12 +408,12 @@ setup_pki () {
 	# SolarIn requires a server certificate. The following block creates one based on the SN_IN_DNS_NAME
 	# value. The certificate and private key will be exported as a PKCS#12 file at .dogtag/pki-tomcat/SN_IN_DNS_NAME.p12
 	
-	if sudo ls "/home/caadmin/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" &>/dev/null; then
+	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" ]; then
 		echo "$SN_IN_DNS_NAME certificate already exists."
 	else
 		echo "Creating $SN_IN_DNS_NAME certificate..."
 		if [ -z "$DRY_RUN" ]; then
-			local req_id=$(sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
+			local req_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
 				"CN=$SN_IN_DNS_NAME,OU=SolarIn,O=$CA_SEC_DOMAIN_NAME" --profile caServerCert \
 				|grep 'Request ID:' |cut -d : -f 2 |xargs)
 			if [ -z "$req_id" ]; then
@@ -404,26 +421,26 @@ setup_pki () {
 				exit 1
 			else
 				echo "Approving $SN_IN_DNS_NAME certificate request $req_id..."
-				local cert_id=$(sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
+				local cert_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
 					|grep 'Certificate ID:'|cut -d : -f 2 |xargs)
 				if [ -z "$cert_id" ]; then
 					echo "ERROR: unable to approve $SN_IN_DNS_NAME certificate."
 					exit 1
 				else
 					echo "Saving approved $SN_IN_DNS_NAME certificate $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.crt"
-					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-show $cert_id --encoded \
-						--output "/home/caadmin/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.crt"
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-show $cert_id --encoded \
+						--output "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.crt"
 
 					echo "Importing approved $SN_IN_DNS_NAME certificate $cert_id to nssdb..."
-					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$SN_IN_DNS_NAME" --serial $cert_id
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$SN_IN_DNS_NAME" --serial $cert_id
 					
 					echo "Exporting approved $SN_IN_DNS_NAME certificate and private key $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.nssdb.p12..."
-					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_IN_DNS_NAME" \
-						--pkcs12-file "/home/caadmin/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" --pkcs12-password "$CA_ADMIN_P12_PASS"
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_IN_DNS_NAME" \
+						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" --pkcs12-password "$PKI_ADMIN_P12_PASS"
 					
 					echo "Exporting approved $SN_IN_DNS_NAME certificate and private key $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12..."
-					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_IN_DNS_NAME" \
-						--pkcs12-file "/home/caadmin/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" --pkcs12-password "$CA_ADMIN_P12_PASS" \
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_IN_DNS_NAME" \
+						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" --pkcs12-password "$PKI_ADMIN_P12_PASS" \
 						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
 				fi
 			fi	
@@ -437,22 +454,22 @@ setup_pki () {
 	# and then creates a certificate for the user. The certificate and private key will be exported as a 
 	# PKCS#12 file at .dogtag/pki-tomcat/suagent.p12
 	
-	if sudo ls "/home/caadmin/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" &>/dev/null; then
+	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" ]; then
 		echo "$CA_AGENT_UID certificate already exists."
 	else
 		echo "Creating SolarUser agent user $CA_AGENT_UID..."
 		if [ -z "$DRY_RUN" ]; then
-			sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-add "$CA_AGENT_UID" \
+			sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-add "$CA_AGENT_UID" \
 				--fullName "$CA_AGENT_NAME" --email "$CA_AGENT_EMAIL"
 				
 			echo "Adding $CA_AGENT_UID agent user to group..."
-			sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname"  ca-group-member-add \
+			sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname"  ca-group-member-add \
 				"Certificate Manager Agents" "$CA_AGENT_UID"
 		fi
 				
 		echo "Creating $CA_AGENT_UID certificate..."
 		if [ -z "$DRY_RUN" ]; then
-			local req_id=$(sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
+			local req_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
 				"UID=$CA_AGENT_UID,E=$CA_AGENT_EMAIL,CN=$CA_AGENT_NAME,OU=SolarUser,O=$CA_SEC_DOMAIN_NAME" --profile caUserCert \
 				|grep 'Request ID:' |cut -d : -f 2 |xargs)
 			if [ -z "$req_id" ]; then
@@ -460,35 +477,36 @@ setup_pki () {
 				exit 1
 			else
 				echo "Approving $CA_AGENT_UID certificate request $req_id..."
-				local cert_id=$(sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
+				local cert_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
 					|grep 'Certificate ID:'|cut -d : -f 2 |xargs)
 				if [ -z "$cert_id" ]; then
 					echo "ERROR: unable to approve $CA_AGENT_UID certificate."
 					exit 1
 				else
 					echo "Adding $CA_AGENT_UID certificate to user..."
-					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$CA_AGENT_UID" --serial "$cert_id"
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$CA_AGENT_UID" --serial "$cert_id"
 					
 					echo "Importing approved $CA_AGENT_UID certificate $cert_id to nssdb..."
-					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$CA_AGENT_UID" --serial $cert_id
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$CA_AGENT_UID" --serial $cert_id
 					
 					echo "Exporting approved $CA_AGENT_UID certificate and private key $cert_id to .dogtag/pki-tomcat/$CA_AGENT_UID.p12..."
-					sudo -u caadmin pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$CA_AGENT_UID" \
-						--pkcs12-file "/home/caadmin/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" --pkcs12-password "$CA_AGENT_P12_PASS" \
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$CA_AGENT_UID" \
+						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" --pkcs12-password "$CA_AGENT_P12_PASS" \
 						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
 				fi
 			fi	
 		fi
 	fi
 
-	if sudo ls /home/caadmin/.dogtag/pki-tomcat/dogtag-client.jks &>/dev/null; then
+	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks" ]; then
 		echo 'dogtag-client.jks keystore already exists.'
 	else
 		echo 'Setting up dogtag-client.jks keystore...'
 		if [ -z "$DRY_RUN" ]; then
-			sudo -u caadmin keytool -importkeystore -srckeystore /home/caadmin/.dogtag/pki-tomcat/suagent.p12 \
+			sudo -u $CA_ADMIN_LOGIN keytool -importkeystore \
+				-srckeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/suagent.p12" \
 				-srcstoretype pkcs12 -srcstorepass "$CA_AGENT_P12_PASS" \
-				-destkeystore /home/caadmin/.dogtag/pki-tomcat/dogtag-client.jks \
+				-destkeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks" \
 				-deststoretype jks -deststorepass dev123 -noprompt
 		fi
 	fi
@@ -505,8 +523,8 @@ setup_cockpit () {
 	if systemctl status cockpit.socket |grep ' disabled;'; then
 		echo 'Enabling cockpit service...'
 		if [ -z "$DRY_RUN" ]; then
-			sudo systemctl enable cockpit.socket
-			sudo systemctl start cockpit.socket
+			systemctl enable cockpit.socket
+			systemctl start cockpit.socket
 		fi
 	else
 		echo 'Cockpit service already enabled.'
@@ -514,26 +532,44 @@ setup_cockpit () {
 }
 
 show_results () {
+	cat <<-EOF
+
+		*******************************************************************************************
+		INSTALLATION REPORT
+		*******************************************************************************************
+			
+		To access services, you may need to add a hosts entry for $HOSTNAME
+		from one of these IP addresses:
+		
+		  `hostname -I`
+	
+	EOF
+	#if [ -n "$did_vnc" ]; then
+		cat <<-EOF
+		
+			A VNC server for the '$CA_ADMIN_LOGIN' user has been setup at localhost:1. You can access VNC
+			by SSH forwarding a port to localhost:5901. For example
+			
+			  ssh -L5901:localhost:5901 $CA_ADMIN_LOGIN@$HOSTNAME
+		EOF
+	#fi
 	if [ -n "$did_pki" ]; then
 		cat <<-EOF
 			
 			Dogtag PKI has been setup at https://$HOSTNAME:8443/ca.
-			You may need to add a hosts entry for $HOSTNAME from one of these IP addresses:
-			
-			  `hostname -I`
 				
 			The Dogtag root CA certificate has been saved to:
 			
-			  /home/caadmin/.dogtag/pki-tomcat/ca-root.crt
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/ca-root.crt
 				
 			You can import this certificate as a trusted CA. The certificate has been copied into
 			a Java keystore for use by SolarNetwork applications, with a password 'dev123':
 			
-			  /home/caadmin/.dogtag/pki-tomcat/central-trust.jks
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/central-trust.jks
 
 			You need an admin certificate to access Dogtag, which as been created as the PKCS#12 file
 
-			  /home/caadmin/.dogtag/pki-tomcat/ca_admin_cert.p12
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/ca_admin_cert.p12
 			
 			that contains the private key and certificate you can import into your browser. The 
 			password used was specified in the 'pki_client_pkcs12_password' property in the PKI
@@ -543,12 +579,12 @@ show_results () {
 			user has been added to the 'Certificate Manager Agents' group. A PKCS#12 file for this
 			user has been created as
 			
-			  /home/caadmin/.dogtag/pki-tomcat/suagent.p12
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/suagent.p12
 				
 			The suagent.p12 file has been copied into a Java keystore for use by SolarNetwork
 			applications, with a store password 'dev123':
 			
-			  /home/caadmin/.dogtag/pki-tomcat/dogtag-client.jks
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks
 
 			
 		EOF
