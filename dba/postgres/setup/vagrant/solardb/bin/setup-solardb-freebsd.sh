@@ -2,11 +2,12 @@
 
 DRY_RUN=""
 HOSTNAME="solardb"
+PG_CONF_AWK="example/pg-conf.awk"
 PG_DATA_DIR="/var/db/postgres/data96"
 PG_IDENT_MAP="cert"
 PG_IDENT_CONF="example/pg_ident.conf"
 PG_LISTEN_ADDR="*"
-PG_PRELOAD_LIB="timescaledb"
+PG_PRELOAD_LIB="auto_explain,pg_stat_statements,timescaledb"
 PG_SSL_CA="tls/ca.crt"
 PG_SSL_CERT="tls/server.crt"
 PG_SSL_CIPHERS="ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES256:ECDH+AES128:!aNULL:!SHA1"
@@ -29,7 +30,10 @@ Arguments:
  -A <pg ident mapname>  - the Postgres pg_ident.conf map name to test for; defaults to cert
  -a <pg ident conf>     - relative path to file to copy to Postgres pg_ident.conf; defaults to
                           example/pg_hba.conf
- -b <pg preload lib>    - value for the Postgres shared_preload_libraries; defaults to timescaledb
+ -B <pg custom awk>     - relative path to an awk script to run on the Postgres configuration file
+                          after all other customizations are performed; defaults to example/pg-conf.awk
+ -b <pg preload lib>    - value for the Postgres shared_preload_libraries; defaults to
+                          auto_explain,pg_stat_statements,timescaledb
  -D <pg data dir>       - directory to initialize Postgres data; defaults to /var/db/postgres/data96
  -d <pg listen addr>    - the Postgres address to listen to; defaults to *
  -d <pg listen addr>    - the Postgres address to listen on; defaults to *
@@ -50,6 +54,7 @@ while getopts ":A:a:b:D:d:E:e:F:f:h:nP:p:uv" opt; do
 	case $opt in
 		A) PG_IDENT_MAP="${OPTARG}";;
 		a) PG_IDENT_CONF="${OPTARG}";;
+		B) PG_CONF_AWK="${OPTARG}";;
 		b) PG_PRELOAD_LIB="${OPTARG}";;
 		D) PG_DATA_DIR="${OPTARG}";;
 		d) PG_LISTEN_ADDR="${OPTARG}";;
@@ -196,7 +201,7 @@ setup_postgres () {
 	else
 		echo "Configuring shared_preload_libraries in postgresql.conf"
 		if [ -z "$DRY_RUN" ]; then
-			sed -Ei '' -e 's/#?shared_preload_libraries = '"''"'/shared_preload_libraries = '"'$PG_PRELOAD_LIB'/" \
+			sed -Ei '' -e 's/#?shared_preload_libraries = '"'.*'"'/shared_preload_libraries = '"'$PG_PRELOAD_LIB'/" \
 				"$PG_DATA_DIR/postgresql.conf"
 		fi
 	fi
@@ -248,6 +253,26 @@ setup_postgres () {
 				exit 1
 			fi
 		fi
+	fi
+	
+	if [ -n "$PG_CONF_AWK" -a -e "/vagrant/$PG_CONF_AWK" ]; then
+		echo "Executing custom Postgres awk configuration script $PG_CONF_AWK..."
+		if [ -z "$DRY_RUN" ]; then
+			awk -F '[[:space:]]=[[:space:]]' -f "/vagrant/$PG_CONF_AWK" "$PG_DATA_DIR/postgresql.conf" \
+				>"$PG_DATA_DIR/postgresql.conf.new"
+			if diff -q "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.new" >/dev/null; then
+				echo "No change to Postgres configuration from custom awk script $PG_CONF_AWK"
+				rm -f "$PG_DATA_DIR/postgresql.conf.new"
+			else
+				mv -f "$PG_DATA_DIR/postgresql.conf.new" "$PG_DATA_DIR/postgresql.conf"
+			fi
+		fi
+	fi
+	
+	if diff -q "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.orig" >/dev/null; then
+		echo "Postgres configuration unchanged from $PG_DATA_DIR/postgresql.conf.orig"
+	else
+		diff "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.orig" 
 	fi
 	
 	if  service postgresql status; then
