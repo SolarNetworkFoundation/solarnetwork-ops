@@ -3,7 +3,14 @@
 DRY_RUN=""
 HOSTNAME="solardb"
 PG_DATA_DIR="/var/db/postgres/data96"
+PG_IDENT_MAP="cert"
+PG_IDENT_CONF="example/pg_ident.conf"
+PG_LISTEN_ADDR="*"
 PG_PRELOAD_LIB="timescaledb"
+PG_SSL_CA="tls/ca.crt"
+PG_SSL_CERT="tls/server.crt"
+PG_SSL_CIPHERS="ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES256:ECDH+AES128:!aNULL:!SHA1"
+PG_SSL_KEY="tls/server.key"
 PKG_REPO_CONF="example/solarnet.conf"
 PKG_REPO_CERT="example/solarnet-repo.cert"
 UPDATE_PKGS=""
@@ -19,8 +26,17 @@ do_help () {
 Usage: $0 [-nuv]
 
 Arguments:
+ -A <pg ident mapname>  - the Postgres pg_ident.conf map name to test for; defaults to cert
+ -a <pg ident conf>     - relative path to file to copy to Postgres pg_ident.conf; defaults to
+                          example/pg_hba.conf
  -b <pg preload lib>    - value for the Postgres shared_preload_libraries; defaults to timescaledb
  -D <pg data dir>       - directory to initialize Postgres data; defaults to /var/db/postgres/data96
+ -d <pg listen addr>    - the Postgres address to listen to; defaults to *
+ -d <pg listen addr>    - the Postgres address to listen on; defaults to *
+ -E <pg ssl cert>       - relative path to the Postgres SSL public certificate; defaults to tls/server.crt
+ -e <pg ssl key>        - relative path to the Postgres SSL private key; defaults to tls/server.key
+ -F <pg ssl ca>         - Postgres SSL CA certificate bundle; defaults to tls/ca.crt
+ -f <pg ssl ciphers>    - Postgres SSL ciphers to enable; define as empty string to skip SSL configuration
  -h <hostname>          - the hostname to use; defaults to solardb
  -n                     - dry run; do not make any actual changes
  -P <pkg conf>          - relative path to the pkg configuration to add; defaults to example/solarnet.conf
@@ -30,10 +46,17 @@ Arguments:
 EOF
 }
 
-while getopts ":b:D:h:nP:p:uv" opt; do
+while getopts ":A:a:b:D:d:E:e:F:f:h:nP:p:uv" opt; do
 	case $opt in
+		A) PG_IDENT_MAP="${OPTARG}";;
+		a) PG_IDENT_CONF="${OPTARG}";;
 		b) PG_PRELOAD_LIB="${OPTARG}";;
 		D) PG_DATA_DIR="${OPTARG}";;
+		d) PG_LISTEN_ADDR="${OPTARG}";;
+		E) PG_SSL_CERT="${OPTARG}";;
+		e) PG_SSL_KEY="${OPTARG}";;
+		F) PG_SSL_CA="${OPTARG}";;
+		f) PG_SSL_CIPHERS="${OPTARG}";;
 		h) HOSTNAME="${OPTARG}";;
 		P) PKG_REPO_CONF="${OPTARG}";;
 		p) PKG_REPO_CERT="${OPTARG}";;
@@ -100,7 +123,7 @@ setup_hostname () {
 		echo "Setting hostname to $HOSTNAME..."
 		if [ -z "$DRY_RUN" ]; then
 			hostname "$HOSTNAME"
-			sed -i -e 's/hostname=.*/hostname="'"$HOSTNAME"'"/' /etc/rc.conf
+			sed -Ei '' -e 's/hostname=.*/hostname="'"$HOSTNAME"'"/' /etc/rc.conf
 		fi
 	fi
 
@@ -151,22 +174,80 @@ setup_postgres () {
 		fi
 	fi
 	
+	if [ ! -e "$PG_DATA_DIR/postgresql.conf.orig" ];then
+		echo "Making backup of Postgres configuration to postgresql.conf.orig..."
+		if [ -z "$DRY_RUN" ]; then
+			cp -a "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.orig"
+		fi
+	fi
+	
+	if grep -q "^listen_addresses = '$PG_LISTEN_ADDR'" "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
+		echo "Postgres already configured with listen address $PG_LISTEN_ADDR"
+	else
+		echo "Configuring Postgres listen address to $PG_LISTEN_ADDR..."
+		if [ -z "$DRY_RUN" ]; then
+			sed -Ei '' -e "s/#?listen_addresses = '.*'/listen_addresses = '$PG_LISTEN_ADDR'/" \
+				"$PG_DATA_DIR/postgresql.conf"
+		fi
+	fi
+	
 	if grep -q "shared_preload_libraries.*$PG_PRELOAD_LIB" "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
 		echo "shared_preload_libraries extension already configured in postgresql.conf."
 	else
 		echo "Configuring shared_preload_libraries in postgresql.conf"
 		if [ -z "$DRY_RUN" ]; then
-			sed -Ei -e 's/#?shared_preload_libraries = '"''"'/shared_preload_libraries = '"'$PG_PRELOAD_LIB'/" \
+			sed -Ei '' -e 's/#?shared_preload_libraries = '"''"'/shared_preload_libraries = '"'$PG_PRELOAD_LIB'/" \
 				"$PG_DATA_DIR/postgresql.conf"
 		fi
 	fi
-
 	
 	if grep -q plv8.start_proc "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
 		echo "plv8 startup procedure already configured."
 	else
 		echo "Configuring plv8 startup procedure..."
-		echo "plv8.start_proc = 'plv8_startup'" >>"$PG_DATA_DIR/postgresql.conf"
+		if [ -z "$DRY_RUN" ]; then
+			echo "plv8.start_proc = 'plv8_startup'" >>"$PG_DATA_DIR/postgresql.conf"
+		fi
+	fi
+	
+	if grep -q "^ssl = on" "$PG_DATA_DIR/postgresql.conf">/dev/null; then
+		echo "Postgres SSL already enabled."
+	elif [ -n "$PG_SSL_CIPHERS" ]; then
+		echo "Configuring Postgres SSL"
+		if [ -z "$DRY_RUN" ]; then
+			sed -Ei '' -e 's/#?ssl = [[:alpha:]]+/ssl = on/' \
+				-e "s/#?ssl_ciphers = '.*'/ssl_ciphers = '$PG_SSL_CIPHERS'/" \
+				"$PG_DATA_DIR/postgresql.conf"
+			if [ -d "/vagrant/tls" ];then
+				rsync -aq /vagrant/tls "$PG_DATA_DIR/"
+				chown -R postgres:postgres "$PG_DATA_DIR/tls"
+			fi
+			if [ -n "$PG_SSL_CERT" ]; then
+				echo "Configuring Postgres SSL certificate, private key..."
+				sed -Ei '' -e "s|#?ssl_cert_file = '.*'|ssl_cert_file = '$PG_SSL_CERT'|" \
+					-e "s|#?ssl_key_file = '.*'|ssl_key_file = '$PG_SSL_KEY'|" \
+					"$PG_DATA_DIR/postgresql.conf"
+			fi
+			if [ -n "$PG_SSL_CA" ]; then
+				echo "Configuring Postgres SSL CA certificate..."
+				sed -Ei '' -e "s|#?ssl_ca_file = '.*'|ssl_ca_file = '$PG_SSL_CA'|" \
+					"$PG_DATA_DIR/postgresql.conf"
+			fi
+		fi
+	fi
+	
+	if grep -q "^$PG_IDENT_MAP\b" "$PG_DATA_DIR/pg_ident.conf" >/dev/null; then
+		echo "Postgres pg_ident.conf already contains map $PG_IDENT_MAP."
+	else
+		echo "Configuring pg_ident.conf map for $PG_IDENT_MAP..."
+		if [ -z "$DRY_RUN" ]; then
+			if [ -e "/vagrant/$PG_IDENT_CONF" ]; then
+				cat "/vagrant/$PG_IDENT_CONF" >>"$PG_DATA_DIR/pg_ident.conf"
+			else
+				echo "pg_ident file $PG_IDENT_CONF not found."
+				exit 1
+			fi
+		fi
 	fi
 	
 	if  service postgresql status; then
