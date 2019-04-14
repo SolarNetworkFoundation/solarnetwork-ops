@@ -2,6 +2,8 @@
 
 DRY_RUN=""
 HOSTNAME="solardb"
+PG_DATA_DIR="/var/db/postgres/data96"
+PG_PRELOAD_LIB="timescaledb"
 PKG_REPO_CONF="example/solarnet.conf"
 PKG_REPO_CERT="example/solarnet-repo.cert"
 UPDATE_PKGS=""
@@ -17,6 +19,8 @@ do_help () {
 Usage: $0 [-nuv]
 
 Arguments:
+ -b <pg preload lib>    - value for the Postgres shared_preload_libraries; defaults to timescaledb
+ -D <pg data dir>       - directory to initialize Postgres data; defaults to /var/db/postgres/data96
  -h <hostname>          - the hostname to use; defaults to solardb
  -n                     - dry run; do not make any actual changes
  -P <pkg conf>          - relative path to the pkg configuration to add; defaults to example/solarnet.conf
@@ -26,8 +30,10 @@ Arguments:
 EOF
 }
 
-while getopts ":h:nP:p:uv" opt; do
+while getopts ":b:D:h:nP:p:uv" opt; do
 	case $opt in
+		b) PG_PRELOAD_LIB="${OPTARG}";;
+		D) PG_DATA_DIR="${OPTARG}";;
 		h) HOSTNAME="${OPTARG}";;
 		P) PKG_REPO_CONF="${OPTARG}";;
 		p) PKG_REPO_CERT="${OPTARG}";;
@@ -132,27 +138,35 @@ setup_postgres () {
 		echo "Configuring Postgres to start at boot..."
 		if [ -z "$DRY_RUN" ]; then
 			echo 'postgresql_enable="YES"' >>/etc/rc.conf
-			echo 'postgresql_data="/var/db/postgres/data96"' >>/etc/rc.conf
+			echo 'postgresql_data="'"$PG_DATA_DIR"'"' >>/etc/rc.conf
 			echo 'postgresql_initdb_flags="--encoding=utf-8 --lc-collate=C"' >> /etc/rc.conf
 		fi	
 	fi
-	if [ -d /var/db/postgres/data96 ]; then
-		echo "Postgres already initialized at /var/db/postgres/data96."
+	if [ -d "$PG_DATA_DIR" ]; then
+		echo "Postgres already initialized at $PG_DATA_DIR."
 	else
-		echo "Initializing Postgres at /var/db/postgres/data96..."
+		echo "Initializing Postgres at $PG_DATA_DIR..."
 		if [ -z "$DRY_RUN" ]; then
 			service postgresql initdb
 		fi
 	fi
 	
-	if grep -q 'shared_preload_libraries.*timescaledb' /var/db/postgres/data96/postgresql.conf >/dev/null; then
-		echo "TimescaleDB extension already configured in postgresql.conf."
+	if grep -q "shared_preload_libraries.*$PG_PRELOAD_LIB" "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
+		echo "shared_preload_libraries extension already configured in postgresql.conf."
 	else
-		echo "Configuring TimescaleDB in postgresql.conf"
+		echo "Configuring shared_preload_libraries in postgresql.conf"
 		if [ -z "$DRY_RUN" ]; then
-			sed -Ei -e 's/#?shared_preload_libraries = '"''"'/shared_preload_libraries = '"'timescaledb'/" \
-				/var/db/postgres/data96/postgresql.conf
+			sed -Ei -e 's/#?shared_preload_libraries = '"''"'/shared_preload_libraries = '"'$PG_PRELOAD_LIB'/" \
+				"$PG_DATA_DIR/postgresql.conf"
 		fi
+	fi
+
+	
+	if grep -q plv8.start_proc "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
+		echo "plv8 startup procedure already configured."
+	else
+		echo "Configuring plv8 startup procedure..."
+		echo "plv8.start_proc = 'plv8_startup'" >>"$PG_DATA_DIR/postgresql.conf"
 	fi
 	
 	if  service postgresql status; then
