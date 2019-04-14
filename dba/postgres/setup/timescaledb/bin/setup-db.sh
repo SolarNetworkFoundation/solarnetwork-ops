@@ -1,11 +1,7 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 # Script for creating or re-creating the SolarNetwork database in its TimescaleDB form.
 # The resulting database is suitable for production deployments.
-#
-# To create a database 'solarnet_prod' and all associated users:
-#
-#     ./bin/setup-db.sh -mrv
 #
 # To create a database 'solarnetwork' and all associated users:
 #
@@ -18,7 +14,7 @@
 
 PSQL_CONN_ARGS=""
 PG_DB_OWNER="solarnet"
-PG_DB="solarnet_prod"
+PG_DB="solarnetwork"
 PG_DB_TABLESPACE=""
 PG_DB_TABLESPACE_PATH=""
 PG_DB_TABLESPACE_OPTS=""
