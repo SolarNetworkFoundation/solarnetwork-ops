@@ -381,15 +381,11 @@ setup_pki () {
 		fi
 	fi
 	
-	# Copy entire pki nssdb to admin user
-	if [ -d "$CA_ADMIN_HOME/.dogtag" ]; then
-		echo "$CA_ADMIN_LOGIN pki data exists."
-	else
-		echo "Setting up $CA_ADMIN_LOGIN pki data..."
-		if [ -z "$DRY_RUN" ]; then
-			rsync -a /root/.dogtag "$CA_ADMIN_HOME"
-			chown -R "$CA_ADMIN_LOGIN:$CA_ADMIN_LOGIN" "$CA_ADMIN_HOME/.dogtag"
-		fi
+	# Sync entire pki nssdb to admin user
+	echo "Syncing $CA_ADMIN_LOGIN pki data..."
+	if [ -z "$DRY_RUN" ]; then
+		rsync -a /root/.dogtag "$CA_ADMIN_HOME"
+		chown -R "$CA_ADMIN_LOGIN:$CA_ADMIN_LOGIN" "$CA_ADMIN_HOME/.dogtag"
 	fi
 
 	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/central-trust.jks" ]; then
@@ -544,7 +540,7 @@ show_results () {
 		  `hostname -I`
 	
 	EOF
-	#if [ -n "$did_vnc" ]; then
+	if [ -n "$did_vnc" ]; then
 		cat <<-EOF
 		
 			A VNC server for the '$CA_ADMIN_LOGIN' user has been setup at localhost:1. You can access VNC
@@ -552,7 +548,7 @@ show_results () {
 			
 			  ssh -L5901:localhost:5901 $CA_ADMIN_LOGIN@$HOSTNAME
 		EOF
-	#fi
+	fi
 	if [ -n "$did_pki" ]; then
 		cat <<-EOF
 			
@@ -586,7 +582,6 @@ show_results () {
 			
 			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks
 
-			
 		EOF
 	fi
 }
