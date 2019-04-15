@@ -50,7 +50,7 @@ Arguments:
 EOF
 }
 
-while getopts ":A:a:b:D:d:E:e:F:f:h:nP:p:uv" opt; do
+while getopts ":A:a:B:b:D:d:E:e:F:f:h:nP:p:uv" opt; do
 	case $opt in
 		A) PG_IDENT_MAP="${OPTARG}";;
 		a) PG_IDENT_CONF="${OPTARG}";;
@@ -255,16 +255,21 @@ setup_postgres () {
 		fi
 	fi
 	
-	if [ -n "$PG_CONF_AWK" -a -e "/vagrant/$PG_CONF_AWK" ]; then
-		echo "Executing custom Postgres awk configuration script $PG_CONF_AWK..."
-		if [ -z "$DRY_RUN" ]; then
-			awk -F '[[:space:]]=[[:space:]]' -f "/vagrant/$PG_CONF_AWK" "$PG_DATA_DIR/postgresql.conf" \
-				>"$PG_DATA_DIR/postgresql.conf.new"
-			if diff -q "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.new" >/dev/null; then
-				echo "No change to Postgres configuration from custom awk script $PG_CONF_AWK"
-				rm -f "$PG_DATA_DIR/postgresql.conf.new"
-			else
-				mv -f "$PG_DATA_DIR/postgresql.conf.new" "$PG_DATA_DIR/postgresql.conf"
+	if [ -n "$PG_CONF_AWK" ]; then
+		if [ ! -e "/vagrant/$PG_CONF_AWK" ]; then
+			echo "Custom Postgres awk configuration script $PG_CONF_AWK not found."
+			exit 1
+		else
+			echo "Executing custom Postgres awk configuration script $PG_CONF_AWK..."
+			if [ -z "$DRY_RUN" ]; then
+				awk -F '[[:space:]]=[[:space:]]' -f "/vagrant/$PG_CONF_AWK" "$PG_DATA_DIR/postgresql.conf" \
+					>"$PG_DATA_DIR/postgresql.conf.new"
+				if diff -q "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.new" >/dev/null; then
+					echo "No change to Postgres configuration from custom awk script $PG_CONF_AWK"
+					rm -f "$PG_DATA_DIR/postgresql.conf.new"
+				else
+					mv -f "$PG_DATA_DIR/postgresql.conf.new" "$PG_DATA_DIR/postgresql.conf"
+				fi
 			fi
 		fi
 	fi

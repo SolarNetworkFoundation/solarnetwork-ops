@@ -5,7 +5,8 @@ vm_box_version=">= 2018.06.22"
 cpu_count=1
 memory_size=2048
 gui=false
-bootstrap_path="bin/setup-solardb-freebsd.sh"
+setup_path="/vagrant/bin/setup-solardb-freebsd.sh"
+setup_args="-u"
 
 # Read any user specific configuration overrides - cater for this file not existing
 local_env_config_file="Vagrantfile.local"
@@ -27,9 +28,7 @@ Vagrant.configure("2") do |config|
 	
 	config.ssh.shell = "sh"
 
-	config.vm.provision :shell, path: bootstrap_path, :args => [
-		"-u"
-	]
+	config.vm.provision :shell, inline: "#{setup_path} #{setup_args}"
 
 	config.vm.provider "virtualbox" do |v|
 		v.gui = gui
