@@ -8,6 +8,7 @@ PG_IDENT_MAP="cert"
 PG_IDENT_CONF="example/pg_ident.conf"
 PG_LISTEN_ADDR="*"
 PG_PRELOAD_LIB="auto_explain,pg_stat_statements,timescaledb"
+PG_RECREATE=""
 PG_SSL_CA="tls/ca.crt"
 PG_SSL_CERT="tls/server.crt"
 PG_SSL_CIPHERS="ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES256:ECDH+AES128:!aNULL:!SHA1"
@@ -41,6 +42,7 @@ Arguments:
  -e <pg ssl key>        - relative path to the Postgres SSL private key; defaults to tls/server.key
  -F <pg ssl ca>         - Postgres SSL CA certificate bundle; defaults to tls/ca.crt
  -f <pg ssl ciphers>    - Postgres SSL ciphers to enable; define as empty string to skip SSL configuration
+ -G                     - always re-create the Postgres database
  -h <hostname>          - the hostname to use; defaults to solardb
  -n                     - dry run; do not make any actual changes
  -P <pkg conf>          - relative path to the pkg configuration to add; defaults to example/solarnet.conf
@@ -50,7 +52,7 @@ Arguments:
 EOF
 }
 
-while getopts ":A:a:B:b:D:d:E:e:F:f:h:nP:p:uv" opt; do
+while getopts ":A:a:B:b:D:d:E:e:F:f:Gh:nP:p:uv" opt; do
 	case $opt in
 		A) PG_IDENT_MAP="${OPTARG}";;
 		a) PG_IDENT_CONF="${OPTARG}";;
@@ -62,6 +64,7 @@ while getopts ":A:a:B:b:D:d:E:e:F:f:h:nP:p:uv" opt; do
 		e) PG_SSL_KEY="${OPTARG}";;
 		F) PG_SSL_CA="${OPTARG}";;
 		f) PG_SSL_CIPHERS="${OPTARG}";;
+		G) PG_RECREATE='TRUE';;
 		h) HOSTNAME="${OPTARG}";;
 		P) PKG_REPO_CONF="${OPTARG}";;
 		p) PKG_REPO_CERT="${OPTARG}";;
@@ -277,6 +280,7 @@ setup_postgres () {
 	if diff -q "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.orig" >/dev/null; then
 		echo "Postgres configuration unchanged from $PG_DATA_DIR/postgresql.conf.orig"
 	else
+		echo "Postgres configuration changes from $PG_DATA_DIR/postgresql.conf.orig:"
 		diff "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.orig" 
 	fi
 	
@@ -294,17 +298,37 @@ setup_postgres () {
 }
 
 setup_db () {
-	#pkg_install bash
 	if [ ! -d /db-init ]; then
 		echo "Missing /db-init setup directory.";
 	else
-		cd /db-init
-		./bin/setup-db.sh -mrv -d solarnetwork -L example/tsdb-init-users.sql
+		su postgres -c "psql -d solarnetwork -c 'SELECT now()'" >/dev/null 2>&1
+		if [ -n "$PG_RECREATE" -o $? -ne 0 ]; then
+			echo "Creating Postgres database solarnetwork..."
+			cd /db-init
+			./bin/setup-db.sh -mrv -d solarnetwork -L example/tsdb-init-users.sql
+		else
+			echo "Postgres database solarnetwork already exists."
+		fi
 	fi
+}
+
+show_results () {
+	cat <<-EOF
+
+		*******************************************************************************************
+		INSTALLATION REPORT
+		*******************************************************************************************
+			
+		To access services, you may need to add a hosts entry for $HOSTNAME
+		from one of these IP addresses:
+		
+		`ifconfig |grep 'inet ' |grep -v '127\.0' |awk -F ' ' '{ print $2 }'`
 	
+	EOF
 }
 
 setup_pkgs
 setup_hostname
 setup_postgres
 setup_db
+show_results
