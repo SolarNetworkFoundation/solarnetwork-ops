@@ -15,6 +15,7 @@ DRY_RUN=""
 DS_INST_NAME="ca"
 DS_ROOT_PASS="admin"
 DS_SUFFIX="dc=solarnetworkdev,dc=net"
+DS_IMPORT_LDIF=""
 HOSTNAME="ca.solarnetworkdev.net"
 SN_PROFILE_CONF="example/SolarNode.cfg"
 SN_IN_DNS_NAME="in.solarnetworkdev.net"
@@ -50,12 +51,14 @@ Arguments:
  -o <DS inst name>      - the Directory Server instance name; defaults to ca
  -p <DS root pw>        - the Directory Server root user password; defaults to admin
  -s <DN suffix>         - the Directory Server DN suffix to use; defaults to dc=solarnetworkdev,dc=net
+ -t <LDIF file>         - path to a LDIF file to import into the Directory Server after Dogtag
+                          configured; this can be used to migrate data from another Dogtag instance
  -u                     - update package cache
  -v                     - verbose mode; print out more verbose messages
 EOF
 }
 
-while getopts ":A:a:c:d:E:e:F:f:h:i:J:j:K:k:no:p:s:uv" opt; do
+while getopts ":A:a:c:d:E:e:F:f:h:i:J:j:K:k:no:p:s:t:uv" opt; do
 	case $opt in		
 		A) CA_ADMIN_LOGIN="${OPTARG}";;
 		a) CA_ADMIN_HOME="${OPTARG}";;
@@ -75,6 +78,7 @@ while getopts ":A:a:c:d:E:e:F:f:h:i:J:j:K:k:no:p:s:uv" opt; do
 		o) DS_INST_NAME="${OPTARG}";;
 		p) DS_ROOT_PASS="${OPTARG}";;
 		s) DS_SUFFIX="${OPTARG}";;
+		t) DS_IMPORT_LDIF="${OPTARG}";;
 		u) UPDATE_PKGS='TRUE';;
 		v) VERBOSE='TRUE';;
 		?)
@@ -85,6 +89,7 @@ while getopts ":A:a:c:d:E:e:F:f:h:i:J:j:K:k:no:p:s:uv" opt; do
 done
 shift $(($OPTIND - 1))
 
+did_ds_ldif_import=""
 did_pki=""
 did_vnc=""
 
@@ -508,7 +513,23 @@ setup_pki () {
 	fi
 }
 
-setup_firewall() {
+setup_ds_import () {
+	if [ ! -e "/vagrant/$DS_IMPORT_LDIF" ]; then
+		echo "Directory Server LDIF import file [$DS_IMPORT_LDIF] not found."
+	else
+		echo "Importing Directory Server LDIF file [$DS_IMPORT_LDIF]..."
+		if [ -z "$DRY_RUN" ]; then
+			systemctl stop pki-tomcatd.target
+			db2bak
+			ldapadd -x -w "$DS_ROOT_PASS" -D 'cn=Directory Manager' -c -f "/vagrant/$DS_IMPORT_LDIF" \
+				>"$CA_ADMIN_HOME/.dogtag/pki-tomcat/ds-import-ldif.log" 2>&1
+			systemctl start pki-tomcatd.target
+			did_ds_ldif_import=1
+		fi
+	fi
+}
+
+setup_firewall () {
 	firewall-cmd --quiet --zone=public --add-port=8080/tcp --permanent
 	firewall-cmd --quiet --zone=public --add-port=8080/tcp
 	firewall-cmd --quiet --zone=public --add-port=8443/tcp --permanent
@@ -584,6 +605,18 @@ show_results () {
 
 		EOF
 	fi
+	if [ -n "$did_ds_ldif_import" ]; then
+		cat <<-EOF
+		
+			LDIF data has been imported from:
+			
+			  $DS_IMPORT_LDIF
+			
+			A log of the import results is saved to:
+			
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/ds-import-ldif.log
+		EOF
+	fi
 }
 
 setup_pkgs
@@ -595,6 +628,9 @@ setup_desktop
 setup_vnc
 setup_ds
 setup_pki
+if [ -n "$DS_IMPORT_LDIF" ]; then
+	setup_ds_import
+fi
 setup_firewall
 
 setup_cockpit
