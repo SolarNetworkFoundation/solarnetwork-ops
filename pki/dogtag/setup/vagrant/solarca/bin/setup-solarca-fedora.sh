@@ -11,6 +11,7 @@ CA_AGENT_UID="suagent"
 CA_AGENT_NAME="SolarUser Agent"
 CA_AGENT_EMAIL="sugagent@solarnetworkdev.net"
 CA_AGENT_P12_PASS="Secret.123"
+CA_AGENT_JKS_PASS="dev123"
 DRY_RUN=""
 DS_INST_NAME="ca"
 DS_ROOT_PASS="admin"
@@ -18,7 +19,9 @@ DS_SUFFIX="dc=solarnetworkdev,dc=net"
 DS_IMPORT_LDIF=""
 HOSTNAME="ca.solarnetworkdev.net"
 SN_PROFILE_CONF="example/SolarNode.cfg"
-SN_IN_DNS_NAME="in.solarnetworkdev.net"
+SN_IN_DNS_NAME="solarnetworkdev.net"
+SN_IN_JKS_PASS="dev123"
+SN_TRUST_JKS_PASS="dev123"
 UPDATE_PKGS=""
 VERBOSE=""
 
@@ -42,11 +45,14 @@ Arguments:
  -F <sec domain pw>     - the PKI security domain name, i.e. from ca.cfg; defaults to SolarNetworkDev
  -f <sec domain pw>     - the PKI security domain password, i.e. from ca.cfg; defaults to Secret.123
  -h <host name>         - the FQDN for the machine; defaults to ca.solarnetworkdev.net
+ -I <in JKS pw>         - the SolarIn JKS keystore password; defaults to dev123
  -i <in DNS name>       - the SoalrIn DNS name; defaults to in.solarentworkdev.net
  -J <agent uid>         - the SolarUser agent UID; defaults to suagent
  -j <agent name>        - the SolarUser agent name; defaults to "SolarUser Agent"
  -K <agent email>       - the SolarUser agent email; defaults to "suagent@solarnetworkdev.net"
  -k <agent p12 pw>      - the SolarUser agent PKCS#12 password; defaults to Secret.123
+ -L <agent jks pw>      - the SolarUser agent JKS password; defaults to dev123
+ -l <trust jks pw>      - the SolarNet trust store JKS password; defaults to dev123
  -n                     - dry run; do not make any actual changes
  -o <DS inst name>      - the Directory Server instance name; defaults to ca
  -p <DS root pw>        - the Directory Server root user password; defaults to admin
@@ -58,7 +64,7 @@ Arguments:
 EOF
 }
 
-while getopts ":A:a:c:d:E:e:F:f:h:i:J:j:K:k:no:p:s:t:uv" opt; do
+while getopts ":A:a:c:d:E:e:F:f:h:i:I:J:j:K:k:L:l:no:p:s:t:uv" opt; do
 	case $opt in		
 		A) CA_ADMIN_LOGIN="${OPTARG}";;
 		a) CA_ADMIN_HOME="${OPTARG}";;
@@ -69,11 +75,14 @@ while getopts ":A:a:c:d:E:e:F:f:h:i:J:j:K:k:no:p:s:t:uv" opt; do
 		F) CA_SEC_DOMAIN_NAME="${OPTARG}";;
 		f) CA_SEC_DOMAIN_PASS="${OPTARG}";;
 		h) HOSTNAME="${OPTARG}";;
-		i) HOSTNAME="${OPTARG}";;
+		I) SN_IN_JKS_PASS="${OPTARG}";;
+		i) SN_IN_DNS_NAME="${OPTARG}";;
 		J) CA_AGENT_UID="${OPTARG}";;
 		j) CA_AGENT_NAME="${OPTARG}";;
 		K) CA_AGENT_EMAIL="${OPTARG}";;
 		k) CA_AGENT_P12_PASS="${OPTARG}";;
+		L) CA_AGENT_JKS_PASS="${OPTARG}";;
+		l) SN_TRUST_JKS_PASS="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
 		o) DS_INST_NAME="${OPTARG}";;
 		p) DS_ROOT_PASS="${OPTARG}";;
@@ -399,7 +408,8 @@ setup_pki () {
 		echo 'Setting up central-trust.jks keystore...'
 		if [ -z "$DRY_RUN" ]; then
 			sudo -u $CA_ADMIN_LOGIN keytool -importcert -trustcacerts -alias ca \
-				-keystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/central-trust.jks" -storetype jks -storepass dev123 \
+				-keystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/central-trust.jks" -storetype jks \
+				-storepass "$SN_TRUST_JKS_PASS" \
 				-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/ca-root.crt" -noprompt
 		fi
 	fi
@@ -445,6 +455,24 @@ setup_pki () {
 						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
 				fi
 			fi	
+		fi
+	fi
+
+	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/central.jks" ]; then
+		echo 'central.jks keystore already exists.'
+	else
+		echo 'Setting up central.jks keystore...'
+		if [ -z "$DRY_RUN" ]; then
+			sudo -u $CA_ADMIN_LOGIN keytool -importcert -trustcacerts -alias ca \
+				-keystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/central.jks" -storetype jks \
+				-storepass "$SN_IN_JKS_PASS" \
+				-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/ca-root.crt" -noprompt
+			sudo -u $CA_ADMIN_LOGIN keytool -importkeystore \
+				-srckeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" \
+				-srcstoretype pkcs12 -srcstorepass "$CA_AGENT_P12_PASS" -srckeypass "$CA_AGENT_P12_PASS" \
+				-destkeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/central.jks" \
+				-deststoretype jks -deststorepass "$SN_IN_JKS_PASS" -destkeypass "$SN_IN_JKS_PASS" \
+				-noprompt -srcalias $SN_IN_DNS_NAME -destalias web
 		fi
 	fi
 	
@@ -504,11 +532,16 @@ setup_pki () {
 	else
 		echo 'Setting up dogtag-client.jks keystore...'
 		if [ -z "$DRY_RUN" ]; then
+			sudo -u $CA_ADMIN_LOGIN keytool -importcert -trustcacerts -alias ca \
+				-keystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks" -storetype jks \
+				-storepass "$CA_AGENT_JKS_PASS" \
+				-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/ca-root.crt" -noprompt
 			sudo -u $CA_ADMIN_LOGIN keytool -importkeystore \
 				-srckeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/suagent.p12" \
-				-srcstoretype pkcs12 -srcstorepass "$CA_AGENT_P12_PASS" \
+				-srcstoretype pkcs12 -srcstorepass "$CA_AGENT_P12_PASS" -srckeypass "$CA_AGENT_P12_PASS" \
 				-destkeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks" \
-				-deststoretype jks -deststorepass dev123 -noprompt
+				-deststoretype jks -deststorepass "$CA_AGENT_JKS_PASS" -destkeypass "$CA_AGENT_JKS_PASS" \
+				-noprompt
 		fi
 	fi
 }
@@ -579,8 +612,8 @@ show_results () {
 			
 			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/ca-root.crt
 				
-			You can import this certificate as a trusted CA. The certificate has been copied into
-			a Java keystore for use by SolarNetwork applications, with a password 'dev123':
+			You can import this certificate as a trusted CA. The certificate has been copied for
+			use by SolarNetwork applications with a password '$SN_TRUST_JKS_PASS' to:
 			
 			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/central-trust.jks
 
@@ -592,14 +625,23 @@ show_results () {
 			password used was specified in the 'pki_client_pkcs12_password' property in the PKI
 			configuration file $CA_CONF.
 			
+			A SolarIn web server private key and certificate have been saved as a PKCS#12 file at
+			
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12
+			  
+			that uses the same password specified in the 'pki_client_pkcs12_password' property. A
+			copy of that has been saved with the password '$SN_IN_JKS_PASS' to:
+			
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/central.jks
+			
 			A CA Agent user 'suagent' has been created for SolarUser to integrate with Dogtag. This
 			user has been added to the 'Certificate Manager Agents' group. A PKCS#12 file for this
 			user has been created as
 			
 			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/suagent.p12
 				
-			The suagent.p12 file has been copied into a Java keystore for use by SolarNetwork
-			applications, with a store password 'dev123':
+			The CA Agent PKCS#12 file has been copied for use by SolarNetwork applications with a
+			password '$CA_AGENT_JKS_PASS' to:
 			
 			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks
 
