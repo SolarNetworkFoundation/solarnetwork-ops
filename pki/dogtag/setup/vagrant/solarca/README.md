@@ -30,4 +30,13 @@ cpu_count=2
 memory_size=2048
 ```
 
+# Debugging Dogtag Server
+
+You can create  a `/etc/tomcat/conf.d/debug.conf` file with JVM parameters to pass to the Tomcat
+server, like
+
+```
+JAVA_OPTS="-Djavax.net.debug=ssl:handshake:verbose -Xdebug -Xnoagent -Xrunjdwp:server=y,transport=dt_socket,address=9000,suspend=n"
+```
+
 [vagrant]: https://www.vagrantup.com/
