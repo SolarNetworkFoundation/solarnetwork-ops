@@ -34,6 +34,9 @@ do_help () {
 	cat 1>&2 <<EOF
 Usage: $0 [-nuv]
 
+Arguments that correspond to values in the PKI config file (-c) will be automatically set to the
+value in that file and need not be passed.
+
 Arguments:
  -A <admin username>    - the CA Admin OS username; defaults to caadmin
  -a <admin home>        - the CA Admin OS home; defafults to $CA_ADMIN_HOME
@@ -42,7 +45,7 @@ Arguments:
                           example/SolarNode.cfg
  -E <admin pw>          - the CA admin OS user password; defaults to caadmin
  -e <pki admin p12 pw>  - the PKI Admin PKCS#12 password, i.e. from ca.cfg; defaults to Secret.123
- -F <sec domain pw>     - the PKI security domain name, i.e. from ca.cfg; defaults to SolarNetworkDev
+ -F <sec domain name>   - the PKI security domain name, i.e. from ca.cfg; defaults to SolarNetworkDev
  -f <sec domain pw>     - the PKI security domain password, i.e. from ca.cfg; defaults to Secret.123
  -h <host name>         - the FQDN for the machine; defaults to ca.solarnetworkdev.net
  -I <in JKS pw>         - the SolarIn JKS keystore password; defaults to dev123
@@ -55,7 +58,7 @@ Arguments:
  -l <trust jks pw>      - the SolarNet trust store JKS password; defaults to dev123
  -n                     - dry run; do not make any actual changes
  -o <DS inst name>      - the Directory Server instance name; defaults to ca
- -p <DS root pw>        - the Directory Server root user password; defaults to admin
+ -p <DS root pw>        - the Directory Server root user password, i.e. from ca.cfg; defaults to admin
  -s <DN suffix>         - the Directory Server DN suffix to use; defaults to dc=solarnetworkdev,dc=net
  -t <LDIF file>         - path to a LDIF file to import into the Directory Server after Dogtag
                           configured; this can be used to migrate data from another Dogtag instance
@@ -127,6 +130,20 @@ yum_groupinstall () {
 	fi
 }
 
+setup_cfg_vars () {
+	local tmp_val=$(grep '^pki_client_pkcs12_password=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	PKI_ADMIN_P12_PASS="${tmp_val:-PKI_ADMIN_P12_PASS}"
+	
+	tmp_val=$(grep '^pki_security_domain_name=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	CA_SEC_DOMAIN_NAME="${tmp_val:-CA_SEC_DOMAIN_NAME}"
+	
+	tmp_val=$(grep '^pki_security_domain_password=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	CA_SEC_DOMAIN_PASS="${tmp_val:-CA_SEC_DOMAIN_PASS}"
+	
+	tmp_val=$(grep '^pki_ds_password=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	DS_ROOT_PASS="${tmp_val:-DS_ROOT_PASS}"
+}
+
 setup_pkgs () {
 	if [ -n "$UPDATE_PKGS" ]; then
 		echo 'Upgrading OS packages...'
@@ -172,7 +189,7 @@ setup_osuser () {
 		echo "Adding $CA_ADMIN_LOGIN user."
 		if [ -z "$DRY_RUN" ]; then
 			useradd -c 'CA Admin' -s /bin/bash -m -U "$CA_ADMIN_LOGIN" -d "$CA_ADMIN_HOME"
-			echo "$CA_ADMIN_PASS:$CA_ADMIN_PASS" |chpasswd
+			echo "$CA_ADMIN_LOGIN:$CA_ADMIN_PASS" |chpasswd
 		fi
 	fi
 }
@@ -317,6 +334,22 @@ setup_ds () {
 	fi
 }
 
+setup_pki_pkcs12 () {
+	local p12_file=$(grep '^pki_pkcs12_path=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	local p12_pw=$(grep '^pki_pkcs12_password=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	local p12_nick=$(grep '^pki_ca_signing_nickname=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	if [ -n "$p12_file" -a -n "$p12_pw"  -a -n "$p12_nick" ]; then
+		if pki pkcs12-cert-find --pkcs12-file "$p12_file" --pkcs12-password "$p12_pw" |grep -A 3 "$p12_nick" |tail -1 |grep 'Trust Flags'; then
+			echo "PKI PKCS#12 $p12_file nickname [$p12_nick] already has trust flags set."
+		else
+			echo "Setting PKI PKCS#12 $p12_file nickname [$p12_nick] trust flags..."
+			if [ -z "$DRY_RUN" ]; then
+				pki pkcs12-cert-mod "$p12_nick" --pkcs12-file "$p12_file" --pkcs12-password "$p12_pw" --trust-flags "CTu,Cu,Cu"
+			fi
+		fi
+	fi
+}
+
 setup_pki () {
 	pkg_install pki-ca
 	pkg_install dogtag-pki-server-theme
@@ -324,6 +357,8 @@ setup_pki () {
 	# non-headless Java needed for console
 	pkg_install java-1.8.0-openjdk
 	pkg_install pki-console
+	
+	setup_pki_pkcs12
 	
 	if [ -d /var/lib/pki/pki-tomcat ]; then
 		echo 'Dogtag CA already present.'
@@ -661,6 +696,7 @@ show_results () {
 	fi
 }
 
+setup_cfg_vars
 setup_pkgs
 setup_hostname
 setup_dns
