@@ -63,12 +63,12 @@
     <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" enableLookups="false" />
     -->
 
-    <Engine name="Catalina" defaultHost="solarnetworkdev.net">
+    <Engine name="Catalina" defaultHost="in.solarnetworkdev.net">
       <Realm className="org.apache.catalina.realm.JAASRealm" appName="virgo-kernel"
              userClassNames="org.eclipse.virgo.nano.authentication.User"
              roleClassNames="org.eclipse.virgo.nano.authentication.Role"/>
 
-      <Host name="solarnetworkdev.net" appBase="work"
+      <Host name="in.solarnetworkdev.net" appBase="work"
             unpackWARs="false" autoDeploy="false"
             deployOnStartup="false" createDirs="false">
 
