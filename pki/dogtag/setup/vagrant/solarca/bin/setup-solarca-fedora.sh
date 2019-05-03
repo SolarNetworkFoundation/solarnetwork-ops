@@ -480,10 +480,6 @@ setup_pki () {
 					echo "Importing approved $SN_IN_DNS_NAME certificate $cert_id to nssdb..."
 					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$SN_IN_DNS_NAME" --serial $cert_id
 					
-					echo "Exporting approved $SN_IN_DNS_NAME certificate and private key $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.nssdb.p12..."
-					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_IN_DNS_NAME" \
-						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" --pkcs12-password "$PKI_ADMIN_P12_PASS"
-					
 					echo "Exporting approved $SN_IN_DNS_NAME certificate and private key $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12..."
 					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_IN_DNS_NAME" \
 						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" --pkcs12-password "$PKI_ADMIN_P12_PASS" \
