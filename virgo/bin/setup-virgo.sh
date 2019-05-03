@@ -19,6 +19,12 @@ do_help () {
 	cat 1>&2 <<EOF
 Usage: $0 -a <app name> -h <dest> -i <ivy conf> [-b <build home>] [-rtv]
 
+The following helper programs are used by this script:
+
+ * ant    - to resolve the SolarNet application dependencies
+ * curl   - to download Virgo
+ * unzip  - to extract the Virgo archive
+
 If building from a reference template, overrides can be provided by placing files in a
 local/apphome/X directory, where X is the -a app name you're building.
 
@@ -162,17 +168,17 @@ fi
 #
 # Sync apphome files
 #
-if [ -d "apphome/$APP_NAME" -a -d "local/apphome/$APP_NAME" ]; then
-	if [ -n "$VERBOSE" ]; then
-		echo "Copying local/apphome/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
-	fi
-	rsync -a --no-l --no-t -L "local/apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
-fi
 if [ -d "apphome/$APP_NAME" ]; then
 	if [ -n "$VERBOSE" ]; then
 		echo "Copying apphome/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
 	fi
-	rsync -a --no-l --no-t -L --ignore-existing "apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
+	cp -RL "apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
+fi
+if [ -d "local/apphome/$APP_NAME" ]; then
+	if [ -n "$VERBOSE" ]; then
+		echo "Copying local/apphome/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
+	fi
+	cp -RL "local/apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
 fi
 
 #
@@ -193,5 +199,5 @@ if [ -d "$SN_BUILD_HOME/solarnet-deploy/virgo/build/assemble/repository/usr" ]; 
 	if [ -n "$VERBOSE" ]; then
 		echo "Copying $SN_BUILD_HOME/solarnet-deploy/virgo/build/assemble/repository/usr contents -> $VIRGO_HOME/$APP_NAME/repository/usr"
 	fi
-	rsync -a "$SN_BUILD_HOME/solarnet-deploy/virgo/build/assemble/repository/usr" "$VIRGO_HOME/$APP_NAME/repository/"
+	cp -R "$SN_BUILD_HOME/solarnet-deploy/virgo/build/assemble/repository/usr" "$VIRGO_HOME/$APP_NAME/repository/"
 fi
