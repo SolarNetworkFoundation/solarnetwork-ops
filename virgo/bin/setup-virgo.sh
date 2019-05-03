@@ -19,6 +19,9 @@ do_help () {
 	cat 1>&2 <<EOF
 Usage: $0 -a <app name> -h <dest> -i <ivy conf> [-b <build home>] [-rtv]
 
+If building from a reference template, overrides can be provided by placing files in a
+local/apphome/X directory, where X is the -a app name you're building.
+
 Arguments:
 
  -a <app name>       - the application to deploy; must be a directory in the apphome/ directory
@@ -159,11 +162,17 @@ fi
 #
 # Sync apphome files
 #
+if [ -d "apphome/$APP_NAME" -a -d "local/apphome/$APP_NAME" ]; then
+	if [ -n "$VERBOSE" ]; then
+		echo "Copying local/apphome/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
+	fi
+	rsync -a --no-l --no-t -L "local/apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
+fi
 if [ -d "apphome/$APP_NAME" ]; then
 	if [ -n "$VERBOSE" ]; then
 		echo "Copying apphome/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
 	fi
-	rsync -a "apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
+	rsync -a --no-l --no-t -L --ignore-existing "apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
 fi
 
 #
