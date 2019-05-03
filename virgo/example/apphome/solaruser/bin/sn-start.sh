@@ -39,6 +39,6 @@ env_jdbc () {
 
 env_jdbc
 
-export JMX_PORT=9883
-echo "Starting Virgo HTTP on port 9083, debug port 9983."
-exec "$SCRIPT_DIR"/"$EXECUTABLE" start -debug 9983 "$@"
+export JMX_PORT=9881
+echo "Starting Virgo HTTP on port 9081, debug port 9981."
+exec "$SCRIPT_DIR"/"$EXECUTABLE" start -debug 9981 "$@"
