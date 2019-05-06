@@ -28,7 +28,8 @@
 	<artifact type="bundle" name="net.solarnetwork.central.instructor.aop" version="[1.0,2.0)"/>
 	<artifact type="bundle" name="net.solarnetwork.central.instructor.biz.dao" version="[1.4,2.0)"/>
 	<artifact type="bundle" name="net.solarnetwork.central.instructor.dao.mybatis" version="[1.2,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.query.audit.jdbc" version="[0.1,2.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.central.query.aop" version="[1.0,2.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.central.query.audit.jdbc" version="[1.0,2.0)"/>
 	<artifact type="bundle" name="net.solarnetwork.central.query.biz.dao" version="[2.2,3.0)"/>
 
 	<!-- SolarUser -->
