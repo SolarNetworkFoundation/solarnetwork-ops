@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 
+BASE_DIR="/vagrant"
 DRY_RUN=""
 HOSTNAME="solardb"
 PG_CONF_AWK="example/pg-conf.awk"
@@ -33,7 +34,8 @@ Arguments:
                           example/pg_hba.conf
  -B <pg custom awk>     - relative path to an awk script to run on the Postgres configuration file
                           after all other customizations are performed; defaults to example/pg-conf.awk
- -b <pg preload lib>    - value for the Postgres shared_preload_libraries; defaults to
+ -b <base dir>          - base dir for relative paths; defaults to /vagrant
+ -c <pg preload lib>    - value for the Postgres shared_preload_libraries; defaults to
                           auto_explain,pg_stat_statements,timescaledb
  -D <pg data dir>       - directory to initialize Postgres data; defaults to /var/db/postgres/data96
  -d <pg listen addr>    - the Postgres address to listen to; defaults to *
@@ -52,12 +54,13 @@ Arguments:
 EOF
 }
 
-while getopts ":A:a:B:b:D:d:E:e:F:f:Gh:nP:p:uv" opt; do
+while getopts ":A:a:B:b:c:D:d:E:e:F:f:Gh:nP:p:uv" opt; do
 	case $opt in
 		A) PG_IDENT_MAP="${OPTARG}";;
 		a) PG_IDENT_CONF="${OPTARG}";;
 		B) PG_CONF_AWK="${OPTARG}";;
-		b) PG_PRELOAD_LIB="${OPTARG}";;
+		b) BASE_DIR="${OPTARG}";;
+		c) PG_PRELOAD_LIB="${OPTARG}";;
 		D) PG_DATA_DIR="${OPTARG}";;
 		d) PG_LISTEN_ADDR="${OPTARG}";;
 		E) PG_SSL_CERT="${OPTARG}";;
@@ -101,7 +104,7 @@ setup_pkgs () {
 			if [ ! -d /usr/local/etc/ssl/certs ]; then
 				mkdir -p /usr/local/etc/ssl/certs
 			fi
-			cp "/vagrant/${PKG_REPO_CERT}" /usr/local/etc/ssl/certs/solarnet-repo.cert
+			cp "$BASE_DIR/${PKG_REPO_CERT}" /usr/local/etc/ssl/certs/solarnet-repo.cert
 		fi
 	fi
 	if [ -e /usr/local/etc/pkg/repos/solarnet.conf ]; then
@@ -112,7 +115,7 @@ setup_pkgs () {
 			if [ ! -d /usr/local/etc/pkg/repos ]; then
 				mkdir -p /usr/local/etc/pkg/repos
 			fi
-			cp "/vagrant/${PKG_REPO_CONF}" /usr/local/etc/pkg/repos/solarnet.conf
+			cp "$BASE_DIR/${PKG_REPO_CONF}" /usr/local/etc/pkg/repos/solarnet.conf
 		fi
 	fi
 	if [ -n "$UPDATE_PKGS" ]; then
@@ -200,7 +203,7 @@ setup_postgres () {
 	fi
 	
 	if grep -q "shared_preload_libraries.*$PG_PRELOAD_LIB" "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
-		echo "shared_preload_libraries extension already configured in postgresql.conf."
+		echo "shared_preload_libraries already configured in postgresql.conf."
 	else
 		echo "Configuring shared_preload_libraries in postgresql.conf"
 		if [ -z "$DRY_RUN" ]; then
@@ -226,8 +229,8 @@ setup_postgres () {
 			sed -Ei '' -e 's/#?ssl = [[:alpha:]]+/ssl = on/' \
 				-e "s/#?ssl_ciphers = '.*'/ssl_ciphers = '$PG_SSL_CIPHERS'/" \
 				"$PG_DATA_DIR/postgresql.conf"
-			if [ -d "/vagrant/tls" ];then
-				rsync -aq /vagrant/tls "$PG_DATA_DIR/"
+			if [ -d "$BASE_DIR/tls" ];then
+				rsync -aq "$BASE_DIR/tls" "$PG_DATA_DIR/"
 				chown -R postgres:postgres "$PG_DATA_DIR/tls"
 			fi
 			if [ -n "$PG_SSL_CERT" ]; then
@@ -249,8 +252,8 @@ setup_postgres () {
 	else
 		echo "Configuring pg_ident.conf map for $PG_IDENT_MAP..."
 		if [ -z "$DRY_RUN" ]; then
-			if [ -e "/vagrant/$PG_IDENT_CONF" ]; then
-				cat "/vagrant/$PG_IDENT_CONF" >>"$PG_DATA_DIR/pg_ident.conf"
+			if [ -e "$BASE_DIR/$PG_IDENT_CONF" ]; then
+				cat "$BASE_DIR/$PG_IDENT_CONF" >>"$PG_DATA_DIR/pg_ident.conf"
 			else
 				echo "pg_ident file $PG_IDENT_CONF not found."
 				exit 1
@@ -259,13 +262,13 @@ setup_postgres () {
 	fi
 	
 	if [ -n "$PG_CONF_AWK" ]; then
-		if [ ! -e "/vagrant/$PG_CONF_AWK" ]; then
+		if [ ! -e "$BASE_DIR/$PG_CONF_AWK" ]; then
 			echo "Custom Postgres awk configuration script $PG_CONF_AWK not found."
 			exit 1
 		else
 			echo "Executing custom Postgres awk configuration script $PG_CONF_AWK..."
 			if [ -z "$DRY_RUN" ]; then
-				awk -F '[[:space:]]=[[:space:]]' -f "/vagrant/$PG_CONF_AWK" "$PG_DATA_DIR/postgresql.conf" \
+				awk -F '[[:space:]]=[[:space:]]' -f "$BASE_DIR/$PG_CONF_AWK" "$PG_DATA_DIR/postgresql.conf" \
 					>"$PG_DATA_DIR/postgresql.conf.new"
 				if diff -q "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.new" >/dev/null; then
 					echo "No change to Postgres configuration from custom awk script $PG_CONF_AWK"
