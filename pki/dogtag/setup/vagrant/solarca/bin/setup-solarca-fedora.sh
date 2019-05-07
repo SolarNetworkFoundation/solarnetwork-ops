@@ -19,12 +19,14 @@ DS_ROOT_PASS="admin"
 DS_SUFFIX="dc=solarnetworkdev,dc=net"
 DS_IMPORT_LDIF=""
 HOSTNAME="ca.solarnetworkdev.net"
-SN_DB_DNS_NAME="db.solarnetworkdev.net"
-SN_DB_P12_PASS="dev123"
 SN_PROFILE_CONF="example/SolarNode.cfg"
 SN_IN_DNS_NAME="in.solarnetworkdev.net"
 SN_IN_JKS_PASS="dev123"
+SN_SERVER_DNS_NAMES="DB:db.solarnetworkdev.net SolarFlux:influx.solarnetworkdev.net SolarIn:queue.solarnetworkdev.net"
+SN_SERVER_P12_PASS="dev123"
 SN_TRUST_JKS_PASS="dev123"
+SN_USER_NAMES="DB:auth:operations@solarnetworkdev.net DB:in:operations@solarnetworkdev.net DB:jobs:operations@solarnetworkdev.net DB:query:operations@solarnetworkdev.net DB:user:operations@solarnetworkdev.net"
+SN_USER_P12_PASS="dev123"
 UPDATE_PKGS=""
 VERBOSE=""
 
@@ -60,8 +62,12 @@ Arguments:
  -k <agent p12 pw>      - the SolarUser agent PKCS#12 password; defaults to Secret.123
  -L <agent jks pw>      - the SolarUser agent JKS password; defaults to dev123
  -l <trust jks pw>      - the SolarNet trust store JKS password; defaults to dev123
- -M <db p12 pw>         - the DB server PKCS#12 password; defaults to dev123
- -m <db DNS name>       - the DB server DNS name; defaults to db.solarnetworkdev.net
+ -M <server p12 pw>     - the DB servers PKCS#12 password; defaults to dev123
+ -m <server DNS names>  - a space-delimited list of server DN organizational units and DNS name pairs
+                          delimited by colons, to create certificates for; defaults to the following:
+
+                         DB:db.solarnetworkdev.net SolarFlux:influx.solarnetworkdev.net SolarIn:queue.solarnetworkdev.net
+
  -n                     - dry run; do not make any actual changes
  -o <DS inst name>      - the Directory Server instance name; defaults to ca
  -p <DS root pw>        - the Directory Server root user password, i.e. from ca.cfg; defaults to admin
@@ -70,10 +76,15 @@ Arguments:
                           configured; this can be used to migrate data from another Dogtag instance
  -u                     - update package cache
  -v                     - verbose mode; print out more verbose messages
+ -W <user p12 pw>       - the user PKCS#12 password; defaults to dev123
+ -w <user names>        - a space-delimited list of server DN organizational units and DNS name pairs
+                          delimited by colons, to create certificates for; defaults to the following:
+
+                         DB:auth:operations@solarnetworkdev.net DB:in:operations@solarnetworkdev.net...
 EOF
 }
 
-while getopts ":A:a:b:c:d:E:e:F:f:h:i:I:J:j:K:k:L:l:M:m:no:p:s:t:uv" opt; do
+while getopts ":A:a:b:c:d:E:e:F:f:h:i:I:J:j:K:k:L:l:M:m:no:p:s:t:uvW:w:" opt; do
 	case $opt in		
 		A) CA_ADMIN_LOGIN="${OPTARG}";;
 		a) CA_ADMIN_HOME="${OPTARG}";;
@@ -93,8 +104,8 @@ while getopts ":A:a:b:c:d:E:e:F:f:h:i:I:J:j:K:k:L:l:M:m:no:p:s:t:uv" opt; do
 		k) CA_AGENT_P12_PASS="${OPTARG}";;
 		L) CA_AGENT_JKS_PASS="${OPTARG}";;
 		l) SN_TRUST_JKS_PASS="${OPTARG}";;
-		M) SN_DB_P12_PASS="${OPTARG}";;
-		m) SN_DB_DNS_NAME="${OPTARG}";;
+		M) SN_SERVER_P12_PASS="${OPTARG}";;
+		m) SN_SERVER_DNS_NAMES="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
 		o) DS_INST_NAME="${OPTARG}";;
 		p) DS_ROOT_PASS="${OPTARG}";;
@@ -102,6 +113,8 @@ while getopts ":A:a:b:c:d:E:e:F:f:h:i:I:J:j:K:k:L:l:M:m:no:p:s:t:uv" opt; do
 		t) DS_IMPORT_LDIF="${OPTARG}";;
 		u) UPDATE_PKGS='TRUE';;
 		v) VERBOSE='TRUE';;
+		W) SN_USER_P12_PASS="${OPTARG}";;
+		w) SN_USER_NAMES="${OPTARG}";;
 		?)
 			echo "Unknown argument ${OPTARG}"
 			do_help
@@ -359,6 +372,89 @@ setup_pki_pkcs12 () {
 	fi
 }
 
+setup_pki_server_p12 () {
+	local dns_name="$1"
+	local dn_ou="$2"
+	local p12_pass="$3"
+	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$dns_name.p12" ]; then
+		echo "$dns_name certificate already exists."
+	else
+		echo "Creating $dns_name certificate..."
+		if [ -z "$DRY_RUN" ]; then
+			local req_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
+				"CN=$dns_name,OU=$dn_ou,O=$CA_SEC_DOMAIN_NAME" --profile caServerCert \
+				|grep 'Request ID:' |cut -d : -f 2 |xargs)
+			if [ -z "$req_id" ]; then
+				echo "ERROR: unable to request $dns_name certificate."
+				exit 1
+			else
+				echo "Approving $dns_name certificate request $req_id..."
+				local cert_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
+					|grep 'Certificate ID:'|cut -d : -f 2 |xargs)
+				if [ -z "$cert_id" ]; then
+					echo "ERROR: unable to approve $dns_name certificate."
+					exit 1
+				else
+					echo "Saving approved $dns_name certificate $cert_id to .dogtag/pki-tomcat/$dns_name.crt"
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-show $cert_id --encoded \
+						--output "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$dns_name.crt"
+						
+					echo "Importing approved $dns_name certificate $cert_id to nssdb..."
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$dns_name" --serial $cert_id
+				
+					echo "Exporting approved $dns_name certificate and private key $cert_id to .dogtag/pki-tomcat/$dns_name.p12..."
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$dns_name" \
+						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$dns_name.p12" --pkcs12-password "$p12_pass" \
+						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
+				fi
+			fi	
+		fi
+	fi
+}
+
+setup_pki_user_p12 () {
+	local user_uid="$1"
+	local user_email="$2"
+	local dn_ou="$3"
+	local p12_pass="$4"
+	local ca_user="$5" # pass non-empty value to add certificate to CA user with same UID as $user_uid
+	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/${dn_ou}-$user_uid.p12" ]; then
+		echo "$dn_ou $user_uid certificate already exists."
+	else
+		echo "Creating $dn_ou $user_uid certificate..."
+		if [ -z "$DRY_RUN" ]; then
+			local req_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
+				"UID=$user_uid,E=$user_email,CN=$user_uid,OU=$dn_ou,O=$CA_SEC_DOMAIN_NAME" --profile caUserCert \
+				|grep 'Request ID:' |cut -d : -f 2 |xargs)
+			if [ -z "$req_id" ]; then
+				echo "ERROR: unable to request $user_uid certificate."
+				exit 1
+			else
+				echo "Approving $user_uid certificate request $req_id..."
+				local cert_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
+					|grep 'Certificate ID:'|cut -d : -f 2 |xargs)
+				if [ -z "$cert_id" ]; then
+					echo "ERROR: unable to approve $user_uid certificate."
+					exit 1
+				else
+					if [ -n "$ca_user" ]; then
+						echo "Adding $user_uid certificate to user..."
+						sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$user_uid" --serial "$cert_id"
+					fi
+										
+					echo "Importing approved $user_uid certificate $cert_id to nssdb..."
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$user_uid" --serial $cert_id
+					
+					echo "Exporting approved $user_uid certificate and private key $cert_id to .dogtag/pki-tomcat/${dn_ou}-$user_uid.p12..."
+					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$user_uid" \
+						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/${dn_ou}-$user_uid.p12" --pkcs12-password "$p12_pass" \
+						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
+				fi
+			fi	
+		fi
+	fi
+}
+
 setup_pki () {
 	pkg_install pki-ca
 	pkg_install dogtag-pki-server-theme
@@ -463,78 +559,7 @@ setup_pki () {
 	# SolarIn requires a server certificate. The following block creates one based on the SN_IN_DNS_NAME
 	# value. The certificate and private key will be exported as a PKCS#12 file at .dogtag/pki-tomcat/SN_IN_DNS_NAME.p12
 	# using the SN_IN_JKS_PASS.
-	
-	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" ]; then
-		echo "$SN_IN_DNS_NAME certificate already exists."
-	else
-		echo "Creating $SN_IN_DNS_NAME certificate..."
-		if [ -z "$DRY_RUN" ]; then
-			local req_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
-				"CN=$SN_IN_DNS_NAME,OU=SolarIn,O=$CA_SEC_DOMAIN_NAME" --profile caServerCert \
-				|grep 'Request ID:' |cut -d : -f 2 |xargs)
-			if [ -z "$req_id" ]; then
-				echo "ERROR: unable to request $SN_IN_DNS_NAME certificate."
-				exit 1
-			else
-				echo "Approving $SN_IN_DNS_NAME certificate request $req_id..."
-				local cert_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
-					|grep 'Certificate ID:'|cut -d : -f 2 |xargs)
-				if [ -z "$cert_id" ]; then
-					echo "ERROR: unable to approve $SN_IN_DNS_NAME certificate."
-					exit 1
-				else
-					echo "Saving approved $SN_IN_DNS_NAME certificate $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.crt"
-					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-show $cert_id --encoded \
-						--output "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.crt"
-
-					echo "Importing approved $SN_IN_DNS_NAME certificate $cert_id to nssdb..."
-					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$SN_IN_DNS_NAME" --serial $cert_id
-					
-					echo "Exporting approved $SN_IN_DNS_NAME certificate and private key $cert_id to .dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12..."
-					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_IN_DNS_NAME" \
-						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_IN_DNS_NAME.p12" --pkcs12-password "$SN_IN_JKS_PASS" \
-						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
-				fi
-			fi	
-		fi
-	fi
-
-	# SolarDB server certificate creation
-	#
-	# SolarDB requires a server certificate. The following block creates one based on the SN_DB_DNS_NAME
-	# value. The certificate and private key will be exported as a PKCS#12 file at .dogtag/pki-tomcat/SN_DB_DNS_NAME.p12
-	# using the SN_DB_P12_PASS password.
-	
-	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_DB_DNS_NAME.p12" ]; then
-		echo "$SN_DB_DNS_NAME certificate already exists."
-	else
-		echo "Creating $SN_DB_DNS_NAME certificate..."
-		if [ -z "$DRY_RUN" ]; then
-			local req_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
-				"CN=$SN_DB_DNS_NAME,OU=DB,O=$CA_SEC_DOMAIN_NAME" --profile caServerCert \
-				|grep 'Request ID:' |cut -d : -f 2 |xargs)
-			if [ -z "$req_id" ]; then
-				echo "ERROR: unable to request $SN_DB_DNS_NAME certificate."
-				exit 1
-			else
-				echo "Approving $SN_DB_DNS_NAME certificate request $req_id..."
-				local cert_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
-					|grep 'Certificate ID:'|cut -d : -f 2 |xargs)
-				if [ -z "$cert_id" ]; then
-					echo "ERROR: unable to approve $SN_DB_DNS_NAME certificate."
-					exit 1
-				else
-					echo "Importing approved $SN_DB_DNS_NAME certificate $cert_id to nssdb..."
-					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$SN_DB_DNS_NAME" --serial $cert_id
-				
-					echo "Exporting approved $SN_DB_DNS_NAME certificate and private key $cert_id to .dogtag/pki-tomcat/$SN_DB_DNS_NAME.p12..."
-					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$SN_DB_DNS_NAME" \
-						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_DB_DNS_NAME.p12" --pkcs12-password "$SN_DB_P12_PASS" \
-						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
-				fi
-			fi	
-		fi
-	fi
+	setup_pki_server_p12 "$SN_IN_DNS_NAME" "SolarIn" "$SN_IN_JKS_PASS"
 
 	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/central.jks" ]; then
 		echo 'central.jks keystore already exists.'
@@ -554,6 +579,15 @@ setup_pki () {
 		fi
 	fi
 	
+	# Solar server certificates creation
+	#
+	# The following block iterates over SN_SERVER_DNS_NAMES and creates certificate and PKCS#12 archives for each. The
+	# certificates and private keys named after the DNS name, saved to .dogtag/pki-tomcat using the 
+	# SN_SERVER_P12_PASS password.
+	for pair in $SN_SERVER_DNS_NAMES; do
+		setup_pki_server_p12 "${pair#*:}" "${pair%:*}" "$SN_SERVER_P12_PASS"
+	done
+
 	# SolarUser agent certificate creation
 	#
 	# SolarUser requires an "agent" user and associated client certificate to manage SolarNode certificates.
@@ -561,8 +595,8 @@ setup_pki () {
 	# and then creates a certificate for the user. The certificate and private key will be exported as a 
 	# PKCS#12 file at .dogtag/pki-tomcat/suagent.p12
 	
-	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" ]; then
-		echo "$CA_AGENT_UID certificate already exists."
+	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/SolarUser-$CA_AGENT_UID.p12" ]; then
+		echo "SolarUser $CA_AGENT_UID certificate already exists."
 	else
 		echo "Creating SolarUser agent user $CA_AGENT_UID..."
 		if [ -z "$DRY_RUN" ]; then
@@ -573,36 +607,8 @@ setup_pki () {
 			sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname"  ca-group-member-add \
 				"Certificate Manager Agents" "$CA_AGENT_UID"
 		fi
-				
-		echo "Creating $CA_AGENT_UID certificate..."
-		if [ -z "$DRY_RUN" ]; then
-			local req_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-request \
-				"UID=$CA_AGENT_UID,E=$CA_AGENT_EMAIL,CN=$CA_AGENT_NAME,OU=SolarUser,O=$CA_SEC_DOMAIN_NAME" --profile caUserCert \
-				|grep 'Request ID:' |cut -d : -f 2 |xargs)
-			if [ -z "$req_id" ]; then
-				echo "ERROR: unable to request $CA_AGENT_UID certificate."
-				exit 1
-			else
-				echo "Approving $CA_AGENT_UID certificate request $req_id..."
-				local cert_id=$(sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-request-review "$req_id" --action approve \
-					|grep 'Certificate ID:'|cut -d : -f 2 |xargs)
-				if [ -z "$cert_id" ]; then
-					echo "ERROR: unable to approve $CA_AGENT_UID certificate."
-					exit 1
-				else
-					echo "Adding $CA_AGENT_UID certificate to user..."
-					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$CA_AGENT_UID" --serial "$cert_id"
-					
-					echo "Importing approved $CA_AGENT_UID certificate $cert_id to nssdb..."
-					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" client-cert-import "$CA_AGENT_UID" --serial $cert_id
-					
-					echo "Exporting approved $CA_AGENT_UID certificate and private key $cert_id to .dogtag/pki-tomcat/$CA_AGENT_UID.p12..."
-					sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" pkcs12-cert-import "$CA_AGENT_UID" \
-						--pkcs12-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$CA_AGENT_UID.p12" --pkcs12-password "$CA_AGENT_P12_PASS" \
-						--no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC'
-				fi
-			fi	
-		fi
+		
+		setup_pki_user_p12 "$CA_AGENT_UID" "$CA_AGENT_EMAIL" "SolarUser" "$CA_AGENT_P12_PASS" "1"
 	fi
 
 	if [ -e "$CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks" ]; then
@@ -615,13 +621,21 @@ setup_pki () {
 				-storepass "$CA_AGENT_JKS_PASS" \
 				-file "$CA_ADMIN_HOME/.dogtag/pki-tomcat/ca-root.crt" -noprompt
 			sudo -u $CA_ADMIN_LOGIN keytool -importkeystore \
-				-srckeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/suagent.p12" \
+				-srckeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/SolarUser-$CA_AGENT_UID.p12" \
 				-srcstoretype pkcs12 -srcstorepass "$CA_AGENT_P12_PASS" -srckeypass "$CA_AGENT_P12_PASS" \
 				-destkeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks" \
 				-deststoretype jks -deststorepass "$CA_AGENT_JKS_PASS" -destkeypass "$CA_AGENT_JKS_PASS" \
 				-noprompt
 		fi
 	fi
+
+	# Useragent certificate creation
+	#
+	# Other certificates are created (for non-CA users), such as database users
+	
+	for tuple in $SN_USER_NAMES; do
+		setup_pki_user_p12 "$(echo $tuple |cut -d: -f2)" "$(echo $tuple |cut -d: -f3)" "$(echo $tuple |cut -d: -f1)" "$SN_USER_P12_PASS"
+	done
 }
 
 setup_ds_import () {
