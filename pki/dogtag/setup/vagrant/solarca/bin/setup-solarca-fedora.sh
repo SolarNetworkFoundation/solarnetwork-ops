@@ -300,7 +300,7 @@ setup_ds () {
 	pkg_install 389-ds
 	pkg_install cockpit-389-ds
 
-	if dsctl -l |grep "slapd-$DS_INST_NAME"; then
+	if dsctl -l 2>/dev/null |grep "slapd-$DS_INST_NAME"; then
 		echo "DS $DS_INST_NAME exists already."
 	else
 		if [ -e ds.inf ]; then
