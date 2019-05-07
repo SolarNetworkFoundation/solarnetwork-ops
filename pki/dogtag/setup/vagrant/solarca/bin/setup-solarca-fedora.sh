@@ -599,10 +599,10 @@ setup_ds_import () {
 setup_firewall () {
 	echo 'Opening ports 8080, 8443 in firewall...'
 	if [ -z "$DRY_RUN" ]; then
-		firewall-cmd --quiet --zone=public --add-port=8080/tcp --permanent
 		firewall-cmd --quiet --zone=public --add-port=8080/tcp
-		firewall-cmd --quiet --zone=public --add-port=8443/tcp --permanent
+		firewall-cmd --quiet --zone=public --add-port=8080/tcp --permanent
 		firewall-cmd --quiet --zone=public --add-port=8443/tcp
+		firewall-cmd --quiet --zone=public --add-port=8443/tcp --permanent
 	fi
 }
 
@@ -711,8 +711,7 @@ setup_pki
 if [ -n "$DS_IMPORT_LDIF" ]; then
 	setup_ds_import
 fi
-setup_firewall
-
 setup_cockpit
+setup_firewall
 
 show_results
