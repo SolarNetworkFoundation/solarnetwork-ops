@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+BASE_DIR="/vagrant"
 CA_CONF="example/ca.cfg"
 CA_SEC_DOMAIN_NAME="SolarNetworkDev"
 CA_SEC_DOMAIN_PASS="Secret.123"
@@ -40,6 +41,7 @@ value in that file and need not be passed.
 Arguments:
  -A <admin username>    - the CA Admin OS username; defaults to caadmin
  -a <admin home>        - the CA Admin OS home; defafults to $CA_ADMIN_HOME
+ -b <base dir>          - base dir for relative paths; defaults to /vagrant
  -c <PKI config path>   - path to the Dogtag CA configuration file to use; defaults to example/ca.cfg
  -d <profile path>      - path to the Dogtag SolarNode profile configuration file to use; defaults to
                           example/SolarNode.cfg
@@ -67,10 +69,11 @@ Arguments:
 EOF
 }
 
-while getopts ":A:a:c:d:E:e:F:f:h:i:I:J:j:K:k:L:l:no:p:s:t:uv" opt; do
+while getopts ":A:a:b:c:d:E:e:F:f:h:i:I:J:j:K:k:L:l:no:p:s:t:uv" opt; do
 	case $opt in		
 		A) CA_ADMIN_LOGIN="${OPTARG}";;
 		a) CA_ADMIN_HOME="${OPTARG}";;
+		b) BASE_DIR="${OPTARG}";;
 		c) CA_CONF="${OPTARG}";;
 		d) SN_PROFILE_CONF="${OPTARG}";;
 		E) CA_ADMIN_PASS="${OPTARG}";;
@@ -131,16 +134,16 @@ yum_groupinstall () {
 }
 
 setup_cfg_vars () {
-	local tmp_val=$(grep '^pki_client_pkcs12_password=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	local tmp_val=$(grep '^pki_client_pkcs12_password=' "$BASE_DIR/$CA_CONF" 2>/dev/null |cut -d= -f2)
 	PKI_ADMIN_P12_PASS="${tmp_val:-PKI_ADMIN_P12_PASS}"
 	
-	tmp_val=$(grep '^pki_security_domain_name=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	tmp_val=$(grep '^pki_security_domain_name=' "$BASE_DIR/$CA_CONF" 2>/dev/null |cut -d= -f2)
 	CA_SEC_DOMAIN_NAME="${tmp_val:-CA_SEC_DOMAIN_NAME}"
 	
-	tmp_val=$(grep '^pki_security_domain_password=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	tmp_val=$(grep '^pki_security_domain_password=' "$BASE_DIR/$CA_CONF" 2>/dev/null |cut -d= -f2)
 	CA_SEC_DOMAIN_PASS="${tmp_val:-CA_SEC_DOMAIN_PASS}"
 	
-	tmp_val=$(grep '^pki_ds_password=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	tmp_val=$(grep '^pki_ds_password=' "$BASE_DIR/$CA_CONF" 2>/dev/null |cut -d= -f2)
 	DS_ROOT_PASS="${tmp_val:-DS_ROOT_PASS}"
 }
 
@@ -335,9 +338,9 @@ setup_ds () {
 }
 
 setup_pki_pkcs12 () {
-	local p12_file=$(grep '^pki_pkcs12_path=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
-	local p12_pw=$(grep '^pki_pkcs12_password=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
-	local p12_nick=$(grep '^pki_ca_signing_nickname=' "/vagrant/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	local p12_file=$(grep '^pki_pkcs12_path=' "$BASE_DIR/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	local p12_pw=$(grep '^pki_pkcs12_password=' "$BASE_DIR/$CA_CONF" 2>/dev/null |cut -d= -f2)
+	local p12_nick=$(grep '^pki_ca_signing_nickname=' "$BASE_DIR/$CA_CONF" 2>/dev/null |cut -d= -f2)
 	if [ -n "$p12_file" -a -n "$p12_pw"  -a -n "$p12_nick" ]; then
 		if pki pkcs12-cert-find --pkcs12-file "$p12_file" --pkcs12-password "$p12_pw" |grep -A 3 "$p12_nick" |tail -1 |grep 'Trust Flags'; then
 			echo "PKI PKCS#12 $p12_file nickname [$p12_nick] already has trust flags set."
@@ -365,11 +368,11 @@ setup_pki () {
 	else
 		echo "Creating Dogtag CA system using configuration $CA_CONF..."
 		if [ -z "$DRY_RUN" ]; then
-			if [ ! -e "/vagrant/$CA_CONF" ]; then
+			if [ ! -e "$BASE_DIR/$CA_CONF" ]; then
 				echo "Dogtag CA config $CA_CONF not found; cannot create Dogtag CA system."
 				exit 1
 			else
- 				pkispawn -s CA -f "/vagrant/$CA_CONF"
+ 				pkispawn -s CA -f "$BASE_DIR/$CA_CONF"
  				did_pki=1
 			fi
 		fi
@@ -424,7 +427,7 @@ setup_pki () {
 		else
 			echo "Configuring CA profile SolarNode..."
 			if [ -z "$DRY_RUN" ]; then
-				pki -n "$admin_nickname" ca-profile-add "/vagrant/$SN_PROFILE_CONF" --raw
+				pki -n "$admin_nickname" ca-profile-add "$BASE_DIR/$SN_PROFILE_CONF" --raw
 				pki -n "$admin_nickname" ca-profile-enable SolarNode
 			fi
 		fi
@@ -578,14 +581,14 @@ setup_pki () {
 }
 
 setup_ds_import () {
-	if [ ! -e "/vagrant/$DS_IMPORT_LDIF" ]; then
+	if [ ! -e "$BASE_DIR/$DS_IMPORT_LDIF" ]; then
 		echo "Directory Server LDIF import file [$DS_IMPORT_LDIF] not found."
 	else
 		echo "Importing Directory Server LDIF file [$DS_IMPORT_LDIF]..."
 		if [ -z "$DRY_RUN" ]; then
 			systemctl stop pki-tomcatd.target
 			db2bak
-			ldapadd -x -w "$DS_ROOT_PASS" -D 'cn=Directory Manager' -c -f "/vagrant/$DS_IMPORT_LDIF" \
+			ldapadd -x -w "$DS_ROOT_PASS" -D 'cn=Directory Manager' -c -f "$BASE_DIR/$DS_IMPORT_LDIF" \
 				>"$CA_ADMIN_HOME/.dogtag/pki-tomcat/ds-import-ldif.log" 2>&1
 			systemctl start pki-tomcatd.target
 			did_ds_ldif_import=1
