@@ -5,6 +5,12 @@ vm_box_version=">= 2018.06.22"
 cpu_count=1
 memory_size=2048
 gui=false
+disk_journal="disk/journal.vmdk"
+disk_journal_mb=512
+disk_data="disk/data.vmdk"
+disk_data_mb=4096
+disk_index="disk/index.vmdk"
+disk_index_mb=4096
 setup_path="/vagrant/bin/setup-solardb-freebsd.sh"
 setup_args="-u"
 
@@ -35,6 +41,21 @@ Vagrant.configure("2") do |config|
 		v.memory = memory_size
 		v.cpus = cpu_count
 		v.name = vm_name
+		
+		unless File.exist?(disk_journal)
+			v.customize ["createmedium", "disk", "--filename", disk_journal, "--format", "vmdk", "--variant", "Split2G", "--size", disk_journal_mb]
+		end
+		unless File.exist?(disk_data)
+			v.customize ["createmedium", "disk", "--filename", disk_data, "--format", "vmdk", "--variant", "Split2G", "--size", disk_data_mb]
+		end
+		unless File.exist?(disk_index)
+			v.customize ["createmedium", "disk", "--filename", disk_index, "--format", "vmdk", "--variant", "Split2G", "--size", disk_index_mb]
+		end
+		
+		v.customize ["storagectl", :id, "--name", "SAS", "--add", "sas", "--portcount", 4]
+		v.customize ["storageattach", :id, "--storagectl", "SAS", "--port", 1, "--device", 0, "--type", "hdd", "--medium", disk_journal]
+		v.customize ["storageattach", :id, "--storagectl", "SAS", "--port", 2, "--device", 0, "--type", "hdd", "--medium", disk_data]
+		v.customize ["storageattach", :id, "--storagectl", "SAS", "--port", 3, "--device", 0, "--type", "hdd", "--medium", disk_index]
 	end
 
 	config.vm.provider "vmware_desktop" do |v|
