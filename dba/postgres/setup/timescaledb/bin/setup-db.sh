@@ -222,25 +222,25 @@ if [ -n "$DRY_RUN" ]; then
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c '...'"
 else		
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAt <<-EOF
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatum',	'da_datum',				'ts',		'6 months'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatum',	'da_datum',				'ts',		'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 		
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatum',	'da_loc_datum',			'ts',		'1 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatum',	'da_loc_datum',			'ts',		'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 		
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_datum_hourly',		'ts_start',	'6 months'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_datum_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_datum_monthly',	'ts_start',	'5 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_datum_hourly',		'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_datum_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_datum_monthly',	'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_loc_datum_hourly',	'ts_start',	'1 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_loc_datum_daily',	'ts_start',	'5 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_loc_datum_monthly','ts_start',	'10 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_loc_datum_hourly',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_loc_datum_daily',	'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_loc_datum_monthly','ts_start',	'10 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_datum_hourly',		'ts_start',	'6 months'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_datum_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_datum_monthly',	'ts_start',	'5 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_datum_hourly',		'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_datum_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_datum_monthly',	'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_loc_datum_hourly',	'ts_start',	'1 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_loc_datum_hourly',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 		
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_acc_datum_daily',	'ts_start',	'1 years'${INDEX_TABLESPACE:+",'$INDEX_TABLESPACE'"});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_acc_datum_daily',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 	EOF
 fi
 
