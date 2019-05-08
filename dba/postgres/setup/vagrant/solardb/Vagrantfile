@@ -43,6 +43,9 @@ Vagrant.configure("2") do |config|
 		v.name = vm_name
 		
 		unless File.exist?(disk_journal)
+			# we also assume the SAS controller does not exist yet here... and create it; no good way found
+			# to test for existence of controller and VBoxManage throws exception if it already exists
+			v.customize ["storagectl", :id, "--name", "SAS", "--add", "sas", "--portcount", 4]
 			v.customize ["createmedium", "disk", "--filename", disk_journal, "--format", "vmdk", "--variant", "Split2G", "--size", disk_journal_mb]
 		end
 		unless File.exist?(disk_data)
@@ -52,7 +55,6 @@ Vagrant.configure("2") do |config|
 			v.customize ["createmedium", "disk", "--filename", disk_index, "--format", "vmdk", "--variant", "Split2G", "--size", disk_index_mb]
 		end
 		
-		v.customize ["storagectl", :id, "--name", "SAS", "--add", "sas", "--portcount", 4]
 		v.customize ["storageattach", :id, "--storagectl", "SAS", "--port", 1, "--device", 0, "--type", "hdd", "--medium", disk_journal]
 		v.customize ["storageattach", :id, "--storagectl", "SAS", "--port", 2, "--device", 0, "--type", "hdd", "--medium", disk_data]
 		v.customize ["storageattach", :id, "--storagectl", "SAS", "--port", 3, "--device", 0, "--type", "hdd", "--medium", disk_index]
