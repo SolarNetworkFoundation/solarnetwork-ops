@@ -2,11 +2,13 @@
 
 BASE_DIR="/vagrant"
 BASE_DIR_DB_INIT="/db-init"
+DB_INDEX_TSPACE_PATH="/solar/index96"
+DB_INDEX_TSPACE_OPTS="random_page_cost=1, effective_io_concurrency=10"
 DB_USER_PATH="example/tsdb-init-users.sql"
 DRY_RUN=""
 HOSTNAME="solardb"
 PG_CONF_AWK="example/pg-conf.awk"
-PG_DATA_DIR="/var/db/postgres/data96"
+PG_DATA_DIR="/solar/data96"
 PG_IDENT_MAP="cert"
 PG_IDENT_CONF="example/pg_ident.conf"
 PG_LISTEN_ADDR="*"
@@ -16,10 +18,15 @@ PG_SSL_CA="tls/ca.crt"
 PG_SSL_CERT="tls/server.crt"
 PG_SSL_CIPHERS="ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES256:ECDH+AES128:!aNULL:!SHA1"
 PG_SSL_KEY="tls/server.key"
+PG_USER="postgres"
+PG_WAL_DIR="/solar/wal96"
 PKG_REPO_CONF="example/solarnet.conf"
 PKG_REPO_CERT="example/solarnet-repo.cert"
 UPDATE_PKGS=""
 VERBOSE=""
+Z_POOLS="snjournal:da0 sndata:da1 snindex:da2"
+Z_MOUNTS="sndata/data96:/solar/data96 snjournal/wal96:/solar/wal96 snindex/index96:/solar/index96"
+Z_MOUNT_STDPROPS="atime=off exec=off setuid=off compression=lz4 recordsize=128k"
 
 if [ $(id -u) -ne 0 ]; then
 	echo "This script must be run as root."
@@ -40,7 +47,7 @@ Arguments:
  -C <db init base dir>  - base dir for the DB init scripts; defaults to /db-init
  -c <pg preload lib>    - value for the Postgres shared_preload_libraries; defaults to
                           auto_explain,pg_stat_statements,timescaledb
- -D <pg data dir>       - directory to initialize Postgres data; defaults to /var/db/postgres/data96
+ -D <pg data dir>       - directory to initialize Postgres data; defaults to /solar/data96
  -d <pg listen addr>    - the Postgres address to listen to; defaults to *
  -d <pg listen addr>    - the Postgres address to listen on; defaults to *
  -E <pg ssl cert>       - relative path to the Postgres SSL public certificate; defaults to tls/server.crt
@@ -49,16 +56,23 @@ Arguments:
  -f <pg ssl ciphers>    - Postgres SSL ciphers to enable; define as empty string to skip SSL configuration
  -G                     - always re-create the Postgres database
  -h <hostname>          - the hostname to use; defaults to solardb
+ -I <idx tspace opts>   - the SQL options to use for the index tablespace; defaults to
+                          'random_page_cost=1, effective_io_concurrency=10'
+ -i <idx tspace path>   - the tablespace path; defaults to /solar/index96
  -n                     - dry run; do not make any actual changes
  -P <pkg conf>          - relative path to the pkg configuration to add; defaults to example/solarnet.conf
  -p <pkg cert>          - relative path to the pkg certificate to add; defaults to example/solarnet-repo.cert
  -U <db user sql path>  - path relative to -C for SQL to create database users; defaults to example/tsdb-init-users.sql
  -u                     - update package cache
  -v                     - verbose mode; print out more verbose messages
+ -Z <zpools>            - space delimited pairs of ZFS pool names and associated devices;
+                          defaults to 'snjournal:da0 sndata:da1 snindex:da2'
+ -z <zfs mounts>        - space delimited pairs of ZFS filesystems and associated mount points to create;
+                          defaults to 'sndata/data96:/solar/data96 snjournal/wal96:/solar/data96/pg_xlog snindex/index96:/solar/index96'
 EOF
 }
 
-while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gh:nP:p:U:uv" opt; do
+while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gh:I:i:nP:p:U:uvZ:z:" opt; do
 	case $opt in
 		A) PG_IDENT_MAP="${OPTARG}";;
 		a) PG_IDENT_CONF="${OPTARG}";;
@@ -74,12 +88,16 @@ while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gh:nP:p:U:uv" opt; do
 		f) PG_SSL_CIPHERS="${OPTARG}";;
 		G) PG_RECREATE='TRUE';;
 		h) HOSTNAME="${OPTARG}";;
+		I) DB_INDEX_TSPACE_OPTS="${OPTARG}";;
+		i) DB_INDEX_TSPACE_PATH="${OPTARG}";;
 		P) PKG_REPO_CONF="${OPTARG}";;
 		p) PKG_REPO_CERT="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
 		U) DB_USER_PATH="${OPTARG}";;
 		u) UPDATE_PKGS='TRUE';;
 		v) VERBOSE='TRUE';;
+		Z) Z_POOLS="${OPTARG}";;
+		z) Z_MOUNTS="${OPTARG}";;
 		?)
 			echo "Unknown argument ${OPTARG}"
 			do_help
@@ -167,6 +185,73 @@ setup_hostname () {
 	fi
 }
 
+setup_sendmail() {
+	if grep -q sendmail_outbound_enable /etc/rc.conf >/dev/null; then
+		echo "Sendmail outbound already disabled."
+	else
+		echo "Disabling sendmail outbound..."
+		if [ -z "$DRY_RUN" ]; then
+			echo 'sendmail_outbound_enable="NO"' >>/etc/rc.conf
+		fi	
+	fi
+}
+
+setup_zpool () {
+	local pool="$1"
+	local drive="$2"
+	if zpool list -H "$pool" 2>/dev/null; then
+		echo "ZFS pool $pool already exists."
+	else
+		echo "Creating ZFS pool $pool using $drive..."
+		if [ -z "$DRY_RUN" ]; then
+			zpool create -m none "$pool" $drive
+			local zprop=""
+			for zprop in $Z_MOUNT_STDPROPS; do
+				zfs set $zprop "$pool"
+			done
+		fi	
+	fi
+}
+
+setup_zfs_mount () {
+	local fs="$1"
+	local mpoint="$2"
+	if zfs list -H "$fs" 2>/dev/null; then
+		echo "ZFS filesystem $fs already exists."
+	else
+		echo "Creating ZFS filesystem $fs mounted on $mpoint..."
+		if [ -z "$DRY_RUN" ]; then
+			zfs create -o "mountpoint=$mpoint" "$fs"
+		fi	
+	fi
+} 
+
+setup_zfs () {
+	if grep -q zfs_enable /etc/rc.conf >/dev/null; then
+		echo "ZFS already configured to start at boot."
+	else
+		echo "Configuring ZFS to start at boot..."
+		if [ -z "$DRY_RUN" ]; then
+			echo 'zfs_enable="YES"' >>/etc/rc.conf
+		fi	
+	fi
+	if kldstat -m zfs -q; then
+		echo "ZFS kernel module already loaded."
+	else
+		echo "Loading ZFS kernel module..."
+		if [ -z "$DRY_RUN" ]; then
+			kldload zfs
+		fi
+	fi
+	local pair=""
+	for pair in $Z_POOLS; do
+		setup_zpool "${pair%:*}" "${pair#*:}"
+	done
+	for pair in $Z_MOUNTS; do
+		setup_zfs_mount "${pair%:*}" "${pair#*:}"
+	done
+}
+
 setup_postgres () {
 	pkg_install postgresql96-plv8js
 	pkg_install postgresql96-server
@@ -179,14 +264,17 @@ setup_postgres () {
 		if [ -z "$DRY_RUN" ]; then
 			echo 'postgresql_enable="YES"' >>/etc/rc.conf
 			echo 'postgresql_data="'"$PG_DATA_DIR"'"' >>/etc/rc.conf
-			echo 'postgresql_initdb_flags="--encoding=utf-8 --lc-collate=C"' >> /etc/rc.conf
+			echo 'postgresql_initdb_flags="--encoding=utf-8 --lc-collate=C --xlogdir='"$PG_WAL_DIR"'"' >> /etc/rc.conf
 		fi	
 	fi
-	if [ -d "$PG_DATA_DIR" ]; then
+	if [ -f "$PG_DATA_DIR/postgresql.conf" ]; then
 		echo "Postgres already initialized at $PG_DATA_DIR."
 	else
 		echo "Initializing Postgres at $PG_DATA_DIR..."
 		if [ -z "$DRY_RUN" ]; then
+			chown $PG_USER:$PG_USER "$PG_DATA_DIR"
+			chown $PG_USER:$PG_USER "$PG_WAL_DIR"
+			chown $PG_USER:$PG_USER "$DB_INDEX_TSPACE_PATH"
 			service postgresql initdb
 		fi
 	fi
@@ -237,13 +325,17 @@ setup_postgres () {
 				"$PG_DATA_DIR/postgresql.conf"
 			if [ -d "$BASE_DIR/tls" ];then
 				rsync -aq "$BASE_DIR/tls" "$PG_DATA_DIR/"
-				chown -R postgres:postgres "$PG_DATA_DIR/tls"
+				chown -R $PG_USER:$PG_USER "$PG_DATA_DIR/tls"
+				chmod 700 "$PG_DATA_DIR/tls"
 			fi
 			if [ -n "$PG_SSL_CERT" ]; then
 				echo "Configuring Postgres SSL certificate, private key..."
 				sed -Ei '' -e "s|#?ssl_cert_file = '.*'|ssl_cert_file = '$PG_SSL_CERT'|" \
 					-e "s|#?ssl_key_file = '.*'|ssl_key_file = '$PG_SSL_KEY'|" \
 					"$PG_DATA_DIR/postgresql.conf"
+				if [ -e "$PG_DATA_DIR/$PG_SSL_KEY" ]; then
+					chmod 600 "$PG_DATA_DIR/$PG_SSL_KEY"
+				fi
 			fi
 			if [ -n "$PG_SSL_CA" ]; then
 				echo "Configuring Postgres SSL CA certificate..."
@@ -286,11 +378,11 @@ setup_postgres () {
 		fi
 	fi
 	
-	if diff -q "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.orig" >/dev/null; then
+	if diff -q "$PG_DATA_DIR/postgresql.conf.orig" "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
 		echo "Postgres configuration unchanged from $PG_DATA_DIR/postgresql.conf.orig"
 	else
 		echo "Postgres configuration changes from $PG_DATA_DIR/postgresql.conf.orig:"
-		diff "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.orig" 
+		diff "$PG_DATA_DIR/postgresql.conf.orig" "$PG_DATA_DIR/postgresql.conf"
 	fi
 	
 	if  service postgresql status; then
@@ -314,7 +406,7 @@ setup_db () {
 		if [ -n "$PG_RECREATE" -o $? -ne 0 ]; then
 			echo "Creating Postgres database solarnetwork..."
 			cd "$BASE_DIR_DB_INIT"
-			./bin/setup-db.sh -mrv -d solarnetwork -L "$DB_USER_PATH"
+			./bin/setup-db.sh -mrv -d solarnetwork -i solarindex -I "$DB_INDEX_TSPACE_PATH" -j "$DB_INDEX_TSPACE_OPTS" -L "$DB_USER_PATH"
 		else
 			echo "Postgres database solarnetwork already exists."
 		fi
@@ -338,6 +430,8 @@ show_results () {
 
 setup_pkgs
 setup_hostname
+setup_sendmail
+setup_zfs
 setup_postgres
 setup_db
 show_results
