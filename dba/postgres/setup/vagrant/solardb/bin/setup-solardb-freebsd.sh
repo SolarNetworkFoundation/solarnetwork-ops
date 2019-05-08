@@ -6,7 +6,9 @@ DB_INDEX_TSPACE_PATH="/solar/index96"
 DB_INDEX_TSPACE_OPTS="random_page_cost=1, effective_io_concurrency=10"
 DB_USER_PATH="example/tsdb-init-users.sql"
 DRY_RUN=""
-HOSTNAME="solardb"
+HOSTNAME="db.solarnetworkdev.net"
+OS_LOADER_CONF="example/loader.conf"
+OS_SYSCTL_CONF="example/sysctl.conf"
 PG_CONF_AWK="example/pg-conf.awk"
 PG_DATA_DIR="/solar/data96"
 PG_IDENT_MAP="cert"
@@ -59,6 +61,8 @@ Arguments:
  -I <idx tspace opts>   - the SQL options to use for the index tablespace; defaults to
                           'random_page_cost=1, effective_io_concurrency=10'
  -i <idx tspace path>   - the tablespace path; defaults to /solar/index96
+ -J <loader conf path>  - relative path to /boot/loader.conf settings to add; defaults to example/loader.conf
+ -j <sysctl conf path>  - relative path to /etc/sysctl.conf settings to add; defaults to example/sysctl.conf
  -n                     - dry run; do not make any actual changes
  -P <pkg conf>          - relative path to the pkg configuration to add; defaults to example/solarnet.conf
  -p <pkg cert>          - relative path to the pkg certificate to add; defaults to example/solarnet-repo.cert
@@ -72,7 +76,7 @@ Arguments:
 EOF
 }
 
-while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gh:I:i:nP:p:U:uvZ:z:" opt; do
+while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gh:I:i:J:j:nP:p:U:uvZ:z:" opt; do
 	case $opt in
 		A) PG_IDENT_MAP="${OPTARG}";;
 		a) PG_IDENT_CONF="${OPTARG}";;
@@ -90,6 +94,8 @@ while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gh:I:i:nP:p:U:uvZ:z:" opt; do
 		h) HOSTNAME="${OPTARG}";;
 		I) DB_INDEX_TSPACE_OPTS="${OPTARG}";;
 		i) DB_INDEX_TSPACE_PATH="${OPTARG}";;
+		I) OS_LOADER_CONF="${OPTARG}";;
+		i) OS_SYSCTL_CONF="${OPTARG}";;
 		P) PKG_REPO_CONF="${OPTARG}";;
 		p) PKG_REPO_CERT="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
@@ -224,7 +230,18 @@ setup_zfs_mount () {
 			zfs create -o "mountpoint=$mpoint" "$fs"
 		fi	
 	fi
-} 
+}
+
+setup_kmods () {
+	if kldstat -m zfs -q; then
+		echo "ZFS kernel module already loaded."
+	else
+		echo "Loading ZFS kernel module..."
+		if [ -z "$DRY_RUN" ]; then
+			kldload zfs
+		fi
+	fi
+}
 
 setup_zfs () {
 	if grep -q zfs_enable /etc/rc.conf >/dev/null; then
@@ -234,14 +251,6 @@ setup_zfs () {
 		if [ -z "$DRY_RUN" ]; then
 			echo 'zfs_enable="YES"' >>/etc/rc.conf
 		fi	
-	fi
-	if kldstat -m zfs -q; then
-		echo "ZFS kernel module already loaded."
-	else
-		echo "Loading ZFS kernel module..."
-		if [ -z "$DRY_RUN" ]; then
-			kldload zfs
-		fi
 	fi
 	local pair=""
 	for pair in $Z_POOLS; do
@@ -413,6 +422,45 @@ setup_db () {
 	fi
 }
 
+configure_conf_setting () {
+	local conffile="$1"
+	local confkey="$2"
+	local confline="$3"
+	if grep "^$confkey" "$1" >/dev/null; then
+		echo "$conffile already contains $confkey, not changing."
+	else
+		echo "Updating $conffile to add: $confline"
+		if [ -z "$DRY_RUN" ]; then
+			echo "$confline" >> "$conffile"
+			if [ "$conffile" = "/etc/sysctl.conf" ]; then
+				sysctl $confline
+			fi
+		fi
+	fi
+}
+
+setup_loder_conf () {
+	if [ ! -e "$BASE_DIR/$OS_LOADER_CONF" ]; then
+		echo "OS loader.conf file not available: $OS_LOADER_CONF"
+	else
+		echo "Configuring OS loader.conf settings from $OS_LOADER_CONF..."
+		while IFS= read -r line; do
+			configure_conf_setting /boot/loader.conf "${line%=*}" "$line"
+		done < "$BASE_DIR/$OS_LOADER_CONF"
+	fi
+}
+
+setup_sysctl_conf () {
+	if [ ! -e "$BASE_DIR/$OS_SYSCTL_CONF" ]; then
+		echo "OS sysctl.conf file not available: $OS_SYSCTL_CONF"
+	else
+		echo "Configuring OS loader.conf settings from $OS_SYSCTL_CONF..."
+		while IFS= read -r line; do
+			configure_conf_setting /etc/sysctl.conf "${line%=*}" "$line"
+		done < "$BASE_DIR/$OS_SYSCTL_CONF"
+	fi
+}
+
 show_results () {
 	cat <<-EOF
 
@@ -431,6 +479,9 @@ show_results () {
 setup_pkgs
 setup_hostname
 setup_sendmail
+setup_kmods
+setup_loder_conf
+setup_sysctl_conf
 setup_zfs
 setup_postgres
 setup_db
