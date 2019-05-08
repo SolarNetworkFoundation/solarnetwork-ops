@@ -1,6 +1,8 @@
 #!/usr/bin/env sh
 
 BASE_DIR="/vagrant"
+BASE_DIR_DB_INIT="/db-init"
+DB_USER_PATH="example/tsdb-init-users.sql"
 DRY_RUN=""
 HOSTNAME="solardb"
 PG_CONF_AWK="example/pg-conf.awk"
@@ -35,6 +37,7 @@ Arguments:
  -B <pg custom awk>     - relative path to an awk script to run on the Postgres configuration file
                           after all other customizations are performed; defaults to example/pg-conf.awk
  -b <base dir>          - base dir for relative paths; defaults to /vagrant
+ -C <db init base dir>  - base dir for the DB init scripts; defaults to /db-init
  -c <pg preload lib>    - value for the Postgres shared_preload_libraries; defaults to
                           auto_explain,pg_stat_statements,timescaledb
  -D <pg data dir>       - directory to initialize Postgres data; defaults to /var/db/postgres/data96
@@ -49,17 +52,19 @@ Arguments:
  -n                     - dry run; do not make any actual changes
  -P <pkg conf>          - relative path to the pkg configuration to add; defaults to example/solarnet.conf
  -p <pkg cert>          - relative path to the pkg certificate to add; defaults to example/solarnet-repo.cert
+ -U <db user sql path>  - path relative to -C for SQL to create database users; defaults to example/tsdb-init-users.sql
  -u                     - update package cache
  -v                     - verbose mode; print out more verbose messages
 EOF
 }
 
-while getopts ":A:a:B:b:c:D:d:E:e:F:f:Gh:nP:p:uv" opt; do
+while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gh:nP:p:U:uv" opt; do
 	case $opt in
 		A) PG_IDENT_MAP="${OPTARG}";;
 		a) PG_IDENT_CONF="${OPTARG}";;
 		B) PG_CONF_AWK="${OPTARG}";;
 		b) BASE_DIR="${OPTARG}";;
+		C) BASE_DIR_DB_INIT="${OPTARG}";;
 		c) PG_PRELOAD_LIB="${OPTARG}";;
 		D) PG_DATA_DIR="${OPTARG}";;
 		d) PG_LISTEN_ADDR="${OPTARG}";;
@@ -72,6 +77,7 @@ while getopts ":A:a:B:b:c:D:d:E:e:F:f:Gh:nP:p:uv" opt; do
 		P) PKG_REPO_CONF="${OPTARG}";;
 		p) PKG_REPO_CERT="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
+		U) DB_USER_PATH="${OPTARG}";;
 		u) UPDATE_PKGS='TRUE';;
 		v) VERBOSE='TRUE';;
 		?)
@@ -301,14 +307,14 @@ setup_postgres () {
 }
 
 setup_db () {
-	if [ ! -d /db-init ]; then
-		echo "Missing /db-init setup directory.";
+	if [ ! -d "$BASE_DIR_DB_INIT" ]; then
+		echo "Missing $BASE_DIR_DB_INIT setup directory.";
 	else
 		su postgres -c "psql -d solarnetwork -c 'SELECT now()'" >/dev/null 2>&1
 		if [ -n "$PG_RECREATE" -o $? -ne 0 ]; then
 			echo "Creating Postgres database solarnetwork..."
-			cd /db-init
-			./bin/setup-db.sh -mrv -d solarnetwork -L example/tsdb-init-users.sql
+			cd "$BASE_DIR_DB_INIT"
+			./bin/setup-db.sh -mrv -d solarnetwork -L "$DB_USER_PATH"
 		else
 			echo "Postgres database solarnetwork already exists."
 		fi
