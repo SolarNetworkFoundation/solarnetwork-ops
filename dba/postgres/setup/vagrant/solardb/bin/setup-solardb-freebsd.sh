@@ -11,6 +11,7 @@ OS_LOADER_CONF="example/loader.conf"
 OS_SYSCTL_CONF="example/sysctl.conf"
 PG_CONF_AWK="example/pg-conf.awk"
 PG_DATA_DIR="/solar/data96"
+PG_HBA_CONF="example/pg_hba.conf"
 PG_IDENT_MAP="cert"
 PG_IDENT_CONF="example/pg_ident.conf"
 PG_LISTEN_ADDR="*"
@@ -57,6 +58,8 @@ Arguments:
  -F <pg ssl ca>         - Postgres SSL CA certificate bundle; defaults to tls/ca.crt
  -f <pg ssl ciphers>    - Postgres SSL ciphers to enable; define as empty string to skip SSL configuration
  -G                     - always re-create the Postgres database
+ -g <pg hba conf>       - relative path to file to copy to Postgres pg_hba.conf; defaults to
+                          example/pg_hba.conf
  -h <hostname>          - the hostname to use; defaults to solardb
  -I <idx tspace opts>   - the SQL options to use for the index tablespace; defaults to
                           'random_page_cost=1, effective_io_concurrency=10'
@@ -76,7 +79,7 @@ Arguments:
 EOF
 }
 
-while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gh:I:i:J:j:nP:p:U:uvZ:z:" opt; do
+while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gg:h:I:i:J:j:nP:p:U:uvZ:z:" opt; do
 	case $opt in
 		A) PG_IDENT_MAP="${OPTARG}";;
 		a) PG_IDENT_CONF="${OPTARG}";;
@@ -91,6 +94,7 @@ while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gh:I:i:J:j:nP:p:U:uvZ:z:" opt; do
 		F) PG_SSL_CA="${OPTARG}";;
 		f) PG_SSL_CIPHERS="${OPTARG}";;
 		G) PG_RECREATE='TRUE';;
+		g) PG_HBA_CONF="${OPTARG}";;
 		h) HOSTNAME="${OPTARG}";;
 		I) DB_INDEX_TSPACE_OPTS="${OPTARG}";;
 		i) DB_INDEX_TSPACE_PATH="${OPTARG}";;
@@ -357,15 +361,29 @@ setup_postgres () {
 	if grep -q "^$PG_IDENT_MAP\b" "$PG_DATA_DIR/pg_ident.conf" >/dev/null; then
 		echo "Postgres pg_ident.conf already contains map $PG_IDENT_MAP."
 	else
-		echo "Configuring pg_ident.conf map for $PG_IDENT_MAP..."
+		echo "Configuring Postgres pg_ident.conf map for $PG_IDENT_MAP..."
 		if [ -z "$DRY_RUN" ]; then
 			if [ -e "$BASE_DIR/$PG_IDENT_CONF" ]; then
 				cat "$BASE_DIR/$PG_IDENT_CONF" >>"$PG_DATA_DIR/pg_ident.conf"
 			else
-				echo "pg_ident file $PG_IDENT_CONF not found."
+				echo "Postgres pg_ident file $PG_IDENT_CONF not found."
 				exit 1
 			fi
 		fi
+	fi
+	
+	if [ -e "$BASE_DIR/$PG_HBA_CONF" ]; then
+		if diff -q "$PG_DATA_DIR/pg_hba.conf" "$BASE_DIR/$PG_HBA_CONF" >/dev/null; then
+			echo "Postgres pg_hba.conf already configured."
+		else
+			echo "Configuring Postgres pg_hba.conf..."
+			if [ -z "$DRY_RUN" ]; then
+				cat "$BASE_DIR/$PG_HBA_CONF" >"$PG_DATA_DIR/pg_hba.conf"
+			fi
+		fi
+	else
+		echo "Postgres pg_hba file $PG_HBA_CONF not found."
+		exit 1
 	fi
 	
 	if [ -n "$PG_CONF_AWK" ]; then
