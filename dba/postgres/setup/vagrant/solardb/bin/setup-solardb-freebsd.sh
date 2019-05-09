@@ -273,7 +273,7 @@ setup_postgres () {
 		if [ -z "$DRY_RUN" ]; then
 			echo 'postgresql_enable="YES"' >>/etc/rc.conf
 			echo 'postgresql_data="'"$PG_DATA_DIR"'"' >>/etc/rc.conf
-			echo 'postgresql_initdb_flags="--encoding=utf-8 --lc-collate=C --xlogdir='"$PG_WAL_DIR"'"' >> /etc/rc.conf
+			echo 'postgresql_initdb_flags="--encoding=utf-8 --lc-collate=C --auth-local=ident --auth-host=md5 --xlogdir='"$PG_WAL_DIR"'"' >> /etc/rc.conf
 		fi	
 	fi
 	if [ -f "$PG_DATA_DIR/postgresql.conf" ]; then
