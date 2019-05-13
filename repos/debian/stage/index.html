@@ -1,0 +1,26 @@
+<!doctype html>
+<html>
+	<head>
+		<title>SolarNetwork Foundation Debian Package Repository (Staging)</title>
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	</head>
+	<body>
+		<main class="col-12" role="main">
+			<h1>SolarNetwork Foundation Debian Package Repository (Staging)</h1>
+			<p>
+				This is the SolarNetwork Foundation Debian Package Repository (Staging).
+			</p>
+			<div class="alert alert-warning" role="alert">
+				<b>Heads up!</b> This repository is for testing and development and may contain
+				broken or unstable packages. Unless you're quite sure this is what you need, use the
+				<a href="https://debian.repo.solarnetwork.org.nz/">production repository</a> instead.
+			</div>
+			<p>Try adding an apt repo configuration <code>/etc/apt/sources.list.d/solarnetwork.list</code>
+				with the following content:</p>
+			<pre class="bg-light text-dark p-3"><code>deb https://debian.repo.stage.solarnetwork.org.nz stretch main</code></pre>
+			<p>You'll need to import the GPG signing key, which you can do via:</p>
+			<pre class="bg-light text-dark p-3"><code>$ curl -s https://debian.repo.stage.solarnetwork.org.nz/KEY.gpg |sudo apt-key add -</code></pre>
+		</main>
+	</body>
+</html>
