@@ -1,10 +1,19 @@
+<!doctype html>
 <html>
 	<head>
 		<title>SolarNetwork Foundation Debian Package Repository</title>
+		<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	</head>
 	<body>
-		<p>This is the SolarNetwork Foundation Debian Package Repository.</p>
-		<p>Try adding an apt repo configuration to <code>deb https://debian.repo.solarnetwork.org.nz stretch main</code>.</p>
-		<p>You'll need to import the GPG signing key, like <code>curl -O  https://debian.repo.solarnetwork.org.nz/KEY.gpg |sudo apt-key add -</code>.</p>
+		<main class="col-12" role="main">
+			<h1>SolarNetwork Foundation Debian Package Repository</h1>
+			<p>This is the SolarNetwork Foundation Debian Package Repository.</p>
+			<p>Try adding an apt repo configuration <code>/etc/apt/sources.list.d/solarnetwork.list</code>
+				with the following content:</p>
+			<pre class="bg-light text-dark p-3"><code>deb https://debian.repo.solarnetwork.org.nz stretch main</code></pre>
+			<p>You'll need to import the GPG signing key, which you can do via:</p>
+			<pre class="bg-light text-dark p-3"><code>$ curl -O  https://debian.repo.solarnetwork.org.nz/KEY.gpg |sudo apt-key add -</code></pre>
+		</main>
 	</body>
 </html>
