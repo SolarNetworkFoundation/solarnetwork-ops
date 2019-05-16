@@ -6,7 +6,11 @@ Description: Open port in iptables firewall?
 
 Template: opendnp3/iptables_firewall_open
 Type: error
-Description: The iptables firewall port is open on port ${port}.
+Description: The iptables firewall is open on port ${port}.
+
+Template: opendnp3/iptables_firewall_closed
+Type: error
+Description: The iptables firewall port ${port} is closed.
 
 Template: opendnp3/iptables_rules
 Type: string
