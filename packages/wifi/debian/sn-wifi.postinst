@@ -50,6 +50,7 @@ if [ $(id -u) -eq 0 ]; then
 	systemctl daemon-reload || true
 	systemctl enable systemd-networkd || true
 	systemctl enable sn-wifi@wlan0.service || true
+	systemctl enable sn-wifi-conf@wlan0.service || true
 	systemctl enable sn-wifi-conf@wlan0.path || true
 	systemctl restart systemd-networkd || true
 	systemctl start sn-wifi-conf@wlan0.path || true
