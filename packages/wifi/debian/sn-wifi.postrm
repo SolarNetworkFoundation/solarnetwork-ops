@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+
+# for testing, set WPA_CONF=/path/to/test.conf 
+WPA_CONF="${WPA_CONF:-/etc/wpa_supplicant/wpa_supplicant-wlan0.conf}"
+
+if [ "$1" = "purge" -a -e /usr/share/debconf/confmodule ]; then
+	. /usr/share/debconf/confmodule
+	db_purge
+fi
+
+if [ "$1" = "purge" ]; then
+	if [ -e "$WPA_CONF" ]; then
+		rm -f "$WPA_CONF"
+	fi
+fi
