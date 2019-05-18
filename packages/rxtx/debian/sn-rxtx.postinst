@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+if [ -d /usr/lib/jvm -a -e /usr/share/java/RXTXcomm.jar ]; then
+	for d in /usr/lib/jvm/*; do
+		if [ -d "$d/jre/lib/ext" -a ! -L "$d/jre/lib/ext/RXTXcomm.jar" ]; then
+			echo "Linking to RXTXcomm.jar in $d."
+			ln -s /usr/share/java/RXTXcomm.jar "$d/jre/lib/ext/RXTXcomm.jar"
+		fi
+	done
+fi
