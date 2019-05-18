@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+# Turn off bash persistent history collection
+if [ -e /etc/bash.bashrc ]; then
+	if grep -q 'unset HISTFILE' /etc/bash.bashrc; then
+		true
+	else
+		echo 'Disabling bash permanent history in /etc/bash.bashrc...'
+		echo 'unset HISTFILE' >>/etc/bash.bashrc
+	fi
+fi
