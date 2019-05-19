@@ -13,28 +13,25 @@ fi
 
 systemctl daemon-reload
 
-# setup systemd-networkd
-if ! systemctl is-enabled systemd-networkd >/dev/null; then
-	echo 'Enabling systemd-networkd...'
-	systemctl enable systemd-networkd || true
-fi
-if ! systemctl is-active systemd-networkd >/dev/null; then
-	systemctl start systemd-networkd || true
-else
-	systemctl restart systemd-networkd || true
-fi
+service_up () {
+	name="$1"
+	start="$2"
+	if ! systemctl is-enabled "$name" >/dev/null; then
+		echo "Enabling $name..."
+		systemctl enable "$name" || true
+	fi
+	if [ -n "$start" ]; then
+		if ! systemctl is-active "$name" >/dev/null; then
+			systemctl start "$name" || true
+		else
+			systemctl restart "$name" || true
+		fi
+	fi
+}
 
-# setup systemd-resolvd
-if ! systemctl is-enabled systemd-resolved >/dev/null; then
-	echo 'Enabling systemd-resolved...'
-	systemctl enable systemd-resolved || true
-fi
-if ! systemctl is-active systemd-resolved >/dev/null; then
-	systemctl start systemd-resolved || true
-else
-	systemctl restart systemd-resolved || true
-fi
+service_up systemd-networkd true
 
+service_up systemd-resolved true
 if [ ! -L /etc/resolv.conf ]; then
 	if [ -e /etc/resolv.conf ]; then
 		rm -f /etc/resolv.conf || true
@@ -42,6 +39,9 @@ if [ ! -L /etc/resolv.conf ]; then
 	ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
 fi
 
+service_up sn-expandfs true
+
+# Activate tmpfiles config
 if [ -x /bin/systemd-tmpfiles ]; then
 	/bin/systemd-tmpfiles --create
 fi
