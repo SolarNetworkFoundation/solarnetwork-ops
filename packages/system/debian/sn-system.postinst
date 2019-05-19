@@ -40,6 +40,10 @@ if [ ! -L /etc/resolv.conf ]; then
 	ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
 fi
 
+if [ -x /bin/systemd-tmpfiles ]; then
+	/bin/systemd-tmpfiles --create
+fi
+
 # locale extra purge
 if [ -e /etc/locale.nopurge -a -d /usr/share/locale ]; then
 	echo /dev/null >/tmp/sn-system.locales
