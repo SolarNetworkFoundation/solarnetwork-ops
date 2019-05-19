@@ -16,7 +16,7 @@ deb :
 	--conflicts 'ifupdown' \
 	--replaces 'ifupdown' \
 	--after-install $(NAME).postinst \
-	etc
+	etc usr
 
 clean : 
 	rm $(NAME)_$(VERSION)_all.deb
