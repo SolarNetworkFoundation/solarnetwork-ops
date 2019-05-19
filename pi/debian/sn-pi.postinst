@@ -15,19 +15,6 @@ else
 	fi
 fi
 
-if grep -q '^CrashReboot=yes' /etc/systemd/system.conf >/dev/null; then
-	true
-else
-	echo 'Turning on CrashReboot in /etc/systemd/system.conf; will be enabled on reboot.'
-	if grep -q 'CrashReboot' /etc/systemd/system.conf; then
-		# update
-		sed -i -e '/CrashReboot/c CrashReboot=yes' /etc/systemd/system.conf || true
-	else
-		# add in
-		echo 'dtparam=watchdog=on' >>/etc/systemd/system.conf
-	fi
-fi
-
 if grep -q '^RuntimeWatchdogSec=14' /etc/systemd/system.conf; then
 	true
 else

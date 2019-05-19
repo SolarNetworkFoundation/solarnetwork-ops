@@ -11,6 +11,8 @@ if [ -e /etc/bash.bashrc ]; then
 	fi
 fi
 
+systemctl daemon-reload
+
 # setup systemd-networkd
 if ! systemctl is-enabled systemd-networkd >/dev/null; then
 	echo 'Enabling systemd-networkd...'
@@ -57,4 +59,44 @@ if [ -e /etc/locale.nopurge -a -d /usr/share/locale ]; then
 	rm -rf /usr/share/man/??
 	rm -rf /usr/share/man/??_*
 fi
+
+if grep -q '^CrashReboot=yes' /etc/systemd/system.conf >/dev/null; then
+	true
+else
+	echo 'Turning on CrashReboot in /etc/systemd/system.conf; will be enabled on reboot.'
+	if grep -q 'CrashReboot' /etc/systemd/system.conf; then
+		# update
+		sed -i -e '/CrashReboot/c CrashReboot=yes' /etc/systemd/system.conf || true
+	else
+		# add in
+		echo 'CrashReboot=yes' >>/etc/systemd/system.conf
+	fi
+fi
+
+if grep -q '^DumpCore=no' /etc/systemd/system.conf >/dev/null; then
+	true
+else
+	echo 'Turning off DumpCore in /etc/systemd/system.conf; will be disabled on reboot.'
+	if grep -q 'DumpCore' /etc/systemd/system.conf; then
+		# update
+		sed -i -e '/DumpCore/c DumpCore=no' /etc/systemd/system.conf || true
+	else
+		# add in
+		echo 'DumpCore=no' >>/etc/systemd/system.conf
+	fi
+fi
+
+if grep -q '^RuntimeMaxUse=10M' /etc/systemd/journald.conf >/dev/null; then
+	true
+else
+	echo 'Configuring RuntimeMaxUse in /etc/systemd/journald.conf; will be active on reboot.'
+	if grep -q 'DumpCore' /etc/systemd/journald.conf; then
+		# update
+		sed -i -e '/RuntimeMaxUse/c RuntimeMaxUse=10M' /etc/systemd/journald.conf || true
+	else
+		# add in
+		echo 'RuntimeMaxUse=10M' >>/etc/systemd/journald.conf
+	fi
+fi
+
 
