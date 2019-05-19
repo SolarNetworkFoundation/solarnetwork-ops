@@ -11,19 +11,8 @@ $ sudo gem install --no-ri --no-rdoc fpm
 
 ## Create package
 
-Use `fpm` to package the service. This package is architecture independent:
+Use `fpm` to package the service via `make`. This package is architecture independent:
 
 ```sh
-$ fpm -s dir -t deb -m 'packaging@solarnetwork.org.nz' \
-	--vendor 'SolarNetwork Foundation' \
-	-n sn-system -v 1.0.0-1 \
-	-a all \
-	--description 'SolarNode system support' \
-	--license 'Apache License 2.0' \
-	-f \
-	-d 'bash (>= 4.4)' \
-	-d 'systemd (>= 230)' \
-	--after-install sn-system.postinst \
-	etc
+$ make
 ```
-

@@ -1,5 +1,4 @@
-#!/bin/sh
-set -e
+#!/bin/sh -e
 
 . /usr/share/debconf/confmodule
 
@@ -8,6 +7,9 @@ WPA_CONF="${WPA_CONF:-/etc/wpa_supplicant/wpa_supplicant-wlan0.conf}"
 UDEV_PERSIST="${UDEV_PERSIST:-/etc/udev/rules.d/70-persistent-net.rules}"
 WPA_CONF_EXAMPLE="/usr/share/solarnode/example/wpa_supplicant-wlan0.conf"
 WPA_PP="/usr/bin/wpa_passphrase"
+
+db_get sn-wifi/country
+COUNTRY="${RET:-NZ}"
 
 db_get sn-wifi/ssid
 SSID="$RET"
@@ -26,9 +28,11 @@ if [ -n "$SSID" -a ${#PASS} -ge 8 -a -e "$WPA_PP" ]; then
 	if [ -e "$WPA_CONF" ]; then
 		cat /dev/null >"$WPA_CONF.tmp" || true
 		chmod 640 "$WPA_CONF.tmp" || true
-		sed -e 's/ssid=.*/ssid="'"$SSID"'"/' \
+		sed -e "s/country=.*/country=$COUNTRY/" \
+			-e 's/ssid=.*/ssid="'"$SSID"'"/' \
 			-e '/#psk=.*/d' \
-			-e "s/psk=.*/psk=$PSK/" "$WPA_CONF" >"$WPA_CONF.tmp" || true
+			-e "s/psk=.*/psk=$PSK/" "$WPA_CONF" \
+			>"$WPA_CONF.tmp" || true
 		if diff -q "$WPA_CONF" "$WPA_CONF.tmp" >/dev/null; then
 			# unchanged
 			rm "$WPA_CONF.tmp" || true
@@ -46,12 +50,52 @@ if [ ! -L "$UDEV_PERSIST" ]; then
 	ln -s /dev/null "$UDEV_PERSIST" || true
 fi
 
-if [ $(id -u) -eq 0 ]; then
-	systemctl daemon-reload || true
+# Turn off Raspbian wpa_supplicant if still running
+if systemctl is-active wpa_supplicant >/dev/null; then
+	echo 'Stopping (old) wpa_supplicant...'
+	systemctl stop wpa_supplicant || true
+fi
+if systemctl is-enabled wpa_supplicant >/dev/null; then
+	echo 'Disabling (old) wpa_supplicant...'
+	systemctl disable wpa_supplicant || true
+fi
+
+systemctl daemon-reload >/dev/null || true
+
+if ! systemctl is-enabled sn-wifi-bootconf.service >/dev/null; then
+	echo 'Enabling sn-wifi-bootconf.service...'
+	systemctl enable sn-wifi-bootconf.service || true
+fi
+
+if ! systemctl is-enabled systemd-networkd >/dev/null; then
+	echo 'Enabling systemd-networkd...'
 	systemctl enable systemd-networkd || true
+fi
+
+if ! systemctl is-enabled sn-wifi@wlan0.service >/dev/null; then
+	echo 'Enabling sn-wifi@wlan0.service...'
 	systemctl enable sn-wifi@wlan0.service || true
+fi
+
+if ! systemctl is-enabled sn-wifi-conf@wlan0.service >/dev/null; then
+	echo 'Enabling sn-wifi-conf@wlan0.service...'
 	systemctl enable sn-wifi-conf@wlan0.service || true
+fi
+
+if ! systemctl is-enabled sn-wifi-conf@wlan0.path >/dev/null; then
+	echo 'Enabling sn-wifi-conf@wlan0.path...'
 	systemctl enable sn-wifi-conf@wlan0.path || true
+fi
+
+if ! systemctl is-active systemd-networkd >/dev/null; then
+	systemctl start systemd-networkd || true
+else
 	systemctl restart systemd-networkd || true
+fi
+
+if ! systemctl is-active sn-wifi-conf@wlan0.path >/dev/null; then
+	echo 'Starting sn-wifi-conf@wlan0.path...'
 	systemctl start sn-wifi-conf@wlan0.path || true
+else
+	systemctl restart sn-wifi-conf@wlan0.path || true
 fi

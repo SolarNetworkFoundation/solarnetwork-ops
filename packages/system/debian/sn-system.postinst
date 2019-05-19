@@ -10,3 +10,47 @@ if [ -e /etc/bash.bashrc ]; then
 		echo 'unset HISTFILE' >>/etc/bash.bashrc
 	fi
 fi
+
+# setup systemd-networkd
+if ! systemctl is-enabled systemd-networkd >/dev/null; then
+	echo 'Enabling systemd-networkd...'
+	systemctl enable systemd-networkd || true
+fi
+if ! systemctl is-active systemd-networkd >/dev/null; then
+	systemctl start systemd-networkd || true
+else
+	systemctl restart systemd-networkd || true
+fi
+
+# setup systemd-resolvd
+if ! systemctl is-enabled systemd-resolved >/dev/null; then
+	echo 'Enabling systemd-resolved...'
+	systemctl enable systemd-resolved || true
+fi
+if ! systemctl is-active systemd-resolved >/dev/null; then
+	systemctl start systemd-resolved || true
+else
+	systemctl restart systemd-resolved || true
+fi
+
+if [ ! -L /etc/resolv.conf ]; then
+	if [ -e /etc/resolv.conf ]; then
+		rm -f /etc/resolv.conf || true
+	fi
+	ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
+fi
+
+# locale extra purge
+if [ -e /etc/locale.nopurge -a -d /usr/share/locale ]; then
+	echo /dev/null >/tmp/sn-system.locales
+	for l in $(cat /etc/locale.nopurge |grep '^..$'); do
+		echo "^$l($|_|@)" >>/tmp/sn-system.locales
+	done
+	for d in $(ls -1 /usr/share/locale |egrep -v -f /tmp/sn-system.locales ); do
+		echo "Removing locale data /usr/share/locale/$d..."
+		rm -rf "/usr/share/locale/$d"
+	done
+	rm -rf /usr/share/man/??
+	rm -rf /usr/share/man/??_*
+fi
+

@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-if [ -d /usr/lib/jvm ]; then
+if [ "$1" = "remove" -a -d /usr/lib/jvm ]; then
 	for d in /usr/lib/jvm/*; do
 		if [ -e "$d/jre/lib/ext/RXTXcomm.jar" ]; then
 			echo "Unlinking RXTXcomm.jar from $d."
