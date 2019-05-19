@@ -8,7 +8,7 @@ Before=sysinit.target
 Type=oneshot
 ExecStart=/sbin/iptables-restore /etc/iptables/iptables.rules
 ExecReload=/sbin/iptables-restore /etc/iptables/iptables.rules
-ExecStop=/lib/systemd/scripts/iptables-flush
+ExecStop=/usr/share/solarnode/bin/iptables-flush.sh
 RemainAfterExit=yes
 
 [Install]
