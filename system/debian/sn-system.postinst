@@ -39,6 +39,7 @@ if [ ! -L /etc/resolv.conf ]; then
 	ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
 fi
 
+service_up sn-sshdgenkeys true
 service_up sn-expandfs true
 
 # Activate tmpfiles config
