@@ -1,0 +1,10 @@
+[Unit]
+Description=Close discarded SolarSSH sessions daily.
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target
+
