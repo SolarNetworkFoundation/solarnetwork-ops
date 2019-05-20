@@ -1,0 +1,8 @@
+#!/bin/sh -e
+
+if [ -e /usr/share/solarnode/bin/solarstat.sh -a ! -L /usr/bin/solarstat ]; then
+	if [ -e /usr/bin/solarstat ]; then
+		rm -f /usr/bin/solarstat || true
+	fi
+	ln -s /usr/share/solarnode/bin/solarstat.sh /usr/bin/solarstat
+fi
