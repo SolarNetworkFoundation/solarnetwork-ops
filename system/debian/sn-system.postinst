@@ -92,7 +92,7 @@ if grep -q '^RuntimeMaxUse=10M' /etc/systemd/journald.conf >/dev/null; then
 	true
 else
 	echo 'Configuring RuntimeMaxUse in /etc/systemd/journald.conf; will be active on reboot.'
-	if grep -q 'DumpCore' /etc/systemd/journald.conf; then
+	if grep -q 'RuntimeMaxUse' /etc/systemd/journald.conf; then
 		# update
 		sed -i -e '/RuntimeMaxUse/c RuntimeMaxUse=10M' /etc/systemd/journald.conf || true
 	else
