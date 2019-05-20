@@ -24,8 +24,6 @@
 # Allow ping
 -A INPUT -p icmp -m icmp --icmp-type 8 -j ACCEPT
 
-# Allow DNP3
-
 # log iptables denied calls (access via 'dmesg' command)
 -A INPUT -m limit --limit 5/min -j LOG --log-prefix "iptables denied: " --log-level 7
 
