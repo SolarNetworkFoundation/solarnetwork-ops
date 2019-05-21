@@ -16,6 +16,7 @@ deb :
 	--conflicts 'ifupdown' \
 	--replaces 'ifupdown' \
 	--after-install $(NAME).postinst \
+	--deb-no-default-config-files \
 	etc lib usr
 
 clean : 

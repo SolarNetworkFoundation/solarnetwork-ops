@@ -17,6 +17,7 @@ deb :
 	--after-remove sn-wifi.postrm \
 	--deb-config sn-wifi.config \
 	--deb-templates sn-wifi.templates \
+	--deb-no-default-config-files \
 	etc lib usr
 
 # Note the --deb-systemd switch causes the postinst script to be broken

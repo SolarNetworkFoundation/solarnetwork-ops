@@ -16,6 +16,7 @@ deb :
 	-d 'systemd (>= 232)' \
 	--after-install $(NAME).postinst \
 	--after-remove $(NAME).postrm \
+	--deb-no-default-config-files \
 	etc lib usr
 
 clean : 
