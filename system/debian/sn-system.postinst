@@ -106,7 +106,7 @@ if ! grep -q '/usr/share/solarnode/bin/system-bash-utils.sh' /etc/bash.bashrc >/
 	echo 'Integrating bash utilities into system bash.bashrc...'
 	cat <<- EOF >> /etc/bash.bashrc
 	if [ -e /usr/share/solarnode/bin/system-bash-utils.sh ]; then
-	  . /usr/share/solarnode/bin/system-bash-utils.sh
+	    . /usr/share/solarnode/bin/system-bash-utils.sh
 	fi
 	EOF
 fi
