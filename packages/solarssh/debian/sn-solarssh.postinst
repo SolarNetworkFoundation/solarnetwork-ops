@@ -1,12 +1,5 @@
 #!/bin/sh -e
 
-if [ -e /usr/share/solarnode/bin/solarssh.sh -a ! -L /usr/bin/solarssh ]; then
-	if [ -e /usr/bin/solarssh ]; then
-		rm -f /usr/bin/solarssh || true
-	fi
-	ln -s /usr/share/solarnode/bin/solarssh.sh /usr/bin/solarssh
-fi
-
 systemctl daemon-reload
 
 service_up () {

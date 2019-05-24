@@ -1,9 +1,5 @@
 #!/bin/sh -e
 
-if [ -L /usr/bin/solarssh ]; then
-	rm -f /usr/bin/solarssh || true
-fi
-
 # integrate known hosts file into system-wide known hosts
 if [ -e /etc/ssh/ssh_config ]; then
 	if grep -q '/etc/ssh/sn_known_hosts' /etc/ssh/ssh_config >/dev/null; then
