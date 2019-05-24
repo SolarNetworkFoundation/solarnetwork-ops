@@ -11,9 +11,7 @@ deb :
 	--description 'SolarNode OS statistics support' \
 	--license 'Apache License 2.0' \
 	-f \
-	-d 'systemd (>= 232)' \
-	--after-install $(NAME).postinst \
-	--after-remove $(NAME).postrm \
+	-d 'procps (>= 2:3.3.12)' \
 	usr
 
 clean : 
