@@ -1,5 +1,0 @@
-#!/bin/sh -e
-
-if [ -L /usr/bin/solarstat ]; then
-	rm -f /usr/bin/solarstat || true
-fi
