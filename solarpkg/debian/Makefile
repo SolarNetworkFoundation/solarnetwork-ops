@@ -14,7 +14,7 @@ deb :
 	-d 'apt (>= 1.4.9)' \
 	-d 'dpkg (>= 1.18.25)' \
 	--deb-no-default-config-files \
-	etc usr
+	etc usr var
 
 clean : 
 	rm $(NAME)_$(VERSION)_all.deb
