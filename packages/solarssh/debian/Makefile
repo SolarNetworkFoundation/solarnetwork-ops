@@ -15,7 +15,7 @@ deb :
 	--after-install $(NAME).postinst \
 	--after-remove $(NAME).postrm \
 	--deb-no-default-config-files \
-	etc lib usr
+	etc lib usr var
 
 clean : 
 	rm $(NAME)_$(VERSION)_all.deb
