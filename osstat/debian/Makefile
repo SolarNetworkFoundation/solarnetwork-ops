@@ -12,7 +12,7 @@ deb :
 	--license 'Apache License 2.0' \
 	-f \
 	-d 'procps (>= 2:3.3.12)' \
-	usr
+	usr var
 
 clean : 
 	rm $(NAME)_$(VERSION)_all.deb
