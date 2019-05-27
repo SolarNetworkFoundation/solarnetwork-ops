@@ -81,6 +81,14 @@ export DEBIAN_FRONTEND=noninteractive
 
 pkg_list_files () {
 	local pkg="$1"
+
+	# assume dpkg -c output lines look like:
+	#
+	# drwxr-xr-x 0/0               0 2019-05-20 18:33 ./usr/share/solarnode/bin/
+	# -rwxr-xr-x 0/0            2167 2019-05-20 18:29 ./usr/share/solarnode/bin/solarstat.sh
+	#
+	# We thus extract the 6th field, omitting paths that end in '/' and stripping the leading '.'
+	
 	dpkg -c "$pkg" |awk '$6 !~ "/$" {print substr($6,2)}'
 }
 
@@ -92,15 +100,10 @@ pkg_install_file () {
 		exit 1
 	fi
 	
-	# assume dpkg -c output lines look like:
-	#
-	# drwxr-xr-x 0/0               0 2019-05-20 18:33 ./usr/share/solarnode/bin/
-	# -rwxr-xr-x 0/0            2167 2019-05-20 18:29 ./usr/share/solarnode/bin/solarstat.sh
-	#
-	# We thus extract the 6th field, omitting paths that end in '/' and stripping the leading '.'
-	
-	sudo dpkg -i --force-confdef --force-confold "$pkg" >/dev/null </dev/null \
-		&& pkg_list_files "$pkg"
+	# note: using apt-get here to provide support for installing dependencies
+	sudo apt-get install -qy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" \
+		--no-install-recommends "$pkg" >/dev/null </dev/null || exit $?
+	pkg_list_files "$pkg"
 }
 
 pkg_install_repo () {
@@ -112,12 +115,12 @@ pkg_install_repo () {
 		redo="--reinstall"
 	fi
 		
-	sudo apt-get install -qy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+	sudo apt-get install -qy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" \
 		--no-install-recommends $redo "$pkg${ver:+=$ver}" >/dev/null </dev/null || exit $?
 	
 	local fname="${pkg}_(dpkg-query -W -f '${Version}_${Architecture}' "$pkg").deb"
 	if [ -e "/var/cache/apt/archives/$fname" ]; then
-		pkg_list_files "$fname"
+		pkg_list_files "/var/cache/apt/archives/$fname"
 	fi	
 }
 
