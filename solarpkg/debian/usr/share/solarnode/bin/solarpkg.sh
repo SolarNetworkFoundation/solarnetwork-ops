@@ -79,6 +79,12 @@ shift 1
 # Set the frontend; NOTE sudo must be configured with env_keep+=DEBIAN_FRONTEND for this to work
 export DEBIAN_FRONTEND=noninteractive
 
+pkg_wait_not_busy () {
+	while fuser /var/lib/dpkg/lock >/dev/null; do
+		sleep 0.5
+	done
+}
+
 pkg_list_files () {
 	local pkg="$1"
 
@@ -88,7 +94,7 @@ pkg_list_files () {
 	# -rwxr-xr-x 0/0            2167 2019-05-20 18:29 ./usr/share/solarnode/bin/solarstat.sh
 	#
 	# We thus extract the 6th field, omitting paths that end in '/' and stripping the leading '.'
-	
+	pkg_wait_not_busy
 	dpkg -c "$pkg" |awk '$6 !~ "/$" {print substr($6,2)}'
 }
 
@@ -101,6 +107,7 @@ pkg_install_file () {
 	fi
 	
 	# note: using apt-get here to provide support for installing dependencies
+	pkg_wait_not_busy
 	sudo apt-get install -qy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" \
 		--no-install-recommends "$pkg" >/dev/null </dev/null || exit $?
 	pkg_list_files "$pkg"
@@ -111,10 +118,12 @@ pkg_install_repo () {
 	local ver="$2"
 	local redo=""
 	
+	pkg_wait_not_busy
 	if dpkg -s "$pkg" >/dev/null 2>&1; then
 		redo="--reinstall"
 	fi
 		
+	pkg_wait_not_busy
 	sudo apt-get install -qy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" \
 		--no-install-recommends $redo "$pkg${ver:+=$ver}" >/dev/null </dev/null || exit $?
 	
@@ -142,12 +151,14 @@ pkg_remove () {
 		echo "Must provide name of package to remove."  1>&2
 		exit 1
 	fi
+	pkg_wait_not_busy
 	if dpkg -s "$pkg" >/dev/null 2>&1; then
 		sudo apt-get remove -qy --purge "$pkg" >/dev/null </dev/null
 	fi
 }
 
 pkg_clean () {
+	pkg_wait_not_busy
 	sudo apt-get -qy autoremove >/dev/null </dev/null \
 		&& sudo apt-get clean -qy >/dev/null </dev/null
 }
@@ -156,6 +167,7 @@ pkg_clean () {
 pkg_list () {
 	local name="${1:-*}"
 	
+	pkg_wait_not_busy
 	apt list "$name" 2>/dev/null \
 		|awk 'NF >= 3 {sub(/\/.*$/, "", $1); printf "%s,%s,%s\n", $1, $2, match($4, /installed/) ? "true" : "false"}'
 }
@@ -164,6 +176,7 @@ pkg_list () {
 pkg_list_installed () {
 	local name="${1:-*}"
 	
+	pkg_wait_not_busy
 	dpkg-query -W -f '${Package},${Version},${db:Status-Status}\n' "$name" \
 		|sed -e '/,installed$/! d' -e '/,installed$/ s/,installed$/,true/'
 }
@@ -184,6 +197,7 @@ pkg_is_installed () {
 }
 
 pkg_refresh () {
+	pkg_wait_not_busy
 	sudo apt-get update -qy >/dev/null  2>&1 </dev/null
 }
 
@@ -195,6 +209,7 @@ pkg_upgrade () {
 		action="dist-upgrade"
 	fi
 	
+	pkg_wait_not_busy
 	sudo apt-get $action -qy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
 		>/dev/null </dev/null
 }

@@ -1,5 +1,5 @@
 NAME = sn-solarpkg
-VERSION = 1.0.1-1
+VERSION = 1.0.2-1
 
 deb : 
 	fpm -s dir -t deb \
@@ -13,6 +13,8 @@ deb :
 	-f \
 	-d 'apt (>= 1.4.9)' \
 	-d 'dpkg (>= 1.18.25)' \
+	-d 'psmisc (>= 22.21)' \
+	-d 'sudo (>= 1.8.19)' \
 	--deb-no-default-config-files \
 	etc usr var
 
