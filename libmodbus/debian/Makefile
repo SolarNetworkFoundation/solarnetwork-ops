@@ -13,6 +13,7 @@ deb :
 	--url 'https://github.com/stephane/libmodbus' \
 	--license 'Lesser General Public License 2.1' \
 	--force \
+	-C libmodbus/local \
 	--deb-activate noawait \
 	usr/lib usr/share
 
@@ -26,6 +27,7 @@ deb-dev :
 	--url 'https://github.com/stephane/libmodbus' \
 	--license 'Lesser General Public License 2.1' \
 	--force \
+	-C libmodbus/local \
 	usr/include
 
 clean : 
