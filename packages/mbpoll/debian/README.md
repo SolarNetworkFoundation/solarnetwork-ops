@@ -2,15 +2,16 @@
 
 ## Building
 
-```sh
-$ mkdir build
-$ cd build
-$ cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ..
-```
-
-Now copy the `Makefile` from this directory into the `local/` directory, and then:
+Clone the git repository, check out the release tag, and build like this:
 
 ```sh
-$ cd local
+$ git clone https://github.com/epsilonrt/mbpoll
+$ cd mbpoll
+$ git checkout v1.4.11
+$ mkdir -p build/native
+$ cd build/native
+$ cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr ../..
+$ make && make install DESTDIR=$PWD/local
+$ cd ../../..
 $ make
 ```
