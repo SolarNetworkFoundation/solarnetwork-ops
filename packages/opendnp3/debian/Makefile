@@ -1,10 +1,10 @@
 NAME = opendnp3
-VERSION = 2.2.0-1
+VERSION = 2.2.0-2
 DNP3_INSTALL_DIR = dnp3/build/native/local
 
 all : deb deb-dev
 
-deb :
+deb : jni
 	fpm -s dir -t deb \
 	-n $(NAME) \
 	-v $(VERSION) \
@@ -24,6 +24,16 @@ deb :
 	--deb-templates opendnp3.templates \
 	usr/lib
 
+jni : $(DNP3_INSTALL_DIR)/usr/lib/jni $(DNP3_INSTALL_DIR)/usr/lib/libopendnp3java.so
+	# seems more Debian like to move, rather than link to, the JNI lib
+	mv $(DNP3_INSTALL_DIR)/usr/lib/libopendnp3java.so $(DNP3_INSTALL_DIR)/usr/lib/jni/
+
+$(DNP3_INSTALL_DIR)/usr/lib/jni : 
+	mkdir $(DNP3_INSTALL_DIR)/usr/lib/jni
+
+$(DNP3_INSTALL_DIR)/usr/lib/libopendnp3java.so : $(DNP3_INSTALL_DIR)/usr/lib/jni/libopendnp3java.so
+	mv $(DNP3_INSTALL_DIR)/usr/lib/jni/libopendnp3java.so $(DNP3_INSTALL_DIR)/usr/lib/
+	
 deb-dev :	
 	fpm -s dir -t deb \
 	-n $(NAME)-dev \
