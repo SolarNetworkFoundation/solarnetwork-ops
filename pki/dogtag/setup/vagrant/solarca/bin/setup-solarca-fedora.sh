@@ -77,10 +77,11 @@ Arguments:
  -u                     - update package cache
  -v                     - verbose mode; print out more verbose messages
  -W <user p12 pw>       - the user PKCS#12 password; defaults to dev123
- -w <user names>        - a space-delimited list of server DN organizational units and DNS name pairs
-                          delimited by colons, to create certificates for; defaults to the following:
+ -w <user names>        - a space-delimited list of server DN organizational units, usernames, and
+                          email address tuples delimited by colons, to create certificates for; 
+                          defaults to the following:
 
-                         DB:auth:operations@solarnetworkdev.net DB:in:operations@solarnetworkdev.net...
+                          DB:auth:operations@solarnetworkdev.net DB:in:operations@solarnetworkdev.net...
 EOF
 }
 
@@ -737,11 +738,6 @@ show_results () {
 			
 			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/central.jks
 			
-			A SolarDB server private key and certificate have been saved as a PKCS#12 file using
-			the password '$SN_DB_P12_PASS' as:
-			
-			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/$SN_DB_DNS_NAME.p12
-			
 			A CA Agent user 'suagent' has been created for SolarUser to integrate with Dogtag. This
 			user has been added to the 'Certificate Manager Agents' group. A PKCS#12 file for this
 			user has been created as
@@ -752,7 +748,24 @@ show_results () {
 			password '$CA_AGENT_JKS_PASS' to:
 			
 			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks
-
+		EOF
+	fi
+	if [ -n "$SN_SERVER_DNS_NAMES" ]; then
+		cat <<-EOF
+		
+			All application server private key and certificates (from the -m argument) have been 
+			saved as PKCS#12 files using the password '$SN_SERVER_P12_PASS' to:
+			
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/*.p12
+		EOF
+	fi
+	if [ -n "$SN_USER_NAMES" ]; then
+		cat <<-EOF
+		
+			All user private key and certificates (from the -w argument) have been 
+			saved as PKCS#12 files using the password '$SN_USER_P12_PASS' to:
+			
+			  $CA_ADMIN_HOME/.dogtag/pki-tomcat/*.p12
 		EOF
 	fi
 	if [ -n "$did_ds_ldif_import" ]; then
