@@ -19,6 +19,7 @@ DS_ROOT_PASS="admin"
 DS_SUFFIX="dc=solarnetworkdev,dc=net"
 DS_IMPORT_LDIF=""
 HOSTNAME="ca.solarnetworkdev.net"
+PKI_REPO_EXCLUDE="updates*"
 SN_PROFILE_CONF="example/SolarNode.cfg"
 SN_IN_DNS_NAME="in.solarnetworkdev.net"
 SN_IN_JKS_PASS="dev123"
@@ -53,6 +54,9 @@ Arguments:
  -e <pki admin p12 pw>  - the PKI Admin PKCS#12 password, i.e. from ca.cfg; defaults to Secret.123
  -F <sec domain name>   - the PKI security domain name, i.e. from ca.cfg; defaults to SolarNetworkDev
  -f <sec domain pw>     - the PKI security domain password, i.e. from ca.cfg; defaults to Secret.123
+ -H <repo glob>         - exclude package repositories matching this glob when installing PKI;
+                          this is done to limit the version to match what is available in CentOS;
+                          defaults to 'updates*'
  -h <host name>         - the FQDN for the machine; defaults to ca.solarnetworkdev.net
  -I <in JKS pw>         - the SolarIn JKS keystore password; defaults to dev123
  -i <in DNS name>       - the SoalrIn DNS name; defaults to in.solarentworkdev.net
@@ -96,6 +100,7 @@ while getopts ":A:a:b:c:d:E:e:F:f:h:i:I:J:j:K:k:L:l:M:m:no:p:s:t:uvW:w:" opt; do
 		e) PKI_ADMIN_P12_PASS="${OPTARG}";;
 		F) CA_SEC_DOMAIN_NAME="${OPTARG}";;
 		f) CA_SEC_DOMAIN_PASS="${OPTARG}";;
+		H) PKI_REPO_EXCLUDE="${OPTARG}";;
 		h) HOSTNAME="${OPTARG}";;
 		I) SN_IN_JKS_PASS="${OPTARG}";;
 		i) SN_IN_DNS_NAME="${OPTARG}";;
@@ -129,13 +134,19 @@ did_pki=""
 did_vnc=""
 
 # install package if not already installed
-pkg_install () {	
-	if rpm -q $1 >/dev/null 2>&1; then
-		echo "Package $1 already installed."
+pkg_install () {
+	local pkg=$1
+	local exrepo=$2
+	if rpm -q $pkg >/dev/null 2>&1; then
+		echo "Package $pkg already installed."
 	else
-		echo "Installing package $1 ..."
+		echo "Installing package $pkg ..."
 		if [ -z "$DRY_RUN" ]; then
-			yum -y install $1
+			if [ -n "$exrepo" ]; then
+				yum -y --disablerepo=$exrepo install $pkg
+			else
+				yum -y install $pkg
+			fi
 		fi
 	fi
 }
@@ -465,12 +476,12 @@ setup_pki_user_p12 () {
 }
 
 setup_pki () {
-	pkg_install pki-ca
-	pkg_install dogtag-pki-server-theme
+	pkg_install pki-ca "$PKI_REPO_EXCLUDE"
+	pkg_install dogtag-pki-server-theme "$PKI_REPO_EXCLUDE"
 	
 	# non-headless Java needed for console
 	pkg_install java-1.8.0-openjdk
-	pkg_install pki-console
+	pkg_install pki-console "$PKI_REPO_EXCLUDE"
 	
 	setup_pki_pkcs12
 	
