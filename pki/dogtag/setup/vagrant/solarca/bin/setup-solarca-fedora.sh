@@ -349,7 +349,15 @@ setup_ds () {
 				fi
 			fi
 			if [ -z "$DRY_RUN" ]; then
-				dscreate from-file ds.inf
+				# work around F29 bug for missing environment file
+				if [ ! -e /etc/sysconfig/dirsrv-ca ]; then
+					echo 'Creating /etc/sysconfig/dirsrv-ca environment file...'
+					touch /etc/sysconfig/dirsrv-ca
+				fi
+				if ! dscreate from-file ds.inf; then
+					echo 'Failed to create 389 instance from ds.inf'
+					exit 1
+				fi
 				mv ds.inf ds-ca.inf
 			fi
 		fi
