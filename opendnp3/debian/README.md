@@ -16,4 +16,10 @@ can change that by passing a `DNP3_INSTALL_DIR` variable to `make`, as shown her
 make DNP3_INSTALL_DIR=dnp3/build/native/local
 ```
 
+To specify a specific distribution target, add the `DIST` parameter, like
+
+```sh
+$ make DIST=buster
+```
+
 [wiki-docs]: https://github.com/SolarNetworkFoundation/solarnetwork-ops/wiki/OpenDNP3-Debian-Packaging

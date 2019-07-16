@@ -1,5 +1,6 @@
 NAME = opendnp3
-VERSION = 2.2.0-2
+DIST = 
+VERSION = 2.2.0-2$(if $(DIST),+$(DIST),)
 DNP3_INSTALL_DIR = dnp3/build/native/local
 
 all : deb deb-dev

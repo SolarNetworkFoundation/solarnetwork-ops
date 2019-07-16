@@ -1,5 +1,6 @@
 NAME = libmodbus
-VERSION = 3.1.4-1
+DIST = 
+VERSION = 3.1.4-1$(if $(DIST),+$(DIST),)
 
 all : deb deb-dev
 

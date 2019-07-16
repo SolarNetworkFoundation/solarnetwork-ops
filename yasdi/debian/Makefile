@@ -1,5 +1,6 @@
 NAME = yasdi
-VERSION = 1.8.1-Build9
+DIST = 
+VERSION = 1.8.1-Build9$(if $(DIST),+$(DIST),)
 
 all : deb deb-lib
 

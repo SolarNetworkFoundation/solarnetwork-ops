@@ -14,3 +14,9 @@ $ make && make DESTDIR=$PWD/local install
 $ cd ../../../../..
 $ make
 ```
+
+To specify a specific distribution target, add the `DIST` parameter, like
+
+```sh
+$ make DIST=buster
+```
