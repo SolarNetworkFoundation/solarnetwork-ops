@@ -1,11 +1,11 @@
 NAME = opendnp3
 DIST = 
-UPSTREAM_VERSION = 2.2.0
-PKG_VERSION = 2
+UPSTREAM_VERSION = 2.3.2
+PKG_VERSION = 1
 VERSION = $(UPSTREAM_VERSION)-$(PKG_VERSION)$(if $(DIST),+$(DIST),)
 DNP3_INSTALL_DIR = dnp3/build/native/local
-SSL_DEP = libssl1.0.2
-SSL_DEV_DEP = libssl1.0-dev
+SSL_DEP = libssl1.1
+SSL_DEV_DEP = libssl-dev
 
 all : deb deb-dev
 
