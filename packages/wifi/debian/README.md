@@ -51,5 +51,11 @@ Use `fpm` to package the service via `make`. This package is architecture indepe
 $ make
 ```
 
+To specify a specific distribution target, add the `DIST` parameter, like
+
+```sh
+$ make DIST=buster
+```
+
 [fpm]: https://github.com/jordansissel/fpm
 [dropBrute]: https://github.com/robzr/dropBrute

@@ -1,4 +1,5 @@
-VERSION = 1.0.0-2
+DIST = 
+VERSION = 1.0.0-2$(if $(DIST),+$(DIST),)
 NAME = sn-iptables
 PATHS = etc lib usr
 

@@ -1,5 +1,6 @@
 NAME = sn-osstat
-VERSION = 1.0.0-1
+DIST = 
+VERSION = 1.0.0-1$(if $(DIST),+$(DIST),)
 
 deb : 
 	fpm -s dir -t deb \

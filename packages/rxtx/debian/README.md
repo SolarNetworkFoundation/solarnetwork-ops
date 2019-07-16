@@ -11,19 +11,14 @@ $ sudo gem install --no-ri --no-rdoc fpm
 
 ## Create package
 
-Use `fpm` to package the service. This package is architecture independent:
+Use `fpm` to package the service via `make`. This package is architecture independent:
 
 ```sh
-$ fpm -s dir -t deb -m 'packaging@solarnetwork.org.nz' \
-	--vendor 'SolarNetwork Foundation' \
-	-n sn-rxtx -v 1.0.0-1 \
-	-a all \
-	--description 'SolarNode RXTX support' \
-	--license 'Apache License 2.0' \
-	-f \
-	-d 'librxtx-java (>= 2.2pre2)' \
-	--after-install sn-rxtx.postinst \
-	--after-remove sn-rxtx.postrm \
-	usr
+$ make
 ```
 
+To specify a specific distribution target, add the `DIST` parameter, like
+
+```sh
+$ make DIST=buster
+```
