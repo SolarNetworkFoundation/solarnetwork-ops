@@ -2,9 +2,8 @@
 
 ## Building
 
-Unarchive the `yasdi` source into a `yasdi` directory. Then,
-
 ```sh
+$ git clone https://github.com/SolarNetwork/yasdi.git
 $ cd yasdi/projects/generic-cmake
 $ mkdir -p build/native
 $ cd build/native
