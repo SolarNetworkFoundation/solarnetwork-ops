@@ -16,6 +16,12 @@ can change that by passing a `DNP3_INSTALL_DIR` variable to `make`, as shown her
 make DNP3_INSTALL_DIR=dnp3/build/native/local
 ```
 
+If building a different upstream version, pass the `UPSTREAM_VERSION` variable:
+
+```sh
+$ make UPSTREAM_VERSION=2.3.2
+```
+
 If building with OpenSSL 1.1, call like this:
 
 ```sh
@@ -25,7 +31,7 @@ $ make SSL_DEP=libssl1.1 SSL_DEV_DEP=libssl-dev
 To specify a specific distribution target, add the `DIST` parameter, like
 
 ```sh
-$ make DIST=buster SSL_DEP=libssl1.1 SSL_DEV_DEP=libssl-dev
+$ make DIST=buster UPSTREAM_VERSION=2.3.2 PKG_VERSION=1 SSL_DEP=libssl1.1 SSL_DEV_DEP=libssl-dev
 ```
 
 [wiki-docs]: https://github.com/SolarNetworkFoundation/solarnetwork-ops/wiki/OpenDNP3-Debian-Packaging
