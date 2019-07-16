@@ -13,6 +13,7 @@ deb :
 	--url 'https://www.sma.de/en/products/monitoring-control/yasdi.html' \
 	--license 'General Public License 2.1' \
 	--force \
+	-C yasdi/projects/generic-cmake/build/native/local \
 	-d 'libyasdi (>= 1.8.1)' \
 	usr/bin
 
@@ -26,6 +27,7 @@ deb-lib :
 	--url 'https://www.sma.de/en/products/monitoring-control/yasdi.html' \
 	--license 'General Public License 2.1' \
 	--force \
+	-C yasdi/projects/generic-cmake/build/native/local \
 	--deb-activate noawait \
 	usr/lib
 
