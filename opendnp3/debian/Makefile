@@ -2,6 +2,8 @@ NAME = opendnp3
 DIST = 
 VERSION = 2.2.0-2$(if $(DIST),+$(DIST),)
 DNP3_INSTALL_DIR = dnp3/build/native/local
+SSL_DEP = libssl1.0.2
+SSL_DEV_DEP = libssl1.0-dev
 
 all : deb deb-dev
 
@@ -16,7 +18,7 @@ deb : jni
 	--url 'https://github.com/automatak/dnp3' \
 	-C $(DNP3_INSTALL_DIR) \
 	--force \
-	-d 'libssl1.0.2' \
+	-d $(SSL_DEP) \
 	--deb-activate noawait \
 	--after-install opendnp3.postinst \
 	--before-remove opendnp3.prerm \
@@ -45,7 +47,7 @@ deb-dev :
 	--url 'https://github.com/automatak/dnp3' \
 	-C $(DNP3_INSTALL_DIR) \
 	--force \
-	-d 'libssl1.0-dev' \
+	-d $(SSL_DEV_DEP) \
 	usr/include
 
 clean : 

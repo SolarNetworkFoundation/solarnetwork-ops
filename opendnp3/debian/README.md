@@ -16,10 +16,16 @@ can change that by passing a `DNP3_INSTALL_DIR` variable to `make`, as shown her
 make DNP3_INSTALL_DIR=dnp3/build/native/local
 ```
 
+If building with OpenSSL 1.1, call like this:
+
+```sh
+$ make SSL_DEP=libssl1.1 SSL_DEV_DEP=libssl-dev
+```
+
 To specify a specific distribution target, add the `DIST` parameter, like
 
 ```sh
-$ make DIST=buster
+$ make DIST=buster SSL_DEP=libssl1.1 SSL_DEV_DEP=libssl-dev
 ```
 
 [wiki-docs]: https://github.com/SolarNetworkFoundation/solarnetwork-ops/wiki/OpenDNP3-Debian-Packaging
