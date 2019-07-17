@@ -1,0 +1,13 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+	systemctl daemon-reload >/dev/null || true
+
+	if ! systemctl is-enabled sn-nftables.service >/dev/null; then
+		echo 'Enabling sn-nftables.service...'
+		systemctl enable sn-nftables.service || true
+	
+		echo 'nftables will not be enforced until a reboot, or if you run `systemctl start sn-nftables`.'
+	fi
+fi
