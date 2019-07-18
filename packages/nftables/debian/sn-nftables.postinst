@@ -14,5 +14,5 @@ if [ "$1" = "configure" ]; then
 		systemctl enable nftables.service || true
 	fi
 	
-	echo 'nftables will not be enforced until a reboot, or if you run `systemctl start nftables`.'
+	echo 'nftables will not be enforced until a reboot, or if you run `systemctl restart nftables`.'
 fi
