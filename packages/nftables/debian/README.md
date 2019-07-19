@@ -1,7 +1,7 @@
-# iptables Debian package
+# nftables Debian package
 
-This directory contains packaging scripts used to create an iptables based firewall service 
-`sn-iptables.deb`. It integrates a SSH [brute force][dropBrute] response script.
+This directory contains packaging scripts used to create an nftables based firewall service 
+`sn-nftables.deb`. It integrates a SSH [brute force][dropBrute] response script.
 
 
 ## Packaging requirements

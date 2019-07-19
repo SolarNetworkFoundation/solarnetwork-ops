@@ -1,5 +1,6 @@
 NAME = mbpoll
-VERSION = 1.4.11-1
+DIST = 
+VERSION = 1.4.11-1$(if $(DIST),+$(DIST),)
 MBPOLL_INSTALL_DIR = mbpoll/build/native/local
 
 deb :

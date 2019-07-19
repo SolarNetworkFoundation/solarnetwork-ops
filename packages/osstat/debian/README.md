@@ -20,5 +20,11 @@ Use `fpm` to package the service via `make`. This package is architecture indepe
 $ make
 ```
 
+To specify a specific distribution target, add the `DIST` parameter, like
+
+```sh
+$ make DIST=buster
+```
+
 [fpm]: https://github.com/jordansissel/fpm
 [osstat]: https://github.com/SolarNetwork/solarnetwork-node/tree/master/net.solarnetwork.node.datum.os.stat
