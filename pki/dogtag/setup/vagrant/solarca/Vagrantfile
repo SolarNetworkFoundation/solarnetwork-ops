@@ -1,0 +1,44 @@
+vm_define="solarca"
+vm_name="SolarNet CA"
+#vm_box="centos/7"
+#vm_box_version=">= 1902.01"
+vm_box="fedora/29-cloud-base"
+vm_box_version=">= 29.20181024.1"
+cpu_count=1
+memory_size=1024
+gui=false
+setup_path="bin/setup-solarca-fedora.sh"
+setup_args="-u"
+
+# Read any user specific configuration overrides - cater for this file not existing
+local_env_config_file="Vagrantfile.local"
+begin
+	localsettings = File.read local_env_config_file
+	eval localsettings
+	rescue Errno::ENOENT
+end
+
+Vagrant.configure(2) do |config|
+	config.vm.box = vm_box
+	config.vm.box_version = vm_box_version
+	config.vm.define vm_define
+	config.vm.network "private_network", type: "dhcp"
+	config.vm.synced_folder ".", "/vagrant", type: "rsync", id: "vagrant-root", :mount_options => ["dmode=755"]
+
+	config.vm.provision :shell, inline: "/vagrant/#{setup_path} #{setup_args}"
+
+	config.vm.provider "virtualbox" do |v|
+		v.gui = gui
+		v.memory = memory_size
+		v.cpus = cpu_count
+		v.name = vm_name
+	end
+
+	config.vm.provider "vmware_desktop" do |v|
+		v.gui = gui
+		v.vmx["memsize"] = memory_size
+		v.vmx["numvcpus"] = cpu_count
+		v.vmx["ethernet0.pcislotnumber"] = "32"
+	end
+
+end

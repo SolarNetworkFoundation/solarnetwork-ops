@@ -1,0 +1,3 @@
+# Rename network interfaces NOT using MAC addresses, so this image can be copied to other devices
+SUBSYSTEM=="net", DRIVERS=="?*", KERNEL=="wlan*", NAME="wlan%n"
+

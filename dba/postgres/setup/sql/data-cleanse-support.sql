@@ -25,3 +25,4 @@ $$;
 /* Example call:
 
 SELECT * FROM solardatum.cleanse_datum(ARRAY[1::bigint], ARRAY['foo']);
+*/

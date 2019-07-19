@@ -111,7 +111,7 @@ find_inc_start()
 {
 		src_snap=$1
 		dest_snap="$destpool/${src_snap#*/}"
-		prev_snap=$(ssh $dest zfs list -t snapshot -H -o name -S creation -r $dest_snap |head -1)
+		prev_snap=$(ssh $dest zfs list -t snapshot -H -o name -S creation -r $dest_snap 2>/dev/null |grep "^${dest_snap}@" |head -1)
 		echo ${prev_snap##*@}
 }
 
@@ -119,7 +119,7 @@ find_prev_inc()
 {
 		src_snap=$1
 		dest_snap="$destpool/${src_snap#*/}"
-		prev_snap=$(ssh $dest zfs list -t snapshot -H -o name -S creation -r $dest_snap |head -2 |tail -1)
+		prev_snap=$(ssh $dest zfs list -t snapshot -H -o name -S creation -r $dest_snap 2>/dev/null |grep "^${dest_snap}@" |head -2 |tail -1)
 		echo ${prev_snap##*@}
 }
 
@@ -154,6 +154,7 @@ for pool in $pools; do
 		snap="$pool@$ts"
 
 		inc_snap=$(find_inc_start $pool)
+		[[ -n "$ver" ]] && echo "Initial snapshot for $pool is [$inc_snap]."
 
 		if [ -z "$inc_snap" ]; then
 				[[ -n "$ver" ]] && echo "Sending initial snapshot $snap to $dest $destpool..."

@@ -1,0 +1,15 @@
+[Unit]
+Description=WPA supplicant config reloader (interface-specific version)
+ConditionPathExists=/etc/wpa_supplicant/wpa_supplicant-%i.conf
+Requires=sys-subsystem-net-devices-%i.device
+After=sys-subsystem-net-devices-%i.device
+Before=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/systemctl restart wpa_supplicant@%i.service
+
+[Install]
+Alias=multi-user.target.wants/wpa_supplicant-conf@%i.service
+

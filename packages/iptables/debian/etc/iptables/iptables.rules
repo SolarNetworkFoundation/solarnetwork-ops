@@ -1,0 +1,40 @@
+*filter
+
+# Create chain for SSH brute-force password cracking mitigation
+-N dropBrute
+
+# Allows all loopback (lo0) traffic and drop all traffic to 127/8 that doesn't use lo0
+-A INPUT -i lo -j ACCEPT
+-A INPUT ! -i lo -d 127.0.0.0/8 -j REJECT
+
+# Allow all established inbound connections
+-A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# Allow outbound traffic
+-A OUTPUT -j ACCEPT
+
+# Allows HTTP
+-A INPUT -p tcp --dport 80 -j ACCEPT
+-A INPUT -p tcp --dport 8080 -j ACCEPT
+
+# Allow SSH 
+-A INPUT -p tcp -m state --state NEW --dport 22 -j dropBrute
+-A INPUT -p tcp -m state --state NEW --dport 22 -m limit --limit 6/min --limit-burst 6 -j ACCEPT
+
+# Allow ping
+-A INPUT -p icmp -m icmp --icmp-type 8 -j ACCEPT
+
+# log iptables denied calls (access via 'dmesg' command)
+-A INPUT -m limit --limit 5/min -j LOG --log-prefix "iptables denied: " --log-level 7
+
+-A INPUT -j REJECT
+-A FORWARD -j REJECT
+
+COMMIT
+
+*nat
+
+# Redirect port 80 to 8080 for SolarNode
+-A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 8080
+
+COMMIT

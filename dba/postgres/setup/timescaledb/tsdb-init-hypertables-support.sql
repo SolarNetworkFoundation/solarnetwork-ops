@@ -1,6 +1,6 @@
-GRANT REFERENCES ON TABLE _timescaledb_catalog.chunk TO public;
+CREATE SCHEMA IF NOT EXISTS _timescaledb_solarnetwork;
 
-ALTER SCHEMA _timescaledb_solarnetwork OWNER TO solarnet;
+GRANT REFERENCES ON TABLE _timescaledb_catalog.chunk TO PUBLIC;
 
 CREATE TABLE IF NOT EXISTS _timescaledb_solarnetwork.chunk_index_maint (
 	chunk_id integer NOT NULL,
@@ -12,9 +12,6 @@ CREATE TABLE IF NOT EXISTS _timescaledb_solarnetwork.chunk_index_maint (
       REFERENCES _timescaledb_catalog.chunk (id) MATCH SIMPLE
       ON UPDATE NO ACTION ON DELETE CASCADE
 );
-
-ALTER TABLE _timescaledb_solarnetwork.chunk_index_maint
-  OWNER TO solarnet;
 
 CREATE OR REPLACE VIEW _timescaledb_solarnetwork.chunk_time_index_maint AS
 SELECT ht.id AS hypertable_id
@@ -47,9 +44,6 @@ INNER JOIN pg_indexes pgi ON pgi.schemaname = ch.schema_name AND pgi.tablename =
 LEFT OUTER JOIN _timescaledb_solarnetwork.chunk_index_maint chm ON chm.chunk_id = ch.id AND chm.index_name = chi.index_name
 WHERE dim.column_type = 'timestamp with time zone'::regtype;
 
-ALTER TABLE _timescaledb_solarnetwork.chunk_time_index_maint
-  OWNER TO solarnet;
-
 
 /**
  * Find all chunk indexes needing reindex OR cluster maintenance.
@@ -78,9 +72,6 @@ AND (
 ORDER BY chunk_id
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_maint(interval, interval, interval)
-  OWNER TO solarnet;
-
 
 /**
  * Find all chunk indexes needing reindex maintenance.
@@ -106,8 +97,6 @@ AND (chunk_index_last_reindex IS NULL OR chunk_index_last_reindex < CURRENT_TIME
 ORDER BY chunk_id
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(interval, interval, interval)
-  OWNER TO solarnet;
 
 /**
  * Find all chunk indexes needing cluster maintenance.
@@ -118,13 +107,13 @@ ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_reindex_maint(int
  * @param chunk_max_age		the maximum age of a chunk to consider
  * @param chunk_min_age		the minimum age of a chunk to consider
  * @param redindex_min_age	the minimum interval before reindexing an index
- * @param mod_threshold		the minimum modification threshold (dead tuples)
+ * @param mod_threshold		the minimum modification threshold (dead tuple percent)
  */
 CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(
     chunk_max_age interval DEFAULT interval '24 weeks',
     chunk_min_age interval DEFAULT interval '1 week',
     reindex_min_age interval DEFAULT interval '11 weeks',
-    mod_threshold integer DEFAULT 50
+    mod_threshold integer DEFAULT 5
     )
 	RETURNS TABLE(schema_name name, table_name name, index_name name) LANGUAGE sql STABLE AS
 $$
@@ -136,7 +125,7 @@ WITH ranked AS (
 		chunk_index_name,
 		chunk_upper_range,
 		chunk_index_last_cluster,
-		n_dead_tup
+		dead_tup_percent
 	FROM _timescaledb_solarnetwork.chunk_time_index_maint
 	ORDER BY chunk_id, chunk_index_name
 )
@@ -147,12 +136,13 @@ SELECT
 FROM ranked
 WHERE (chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
 		AND (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age))
-	OR (chunk_upper_range < CURRENT_TIMESTAMP - chunk_min_age AND n_dead_tup >= mod_threshold)
-ORDER BY chunk_id
+	OR (chunk_upper_range < CURRENT_TIMESTAMP - chunk_max_age AND dead_tup_percent >= mod_threshold)
+ORDER BY CASE WHEN (chunk_upper_range BETWEEN CURRENT_TIMESTAMP - chunk_max_age AND CURRENT_TIMESTAMP - chunk_min_age
+		AND (chunk_index_last_cluster IS NULL OR chunk_index_last_cluster < CURRENT_TIMESTAMP - reindex_min_age))
+	THEN 0 ELSE 1 END
+	, chunk_id
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.find_chunk_index_need_cluster_maint(interval, interval, interval, integer)
-  OWNER TO solarnet;
 
 /**
  * Perform reindex maintenance on one specific chunk table.
@@ -203,9 +193,6 @@ BEGIN
 	RETURN;
 END
 $$;
-
-ALTER FUNCTION _timescaledb_solarnetwork.perform_one_chunk_reindex_maintenance(text, text, text, boolean)
-  OWNER TO solarnet;
 
 
 /**
@@ -263,9 +250,6 @@ BEGIN
 END
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.perform_one_chunk_cluster_maintenance(text, text, text, boolean)
-  OWNER TO solarnet;
-
 
 /**
  * Find all chunk indexes needing maintenance and perform the maintenance on them.
@@ -301,8 +285,6 @@ BEGIN
 END
 $$;
 
-ALTER FUNCTION _timescaledb_solarnetwork.perform_chunk_reindex_maintenance(interval, interval, interval, boolean)
-  OWNER TO solarnet;
 
 /* Example call:
 
@@ -312,3 +294,58 @@ SELECT * FROM _timescaledb_solarnetwork.perform_chunk_reindex_maintenance(
 	reindex_min_age => interval '1 day',
 	not_dry_run => TRUE);
 */
+
+/**
+ * Change a normal table into a hypertable, following specific conventions.
+ *
+ * The conventions required by this function are:
+ * 
+ *  * The table must have a primary key named `{table_name}_pkey`
+ *  * A new unique index named `{table_name}_pkey` will be created, in `index_tblespace` if provided
+ * 
+ * @param schem_name the table schema name
+ * @param table_name the table name
+ * @param ts_col_name the timestamp column name to use with the hypertable
+ * @param chunk_interval the chunk interval to use, e.g. '6 months'
+ * @param index_tblspace if provided, the tablespace to use for the created unique index
+ */
+CREATE OR REPLACE FUNCTION _timescaledb_solarnetwork.change_to_hypertable(
+	schem_name text,
+	table_name text,
+	ts_col_name text,
+	chunk_interval text,
+	index_tblspace text DEFAULT NULL
+    )
+    RETURNS VOID LANGUAGE plpgsql AS
+$$
+DECLARE
+	stmt text;
+	pkey_name text := table_name || '_pkey';
+	pkey_cols text;
+BEGIN
+	SELECT array_to_string(array_agg(pg_catalog.pg_get_indexdef(a.attrelid, a.attnum, TRUE) ORDER BY a.attnum), ',')
+	INTO pkey_cols
+	FROM pg_catalog.pg_class c
+	INNER JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+	INNER JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+	WHERE n.nspname = schem_name
+		AND c.relname = pkey_name
+		AND a.attnum > 0
+		AND NOT a.attisdropped;
+	
+	EXECUTE format('ALTER TABLE %I.%I DROP CONSTRAINT %I', schem_name, table_name, pkey_name);
+
+	stmt := format('CREATE UNIQUE INDEX %I ON %I.%I (%s)', pkey_name, schem_name, table_name, pkey_cols);
+	IF NOT index_tblspace IS NULL THEN
+		stmt := stmt || format(' TABLESPACE %I', index_tblspace);
+	END IF;
+	
+	EXECUTE stmt;
+	
+	stmt := format('SELECT public.create_hypertable(%s::regclass, %s::name, chunk_time_interval => interval %s, create_default_indexes => FALSE)',
+		quote_literal(schem_name || '.' || table_name), quote_literal(ts_col_name), quote_literal(chunk_interval));
+	
+	RAISE NOTICE '%', stmt;
+	EXECUTE stmt;
+END
+$$;

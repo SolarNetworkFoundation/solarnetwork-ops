@@ -1,0 +1,14 @@
+#!/bin/sh -e
+
+if [ "$1" = "remove" ]; then
+	systemctl daemon-reload >/dev/null || true
+
+# 	if systemctl is-active sn-iptables.service >/dev/null; then
+# 		echo 'Stopping sn-iptables.service...'
+# 		systemctl stop sn-iptables.service || true
+# 	fi
+# 	if systemctl is-enabled sn-iptables.service >/dev/null; then
+# 		echo 'Disabling sn-iptables.service...'
+# 		systemctl disable sn-iptables.service || true
+# 	fi
+fi

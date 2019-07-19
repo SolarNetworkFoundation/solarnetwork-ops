@@ -1,0 +1,19 @@
+Template: sn-wifi/country
+Type: string
+Default: NZ
+Description: WiFi country?
+ Enter the WiFi 2-character country code, for example NZ.
+
+Template: sn-wifi/ssid
+Type: string
+Description: SSID name?
+ Enter the name of the WiFi network to join.
+
+Template: sn-wifi/pass
+Type: password
+Description: WiFi password?
+ Enter the WiFi network password. It must be a minimum of 8 characters.
+
+Template: sn-wifi/msg_pass_too_short
+Type: error
+Description: The WiFi password you entered is less than the required minimum of 8 characters.

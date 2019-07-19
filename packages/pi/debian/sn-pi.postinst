@@ -1,0 +1,29 @@
+#!/bin/sh
+set -e
+
+# Enable hardware watchdog
+if grep -q '^dtparam=watchdog=on' /boot/config.txt; then
+	true
+else
+	echo 'Turning on watchdog dtparam in /boot/config.txt; will be enabled on reboot.'
+	if grep -q 'dtparam=watchdog' /boot/config.txt; then
+		# update
+		sed -i -e '/dtparam=watchdog/c dtparam=watchdog=on' /boot/config.txt || true
+	else
+		# add in
+		echo 'dtparam=watchdog=on' >>/boot/config.txt
+	fi
+fi
+
+if grep -q '^RuntimeWatchdogSec=14' /etc/systemd/system.conf; then
+	true
+else
+	echo 'Setting RuntimeWatchdogSec to 14 in /etc/systemd/system.conf; will be enabled on reboot.'
+	if grep -q 'RuntimeWatchdogSec' /etc/systemd/system.conf; then
+		# update
+		sed -i -e '/RuntimeWatchdogSec/c RuntimeWatchdogSec=14' /etc/systemd/system.conf || true
+	else
+		# add in
+		echo 'RuntimeWatchdogSec=14' >>/etc/systemd/system.conf
+	fi
+fi
