@@ -1,7 +1,7 @@
 DIST = buster
 VERSION = 1.1.0-1$(if $(DIST),+$(DIST),)
 NAME = sn-nftables
-PATHS = etc usr
+PATHS = etc usr var
 
 deb : prep
 	fpm -s dir -t deb \
