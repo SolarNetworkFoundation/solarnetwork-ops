@@ -1,5 +1,5 @@
 DIST = buster
-VERSION = 1.0.0-1$(if $(DIST),+$(DIST),)
+VERSION = 1.1.0-1$(if $(DIST),+$(DIST),)
 NAME = sn-nftables
 PATHS = etc usr
 
@@ -19,6 +19,7 @@ deb : prep
 	-d 'busybox-syslogd (>= 1:1.30.1)' \
 	--conflicts 'sn-iptables' \
 	--replaces 'sn-iptables' \
+	--provides 'solarnode-firewall' \
 	--after-install $(NAME).postinst \
 	--before-remove $(NAME).prerm \
 	--after-remove $(NAME).postrm \
