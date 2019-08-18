@@ -17,15 +17,9 @@ done
 SCRIPT_DIR=`dirname $SCRIPT`
 EXECUTABLE="dmk.sh"
 
-#
-# identify yourself when running under cygwin
-#
-cygwin=false
-case "$(uname)" in
-    CYGWIN*) cygwin=true ;;
-esac
-export cygwin
+export cygwin=false
 
+export JAVA_OPTS="-Dsolarnetwork.pidfile=$SCRIPT_DIR/../work/solarnet.pid -Dfelix.fileinstall.dir=$SCRIPT_DIR/../configuration/services -Dfelix.fileinstall.filter=.*\.cfg -Dfelix.fileinstall.noInitialDelay=true"
 export JMX_PORT=9882
 echo "Starting Virgo HTTP on port 9082, debug port 9982."
 exec "$SCRIPT_DIR"/"$EXECUTABLE" start -debug 9982 "$@"

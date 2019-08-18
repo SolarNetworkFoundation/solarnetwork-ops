@@ -166,6 +166,7 @@ GRANT ALL ON FUNCTION solardatum.store_meta(cdate timestamp with time zone, node
 GRANT SELECT ON TABLE solarnet.sn_datum_export_task TO solar;
 GRANT ALL ON TABLE solarnet.sn_datum_export_task TO solarinput;
 
+GRANT ALL ON FUNCTION solarnet.find_nodes_for_meta(nodes bigint[], criteria text) TO solar;
 GRANT ALL ON FUNCTION solarnet.get_node_local_timestamp(timestamp with time zone, bigint) TO solar;
 GRANT ALL ON FUNCTION solarnet.get_node_timezone(bigint) TO solar;
 GRANT ALL ON FUNCTION solarnet.get_season(date) TO solar;

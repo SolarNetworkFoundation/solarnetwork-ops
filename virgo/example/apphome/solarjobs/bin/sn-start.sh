@@ -34,11 +34,12 @@ env_jdbc () {
 		args="$args --set jdbc.pass=$SN_JDBC_PASS"
 	fi
 	
-	java -jar "$SCRIPT_DIR"/sn-prop-util.jar modify --file "$SCRIPT_DIR"/../repository/etc/net.solarnetwork.central.dao.jdbc.properties $args
+	java -jar "$SCRIPT_DIR"/sn-prop-util.jar modify --file "$SCRIPT_DIR"/../configuration/services/net.solarnetwork.jdbc.pool.hikari-central.cfg $args
 }
 
 env_jdbc
 
+export JAVA_OPTS="-Dsolarnetwork.pidfile=$SCRIPT_DIR/../work/solarnet.pid -Dfelix.fileinstall.dir=$SCRIPT_DIR/../configuration/services -Dfelix.fileinstall.filter=.*\.cfg -Dfelix.fileinstall.noInitialDelay=true"
 export JMX_PORT=9880
 echo "Starting Virgo HTTP on port 9080, debug port 9980."
 exec "$SCRIPT_DIR"/"$EXECUTABLE" start -debug 9980 "$@"

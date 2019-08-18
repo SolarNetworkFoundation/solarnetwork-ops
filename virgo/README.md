@@ -19,12 +19,12 @@ $ ./bin/setup-virgo.sh -rv -h /home/solarnet -a solarjobs -i example/ivy-solarjo
 
 ## Database connection
 
-The main Postgres database connection settings are defined in the 
-`repository/etc/net.solarnetwork.central.dao.jdbc.properties` file of each reference application.
-They are configured to connect to a `solar-database` host on port `5432`. Thus the host OS must
-be able to resolve that name to the IP address of the actual server. For development where you run
-the database on the same machine, you can add an entry in `/etc/hosts` that maps that name. For 
-example:
+The main Postgres database connection settings are defined in the
+`configuration/services/net.solarnetwork.jdbc.pool.hikari-central.cfg` file of each reference
+application. They are configured to connect to a `solar-database` host on port `5432`. Thus the host
+OS must be able to resolve that name to the IP address of the actual server. For development where
+you run the database on the same machine, you can add an entry in `/etc/hosts` that maps that name.
+For example:
 
 ```
 127.0.0.1       solar-database localhost
