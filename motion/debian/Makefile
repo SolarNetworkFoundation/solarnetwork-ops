@@ -2,12 +2,11 @@ NAME = sn-motion
 DIST = 
 VERSION = 1.0.0-1$(if $(DIST),+$(DIST),)
 
-all : deb deb-dev
-
 deb : 
 	fpm -s dir -t deb \
 	-n $(NAME) \
 	-v $(VERSION) \
+	-a all \
 	-m 'SolarNetwork Packaging <packaging@solarnetwork.org.nz>' \
 	--vendor 'SolarNetwork Foundation' \
 	--description 'SolarNode motion support.' \
