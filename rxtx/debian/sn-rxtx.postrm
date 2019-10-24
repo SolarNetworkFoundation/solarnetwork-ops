@@ -8,4 +8,8 @@ if [ "$1" = "remove" -a -d /usr/lib/jvm ]; then
 			rm -f "$d/jre/lib/ext/RXTXcomm.jar"
 		fi
 	done
+	if [ -e "/usr/share/solarnode/app/ext/RXTXcomm.jar" ]; then
+		echo "Unlinking RXTXcomm.jar from /usr/share/solarnode/app/ext."
+		rm -f "/usr/share/solarnode/app/ext/RXTXcomm.jar"
+	fi
 fi
