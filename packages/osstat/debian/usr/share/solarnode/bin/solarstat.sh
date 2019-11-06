@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 #
 # Linux helper script for SolarNode OS statistic gathering.
+#
+# Other packages can contribute actions by providing shell scripts that define functions in the
+# /usr/share/solarnode/osstat.d directory. The scripts must be named `*.sh`. Any action not
+# natively supported by this script will be translated into a function name following these steps:
+#
+# 1. Replace all dash characters with underscores.
+# 2. Add a `do_` prefix.
+#
+# For example, if the action passed in is `cpu-temp` then the corresponding function name would
+# be `do_cpu_temp`,
 
 VERBOSE=""
 
@@ -25,6 +35,14 @@ ACTION="$1"
 if [ $# -lt 1 ]; then
 	echo "Must provide action, use -? for help."  1>&2
 	exit 1
+fi
+
+# support plug-in functions by looking for directory of scripts to parse, e,g. for 
+# hardware-specific osstat packages
+if [ -d /usr/share/solarnode/osstat.d ]; then
+	for f in $(ls -1 /usr/share/solarnode/osstat.d/*.sh 2>/dev/null); do
+		. "$f"
+	done
 fi
 
 # print out average CPU utilization for current hour reported by sar, e.g.
@@ -89,6 +107,11 @@ do_sys_uptime_acc () {
 	cut -f1 -d' ' /proc/uptime
 }
 
+function_exists () {
+	declare -f $1 >/dev/null
+	return $?
+}
+
 case $ACTION in
 	cpu-use) do_cpu_use_inst;;
 
@@ -103,10 +126,15 @@ case $ACTION in
 	sys-up) do_sys_uptime_acc;;
 
 	*)
-		echo "Action '${ACTION}' not supported." 1>&2
-		echo 1>&2
-		do_help
-		exit 1
+		cust_action_fn=$(echo "do_$ACTION" |tr - _)
+		if function_exists $cust_action_fn; then
+			$cust_action_fn "$@"
+		else
+			echo "Action '${ACTION}' not supported." 1>&2
+			echo 1>&2
+			do_help
+			exit 1
+		fi
 		;;
 esac
 

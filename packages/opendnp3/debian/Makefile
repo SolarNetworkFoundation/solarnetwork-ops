@@ -15,7 +15,7 @@ deb : jni
 	-v $(VERSION) \
 	-m 'SolarNetwork Packaging <packaging@solarnetwork.org.nz>' \
 	--vendor 'SolarNetwork Foundation' \
-	--description 'Shared library for Modbus communication.' \
+	--description 'Shared library for DNP3 communication.' \
 	--license 'Apache License 2.0' \
 	--url 'https://github.com/automatak/dnp3' \
 	-C $(DNP3_INSTALL_DIR) \

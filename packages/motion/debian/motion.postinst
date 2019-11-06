@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+# ensure solar user is in adm group, so it can read motion-generated media
+usermod -a -G adm solar
+
+systemctl daemon-reload
+
+service_up () {
+	name="$1"
+	start="$2"
+	if ! systemctl is-enabled "$name" >/dev/null; then
+		echo "Enabling $name..."
+		systemctl enable "$name" || true
+	fi
+	if [ -n "$start" ]; then
+		if ! systemctl is-active "$name" >/dev/null; then
+			systemctl start "$name" || true
+		else
+			systemctl restart "$name" || true
+		fi
+	fi
+}
+
+service_up sn-motion-cleaner.service
+service_up sn-motion-cleaner.timer true

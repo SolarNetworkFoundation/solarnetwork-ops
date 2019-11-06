@@ -1,0 +1,9 @@
+[Unit]
+Description=Clean old motion images daily
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target
