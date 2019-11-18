@@ -20,7 +20,7 @@ Clone the git repository, check out the release tag, and build like this:
 $ git clone git clone https://github.com/linux-can/socketcand.git
 $ cd socketcand
 $ ./autogen.sh
-$ ./configure
+$ ./configure --prefix=/usr
 $ make && make install DESTDIR=local init_script=no
 $ cd ..
 ```
