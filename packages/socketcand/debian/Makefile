@@ -2,6 +2,7 @@ NAME = sn-socketcand
 DIST = 
 VERSION = 0.6.2dev-1$(if $(DIST),+$(DIST),)
 SOCKETCAND_INSTALL_DIR = socketcand/local
+PATHS = etc usr
 
 deb :
 	fpm -s dir -t deb \
@@ -14,7 +15,7 @@ deb :
 	--license 'Apache License 2.0' \
 	-C $(SOCKETCAND_INSTALL_DIR) \
 	--force \
-	usr
+	$(PATHS)
 
 clean : 
 	rm $(NAME)_$(VERSION)_all.deb
