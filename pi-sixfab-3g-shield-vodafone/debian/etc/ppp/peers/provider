@@ -33,4 +33,3 @@ ipparam 3gppp
 ipcp-max-failure 30
 # Ask the peer for up to 2 DNS server addresses
 usepeerdns
-
