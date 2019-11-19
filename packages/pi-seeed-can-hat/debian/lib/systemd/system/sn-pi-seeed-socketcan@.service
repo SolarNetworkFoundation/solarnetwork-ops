@@ -1,0 +1,33 @@
+# Template service for a socketcan configuration
+#
+# The instance name must be a can device name, e.g. "can0".
+#
+# The following systemd environment values are supported:
+#
+# SOCKETCAN_BAUD - the baud; defaults to 1000000.
+# SOCKETCAN_RESTART_MS - the restart milliseconds; defaults to 1000.
+# SOCKETCAN_OPTS - additional options; defaults to "berr-reporting on"
+#                - for FD: "dbitrate 8000000 fd on"
+#
+#
+# Override by creating /etc/systemd/system/sn-pi-seeed-socketcan@can0.service.d
+# directory with "override.conf" file like
+#
+# [Service]
+# Environment="SOCKETCAN_OPTS=berr-reporting on dbitrate 8000000 fd on"
+
+[Unit]
+Description=socketcan link
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=SOCKETCAN_BAUD=1000000 \
+	SOCKETCAN_RESTART_MS=1000 \
+	"SOCKETCAN_OPTS=berr-reporting on"
+ExecStartPre=/sbin/ip link set %I type can \
+	bitrate ${SOCKETCAN_BAUD} \
+	restart-ms ${SOCKETCAN_RESTART_MS} \
+	$SOCKETCAN_OPTS
+ExecStart=/sbin/ip link set %I up
+ExecStop=/sbin/ip link set %I down

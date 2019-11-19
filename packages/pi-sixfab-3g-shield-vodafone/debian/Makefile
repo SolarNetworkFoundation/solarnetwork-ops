@@ -16,6 +16,8 @@ deb : prep
 	-d 'systemd (>= 232)' \
 	-d 'ppp (>= 2.4.7)' \
 	--after-install $(NAME).postinst \
+	--before-remove $(NAME).prerm \
+	--after-remove $(NAME).postrm \
 	--provides 'solarnode-gps' \
 	--provides 'solarnode-modem' \
 	--deb-no-default-config-files \
