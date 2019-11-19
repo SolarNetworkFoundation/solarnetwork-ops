@@ -4,7 +4,8 @@ This directory contains packaging scripts used to create the `sn-pi-seeed-can-ha
 which provides configuration and support for the Seeed Studio CAN HAT. The goal of this package is
 to configure the CAN HAT for use by SolarNode on a Raspberry Pi.
 
-The kernel modules included here are compiled from the Seeed Studio [pi-hats][pi-hats] project.
+The kernel modules included here are compiled from the Seeed Studio [pi-hats][pi-hats] project,
+which are released under the MIT licence.
 
 # Packaging
 
