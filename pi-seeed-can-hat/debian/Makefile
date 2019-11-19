@@ -1,4 +1,4 @@
-DIST = 
+DIST = buster
 VERSION = 1.0.0-1$(if $(DIST),+$(DIST),)
 NAME = sn-pi-seeed-can-hat
 PATHS = boot etc lib
