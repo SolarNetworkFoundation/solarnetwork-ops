@@ -11,7 +11,6 @@ deb : prep
 	--license 'Apache License 2.0' \
 	-m 'packaging@solarnetwork.org.nz' \
 	--vendor 'SolarNetwork Foundation' \
-	-a armhf \
 	--force \
 	-d 'systemd (>= 232)' \
 	-d 'raspberrypi-kernel (= 1.20190925+1-1)' \
