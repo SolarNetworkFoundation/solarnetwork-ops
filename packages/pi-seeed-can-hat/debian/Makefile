@@ -17,6 +17,7 @@ deb : prep
 	-d 'raspberrypi-kernel (= 1.20190925+1-1)' \
 	--before-install $(NAME).preinst \
 	--after-install $(NAME).postinst \
+	--before-remove $(NAME).prerm \
 	--after-remove $(NAME).postrm \
 	--deb-no-default-config-files \
 	$(PATHS)
