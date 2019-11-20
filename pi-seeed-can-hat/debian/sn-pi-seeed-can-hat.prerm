@@ -9,6 +9,6 @@ service_down () {
 }
 
 if [ "$1" = "remove" ]; then
-	service_down sn-sixfab-3g-reconnect.timer
-	service_down sn-sixfab-3g-pppd
+	service_down sn-pi-seeed-socketcan@can0
+	service_down sn-pi-seeed-socketcan@can1
 fi
