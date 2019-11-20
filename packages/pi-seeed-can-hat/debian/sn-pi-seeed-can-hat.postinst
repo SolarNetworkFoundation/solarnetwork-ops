@@ -33,5 +33,6 @@ if [ $(dpkg --get-selections |grep '^raspberrypi-kernel\s' |awk '{print $2}') !=
 	echo '*** echo "raspberrypi-kernel hold" |dpkg --set-selections'
 fi
 
+systemctl daemon-reload
 reload_udev
 depmod -a
