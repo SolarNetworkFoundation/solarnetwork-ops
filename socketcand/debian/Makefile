@@ -2,7 +2,7 @@ NAME = sn-socketcand
 DIST = 
 VERSION = 0.6.2+dev-1$(if $(DIST),+$(DIST),)
 SOCKETCAND_INSTALL_DIR = socketcand/local
-PATHS = etc usr
+PATHS = usr
 
 deb :
 	fpm -s dir -t deb \
