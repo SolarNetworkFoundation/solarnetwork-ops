@@ -1,7 +1,7 @@
 DIST = buster
 VERSION = 1.0.0-1$(if $(DIST),+$(DIST),)
 NAME = sn-pi-seeed-can-hat
-PATHS = boot etc lib
+PATHS = boot etc lib usr var
 
 deb : prep
 	fpm -s dir -t deb \
