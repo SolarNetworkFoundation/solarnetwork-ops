@@ -4,8 +4,10 @@
 #
 # The following systemd environment values are supported:
 #
-# SOCKETCAN_BAUD - the baud; defaults to 1000000.
+# SOCKETCAN_BAUD - the baud; defaults to 500000.
 # SOCKETCAN_RESTART_MS - the restart milliseconds; defaults to 1000.
+# SOCKETCAN_LISTEN_ONLY - `on` or `off` to toggle read-only mode; defaults to on.
+# SOCKETCAN_FD - `on` or `off` to toggle CAN FD support; defaults to off.
 # SOCKETCAN_OPTS - additional options; defaults to "berr-reporting on"
 #                - for FD: "dbitrate 8000000 fd on"
 #
@@ -14,7 +16,7 @@
 # directory with "override.conf" file like
 #
 # [Service]
-# Environment="SOCKETCAN_OPTS=berr-reporting on dbitrate 8000000 fd on"
+# Environment="SOCKETCAN_OPTS=berr-reporting on dbitrate 8000000"
 
 [Unit]
 Description=socketcan link
@@ -22,12 +24,16 @@ Description=socketcan link
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-Environment=SOCKETCAN_BAUD=1000000 \
+Environment=SOCKETCAN_BAUD=500000 \
 	SOCKETCAN_RESTART_MS=1000 \
+	SOCKETCAN_LISTEN_ONLY=on \
+	SOCKETCAN_FD=off \
 	"SOCKETCAN_OPTS=berr-reporting on"
 ExecStartPre=/sbin/ip link set %I type can \
 	bitrate ${SOCKETCAN_BAUD} \
 	restart-ms ${SOCKETCAN_RESTART_MS} \
+	listen-only ${SOCKETCAN_LISTEN_ONLY} \
+	fd ${SOCKETCAN_FD} \
 	$SOCKETCAN_OPTS
 ExecStart=/sbin/ip link set %I up
 ExecStop=/sbin/ip link set %I down

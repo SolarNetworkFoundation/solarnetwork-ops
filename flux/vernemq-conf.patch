@@ -1,6 +1,6 @@
---- vernemq.conf.orig	2018-12-16 21:51:03.523461558 +0000
-+++ vernemq.conf	2018-12-16 05:43:09.338782056 +0000
-@@ -139,7 +139,7 @@
+--- vernemq.conf.192.orig	2019-09-10 13:07:59.000000000 +0000
++++ vernemq.conf	2019-11-24 22:11:11.001643494 +0000
+@@ -152,7 +152,7 @@
  ## 
  ## Acceptable values:
  ##   - an integer
@@ -9,7 +9,7 @@
  
  ## If a message is published with a QoS lower than the QoS of the subscription it is
  ## delivered to, VerneMQ can upgrade the outgoing QoS. This is a non-standard option.
-@@ -202,7 +202,8 @@
+@@ -233,7 +233,8 @@
  ## 
  ## Acceptable values:
  ##   - an IP/port pair, e.g. 127.0.0.1:10011
@@ -19,7 +19,7 @@
  
  ## 'listener.tcp.allowed_protocol_versions' configures which
  ## protocol versions are allowed for an MQTT listener. The allowed
-@@ -587,7 +588,7 @@
+@@ -602,7 +603,7 @@
  ## 
  ## Acceptable values:
  ##   - on or off
@@ -28,7 +28,7 @@
  
  ## The VerneMQ bridge plugin.
  ## 
-@@ -612,7 +613,7 @@
+@@ -641,7 +642,7 @@
  ## 
  ## Acceptable values:
  ##   - an integer
@@ -37,7 +37,7 @@
  
  ## Set the path to a password file.
  ## 
-@@ -629,7 +630,7 @@
+@@ -658,7 +659,7 @@
  ## 
  ## Acceptable values:
  ##   - an integer
@@ -46,10 +46,10 @@
  
  ## Configure the vmq_diversity plugin script dir. The script dir
  ## is searched for Lua scripts which are automatically loaded when the
-@@ -836,6 +837,15 @@
+@@ -1051,6 +1052,14 @@
+ ## Acceptable values:
  ##   - text
  ## vmq_webhooks.webhook1.endpoint = http://localhost/myendpoints
- 
 +vmq_webhooks.solarflux1.hook = auth_on_register
 +vmq_webhooks.solarflux1.endpoint = http://localhost:8280/hook
 +
@@ -58,11 +58,10 @@
 +
 +vmq_webhooks.solarflux3.hook = auth_on_publish
 +vmq_webhooks.solarflux3.endpoint = http://localhost:8280/hook
-+
+ 
  ## Specify the address and port of the bridge to connect to. Several
  ## bridges can configured by using different bridge names (e.g. br0). If the
- ## connection supports SSL encryption bridge.ssl.<name> can be used.
-@@ -1116,7 +1126,7 @@
+@@ -1334,7 +1343,7 @@
  ## 
  ## Acceptable values:
  ##   - text
@@ -71,7 +70,7 @@
  
  ## Cookie for distributed node communication.  All nodes in the
  ## same cluster should use the same cookie or they will not be able to
-@@ -1127,7 +1137,7 @@
+@@ -1345,7 +1354,7 @@
  ## 
  ## Acceptable values:
  ##   - text
@@ -80,7 +79,7 @@
  
  ## Sets the number of threads in async thread pool, valid range
  ## is 0-1024. If thread support is available, the default is 64.
-@@ -1202,3 +1212,6 @@
+@@ -1420,3 +1429,6 @@
  ##   - an integer
  leveldb.maximum_memory.percent = 70
  
