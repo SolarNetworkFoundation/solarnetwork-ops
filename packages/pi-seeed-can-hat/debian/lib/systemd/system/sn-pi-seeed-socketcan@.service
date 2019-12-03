@@ -4,7 +4,7 @@
 #
 # The following systemd environment values are supported:
 #
-# SOCKETCAN_BAUD - the baud; defaults to 1000000.
+# SOCKETCAN_BAUD - the baud; defaults to 500000.
 # SOCKETCAN_RESTART_MS - the restart milliseconds; defaults to 1000.
 # SOCKETCAN_LISTEN_ONLY - `on` or `off` to toggle read-only mode; defaults to on.
 # SOCKETCAN_FD - `on` or `off` to toggle CAN FD support; defaults to off.
@@ -24,7 +24,7 @@ Description=socketcan link
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-Environment=SOCKETCAN_BAUD=1000000 \
+Environment=SOCKETCAN_BAUD=500000 \
 	SOCKETCAN_RESTART_MS=1000 \
 	SOCKETCAN_LISTEN_ONLY=on \
 	SOCKETCAN_FD=off \
