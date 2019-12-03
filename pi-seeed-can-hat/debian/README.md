@@ -17,18 +17,27 @@ which can be customised via systemd environment configurations.
 
 | Environment | Default | Description |
 |:------------|:--------|:------------|
-| `SOCKETCAN_BAUD` | 1000000 | The bitrate to use. Defaults to 1MB. |
+| `SOCKETCAN_BAUD` | 500000 | The bitrate to use. Defaults to 1MB. |
 | `SOCKETCAN_RESTART_MS` | 1000 | Automatic restart delay time. If set to a non-zero value, a restart of the CAN controller will be triggered automatically in case of a bus-off condition after the specified delay time in milliseconds. |
+| `SOCKETCAN_LISTEN_ONLY` | on | Toggle read-only listen mode. Set to either `on` or `off`. |
 | `SOCKETCAN_OPTS` | `berr-reporting on` | Additional CAN interface options. |
 
 You can use systemd drop-in units to customise these settings. For example, to enable CAN FD on the
 `can0` interface with an 8MB dynamic bitrate, create a
-`/etc/systemd/system/sn-pi-seeed-socketcan@can0.service.d/fd.conf` file with the following content:
+`/etc/systemd/system/sn-pi-seeed-socketcan@can0.service.d/override.conf` file with the following content:
 
 ```
 [Service]
 Environment="SOCKETCAN_OPTS=berr-reporting on dbitrate 8000000 fd on"
 ```
+
+The `/usr/share/solarnode/bin/sn-canctl.sh` script can also be used to manage this override
+easily. For example:
+
+```sh
+sudo /usr/share/solarnode/bin/sn-canctl.sh -d can0 listen-only on
+```
+
 
 # Packaging
 
