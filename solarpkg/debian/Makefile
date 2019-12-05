@@ -1,6 +1,6 @@
 NAME = sn-solarpkg
 DIST = 
-VERSION = 1.0.2-1$(if $(DIST),+$(DIST),)
+VERSION = 1.0.3-1$(if $(DIST),+$(DIST),)
 
 deb : 
 	fpm -s dir -t deb \
