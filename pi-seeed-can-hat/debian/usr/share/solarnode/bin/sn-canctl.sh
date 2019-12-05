@@ -13,7 +13,7 @@ do_help () {
 		<action> is one of:
 
 		baud <speed>           Get or set the baud for a device.
-		fd (on|off)            Toggle CAN FD support for a device.
+		extra <extra>          Configure extra options like FD support.
 		listen-only (on|off)   Toggle read-only mode for a device.
 		restart-ms <ms>        Get or set the bus restart, in milliseonds.
 		EOF
@@ -43,14 +43,15 @@ ACTION="$1"
 shift 1
 
 SERVICE="/lib/systemd/system/sn-pi-seeed-socketcan@.service"
-OVERRIDE_DIR="/etc/systemd/system/sn-pi-seeed-socketcan@${DEVICE}.service.d"
-OVERRIDE="${OVERRIDE_DIR}/override.conf"
+INSTANCE="sn-pi-seeed-socketcan@${DEVICE}"
+OVERRIDE_DIR="/etc/solarnode/socketcan"
+OVERRIDE="${OVERRIDE_DIR}/${DEVICE}.env"
 
 get_env_value () {
 	local key="$1"
 	local val=""
 	if [ -e "${OVERRIDE}" ]; then
-		val=$(grep "${key}=" "${OVERRIDE}" |sed -e 's/.*'"${key}"'=\([0-9a-zA-Z_-]*\).*/\1/')
+		val=$(grep "${key}=" "${OVERRIDE}" |sed -e "s/${key}=\(.*\)/\1/")
 	fi
 	if [ -z "${val}" ]; then
 		val=$(grep "${key}=" "${SERVICE}" |sed -e 's/.*'"${key}"'=\([0-9a-zA-Z_-]*\).*/\1/')
@@ -65,18 +66,17 @@ set_env_value () {
 		if [ ! -d "${OVERRIDE_DIR}" ];then
 			mkdir -p "${OVERRIDE_DIR}"
 		fi
-		echo '[Service]' >"${OVERRIDE}"
 	fi
 	if grep -q "${key}=" "${OVERRIDE}"; then
 		# update
-		sed -i -e "s/${key}=\(.*\)/${key}=${val}/" "${OVERRIDE}"
+		sed -i -e "/${key}=/c ${key}=${val}" "${OVERRIDE}"
 	else
-		echo "Environment=${key}=${val}" >>"${OVERRIDE}"
+		echo "${key}=${val}" >>"${OVERRIDE}"
 	fi
 	
 	systemctl daemon-reload
-	if systemctl --quiet is-active "${SERVICE}"; then
-		systemctl restart "${SERVICE}"
+	if systemctl --quiet is-active "${INSTANCE}"; then
+		systemctl restart "${INSTANCE}"
 	fi
 }
 
@@ -96,12 +96,12 @@ do_baud () {
 	fi
 }
 
-do_fd () {
+do_extra () {
 	check_device_opt
 	if [ -z "$1" ]; then
-		get_env_value 'SOCKETCAN_FD'
+		get_env_value 'SOCKETCAN_OPTS'
 	else
-		set_env_value 'SOCKETCAN_FD' "$1"
+		set_env_value 'SOCKETCAN_OPTS' '"'"$1"'"'
 	fi
 }
 
@@ -125,7 +125,7 @@ do_restart_ms () {
 
 case $ACTION in
 	baud) do_baud "$1" ;;
-	fd) do_fd "$1" ;;
+	extra) do_extra "$1" ;;
 	listen-only) do_listen_only "$1" ;;
 	restart-ms) do_restart_ms "$1" ;;
 	*)
