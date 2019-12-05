@@ -2,21 +2,16 @@
 #
 # The instance name must be a can device name, e.g. "can0".
 #
-# The following systemd environment values are supported:
+# A systemd environment file matching the instance name + .env can exist
+# in /etc/solarnode/socketcan, which can define the following:
 #
 # SOCKETCAN_BAUD - the baud; defaults to 500000.
 # SOCKETCAN_RESTART_MS - the restart milliseconds; defaults to 1000.
 # SOCKETCAN_LISTEN_ONLY - `on` or `off` to toggle read-only mode; defaults to on.
-# SOCKETCAN_FD - `on` or `off` to toggle CAN FD support; defaults to off.
 # SOCKETCAN_OPTS - additional options; defaults to "berr-reporting on"
 #                - for FD: "dbitrate 8000000 fd on"
 #
 #
-# Override by creating /etc/systemd/system/sn-pi-seeed-socketcan@can0.service.d
-# directory with "override.conf" file like
-#
-# [Service]
-# Environment="SOCKETCAN_OPTS=berr-reporting on dbitrate 8000000"
 
 [Unit]
 Description=socketcan link
@@ -27,13 +22,12 @@ RemainAfterExit=yes
 Environment=SOCKETCAN_BAUD=500000 \
 	SOCKETCAN_RESTART_MS=1000 \
 	SOCKETCAN_LISTEN_ONLY=on \
-	SOCKETCAN_FD=off \
 	"SOCKETCAN_OPTS=berr-reporting on"
+EnvironmentFile=-/etc/solarnode/socketcan/%I.env
 ExecStartPre=/sbin/ip link set %I type can \
 	bitrate ${SOCKETCAN_BAUD} \
 	restart-ms ${SOCKETCAN_RESTART_MS} \
 	listen-only ${SOCKETCAN_LISTEN_ONLY} \
-	fd ${SOCKETCAN_FD} \
 	$SOCKETCAN_OPTS
 ExecStart=/sbin/ip link set %I up
 ExecStop=/sbin/ip link set %I down
