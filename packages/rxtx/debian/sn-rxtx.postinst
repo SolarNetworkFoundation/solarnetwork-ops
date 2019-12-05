@@ -10,7 +10,7 @@ if [ -e /usr/share/java/RXTXcomm.jar ]; then
 			fi
 		done
 	fi
-	if [ -d /usr/share/solarnode/app/ext -a ! -L "$d/jre/lib/ext/RXTXcomm.jar" ]; then
+	if [ -d /usr/share/solarnode/app/ext -a ! -L "/usr/share/solarnode/app/ext/RXTXcomm.jar" ]; then
 		echo "Linking to RXTXcomm.jar in /usr/share/solarnode/app/ext."
 		ln -s /usr/share/java/RXTXcomm.jar "/usr/share/solarnode/app/ext/RXTXcomm.jar"
 	fi
