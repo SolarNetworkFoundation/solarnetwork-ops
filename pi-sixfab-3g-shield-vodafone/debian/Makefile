@@ -15,6 +15,7 @@ deb : prep
 	--force \
 	-d 'systemd (>= 232)' \
 	-d 'ppp (>= 2.4.7)' \
+	-d 'gpsd (>= 3.16)' \
 	--after-install $(NAME).postinst \
 	--before-remove $(NAME).prerm \
 	--after-remove $(NAME).postrm \
