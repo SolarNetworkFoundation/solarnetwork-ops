@@ -31,8 +31,8 @@ SELECT ht.id AS hypertable_id
 	, pgs.n_tup_del
 	, pgs.n_dead_tup
 	, pgs.n_live_tup
-	, ((pgs.n_dead_tup::double precision / pgs.n_live_tup::double precision) * 100)::integer AS dead_tup_percent
-	, (((pgs.n_tup_ins + pgs.n_tup_upd + pgs.n_tup_del)::double precision / pgs.n_live_tup::double precision) * 100)::integer AS mod_tup_percent
+	, (CASE pgs.n_live_tup WHEN 0 THEN 0 ELSE ((pgs.n_dead_tup::double precision / pgs.n_live_tup::double precision) * 100)::integer END) AS dead_tup_percent
+	, (CASE pgs.n_live_tup WHEN 0 THEN 0 ELSE (((pgs.n_tup_ins + pgs.n_tup_upd + pgs.n_tup_del)::double precision / pgs.n_live_tup::double precision) * 100)::integer END) AS mod_tup_percent
 FROM _timescaledb_catalog.chunk ch
 INNER JOIN _timescaledb_catalog.chunk_constraint chs ON chs.chunk_id = ch.id
 INNER JOIN _timescaledb_catalog.dimension dim ON ch.hypertable_id = dim.hypertable_id
