@@ -19,6 +19,15 @@
  
  ## 'listener.tcp.allowed_protocol_versions' configures which
  ## protocol versions are allowed for an MQTT listener. The allowed
+@@ -279,7 +280,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - an IP/port pair, e.g. 127.0.0.1:10011
+-listener.http.default = 127.0.0.1:8888
++listener.http.default = 0.0.0.0:8888
+ 
+ ## The cafile is used to define the path to a file containing
+ ## the PEM encoded CA certificates that are trusted. Set the cafile
 @@ -602,7 +603,7 @@
  ## 
  ## Acceptable values:
