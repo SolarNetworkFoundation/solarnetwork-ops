@@ -1,6 +1,6 @@
 NAME = sn-system
 DIST = 
-VERSION = 1.1.1-1$(if $(DIST),+$(DIST),)
+VERSION = 1.1.2-1$(if $(DIST),+$(DIST),)
 
 deb : 
 	fpm -s dir -t deb \
@@ -12,8 +12,7 @@ deb :
 	--description 'SolarNode system support' \
 	--license 'Apache License 2.0' \
 	-f \
-	-d 'bash (>= 4.4)' \
-	-d 'systemd (>= 230)' \
+	-d 'systemd (>= 215)' \
 	--conflicts 'ifupdown' \
 	--replaces 'ifupdown' \
 	--after-install $(NAME).postinst \
