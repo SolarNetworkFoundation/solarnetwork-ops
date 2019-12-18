@@ -2,6 +2,12 @@
 
 ## Building
 
+Make sure `cmake`, `make`, and `pkg-config` are installed, e.g.
+
+```sh
+apt-get install cmake make
+```
+
 Clone the git repository, check out the release tag, and build like this:
 
 ```sh
