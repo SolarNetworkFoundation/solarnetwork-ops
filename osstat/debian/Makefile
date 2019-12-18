@@ -1,6 +1,6 @@
 NAME = sn-osstat
 DIST = 
-VERSION = 1.1.0-1$(if $(DIST),+$(DIST),)
+VERSION = 1.1.0-2$(if $(DIST),+$(DIST),)
 
 deb : 
 	fpm -s dir -t deb \
@@ -12,7 +12,7 @@ deb :
 	--description 'SolarNode OS statistics support' \
 	--license 'Apache License 2.0' \
 	-f \
-	-d 'procps (>= 2:3.3.12)' \
+	-d 'procps (>= 2:3.3.9)' \
 	usr var
 
 clean : 

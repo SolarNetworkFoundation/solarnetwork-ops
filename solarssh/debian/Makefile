@@ -1,6 +1,6 @@
 NAME = sn-solarssh
 DIST = 
-VERSION = 1.0.0-1$(if $(DIST),+$(DIST),)
+VERSION = 1.0.0-2$(if $(DIST),+$(DIST),)
 
 deb : 
 	fpm -s dir -t deb \
@@ -12,7 +12,7 @@ deb :
 	--description 'SolarSSH support' \
 	--license 'Apache License 2.0' \
 	-f \
-	-d 'systemd (>= 232)' \
+	-d 'systemd (>= 215)' \
 	--after-install $(NAME).postinst \
 	--after-remove $(NAME).postrm \
 	--deb-no-default-config-files \

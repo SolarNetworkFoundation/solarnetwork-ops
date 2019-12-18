@@ -1,6 +1,6 @@
 NAME = sn-solarpkg
 DIST = 
-VERSION = 1.0.3-1$(if $(DIST),+$(DIST),)
+VERSION = 1.0.3-2$(if $(DIST),+$(DIST),)
 
 deb : 
 	fpm -s dir -t deb \
@@ -12,10 +12,10 @@ deb :
 	--description 'SolarNode package management support' \
 	--license 'Apache License 2.0' \
 	-f \
-	-d 'apt (>= 1.4.9)' \
-	-d 'dpkg (>= 1.18.25)' \
+	-d 'apt (>= 1.0)' \
+	-d 'dpkg (>= 1.17)' \
 	-d 'psmisc (>= 22.21)' \
-	-d 'sudo (>= 1.8.19)' \
+	-d 'sudo (>= 1.8.10)' \
 	--deb-no-default-config-files \
 	etc usr var
 
