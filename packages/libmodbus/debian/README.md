@@ -2,10 +2,10 @@
 
 ## Building
 
-Make sure `autoconf`, `automake`, and `libtool` are installed, e.g.
+Make sure `autoconf`, `automake`, `libtool`, and `make` are installed, e.g.
 
 ```sh
-apt-get install autoconf automake libtool
+apt-get install autoconf automake libtool make
 ```
 
 Clone the git repository, check out the release tag, and build like this:
