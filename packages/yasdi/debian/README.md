@@ -2,6 +2,12 @@
 
 ## Building
 
+Make sure `cmake`, `make`, and `pkg-config` are installed, e.g.
+
+```sh
+apt-get install cmake make
+```
+
 ```sh
 $ git clone https://github.com/SolarNetwork/yasdi.git
 $ cd yasdi/projects/generic-cmake
