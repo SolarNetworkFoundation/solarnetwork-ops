@@ -2,7 +2,7 @@ NAME = yasdi
 DIST = 
 VERSION = 1.8.1-Build9$(if $(DIST),+$(DIST),)
 
-all : deb deb-lib
+all : deb deb-lib deb-dev
 
 deb :
 	fpm -s dir -t deb \
@@ -31,6 +31,23 @@ deb-lib :
 	-C yasdi/projects/generic-cmake/build/native/local \
 	--deb-activate noawait \
 	usr/lib
+
+deb-dev : cp-dev
+	fpm -s dir -t deb \
+	-n lib$(NAME)-dev \
+	-v $(VERSION) \
+	-m 'SolarNetwork Packaging <packaging@solarnetwork.org.nz>' \
+	--vendor 'SolarNetwork Foundation' \
+	--description 'Shared libraries for SMA yasdi development headers.' \
+	--license 'Lesser General Public License 2.1' \
+	--force \
+	-C yasdi/projects/generic-cmake/build/native/local \
+	usr/include
+
+cp-dev : 
+	mkdir -p yasdi/projects/generic-cmake/build/native/local/usr/include/yasdi
+	find yasdi -name projects -prune -o -name '*.h' \
+		-exec cp {} yasdi/projects/generic-cmake/build/native/local/usr/include/yasdi \;	
 
 clean : 
 	rm -f lib$(NAME)_$(VERSION)*.deb
