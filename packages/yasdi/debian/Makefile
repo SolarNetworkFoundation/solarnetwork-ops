@@ -46,4 +46,5 @@ deb-dev :
 
 clean : 
 	rm -f lib$(NAME)_$(VERSION)*.deb
+	rm -f lib$(NAME)_$(VERSION)-dev*.deb
 	rm -f $(NAME)shell_$(VERSION)*.deb
