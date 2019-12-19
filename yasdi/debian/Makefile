@@ -32,7 +32,7 @@ deb-lib :
 	--deb-activate noawait \
 	usr/lib
 
-deb-dev : cp-dev
+deb-dev : 
 	fpm -s dir -t deb \
 	-n lib$(NAME)-dev \
 	-v $(VERSION) \
@@ -43,11 +43,6 @@ deb-dev : cp-dev
 	--force \
 	-C yasdi/projects/generic-cmake/build/native/local \
 	usr/include
-
-cp-dev : 
-	mkdir -p yasdi/projects/generic-cmake/build/native/local/usr/include/yasdi
-	find yasdi -name projects -prune -o -name '*.h' \
-		-exec cp {} yasdi/projects/generic-cmake/build/native/local/usr/include/yasdi \;	
 
 clean : 
 	rm -f lib$(NAME)_$(VERSION)*.deb
