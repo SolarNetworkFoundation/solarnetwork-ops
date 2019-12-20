@@ -1,0 +1,8 @@
+# Enable the auto-reconnect task
+AUTO_RECONNECT_ENABLE=1
+
+# The network interface to test for
+NET_INTERFACE="ppp0"
+
+# The host or IP address to ping
+PING_HOST="1.1.1.1"

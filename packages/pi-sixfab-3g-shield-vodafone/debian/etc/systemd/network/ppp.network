@@ -1,0 +1,5 @@
+[Match]
+Name=ppp*
+
+[Link]
+Unmanaged=yes

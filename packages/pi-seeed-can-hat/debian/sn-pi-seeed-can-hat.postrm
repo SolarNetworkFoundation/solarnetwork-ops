@@ -1,0 +1,9 @@
+#!/bin/sh -e
+
+if [ "$1" = "remove" ]; then
+	if grep -q '^dtoverlay=2xMCP2517FD$' /boot/config.txt; then
+		echo 'Disabling dtoverlay=2xMCP2517FD in /boot/config.txt; will be disabled on reboot.'
+		sed -i -e '/dtoverlay=2xMCP2517FD/d' /boot/config.txt || true
+	fi
+	depmod -a
+fi

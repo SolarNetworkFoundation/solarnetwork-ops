@@ -1,0 +1,7 @@
+[Unit]
+Description=PPPd managed connection
+
+[Service]
+ExecStart=/usr/sbin/pppd call provider nodetach nolog
+Restart=on-failure
+RestartSec=30

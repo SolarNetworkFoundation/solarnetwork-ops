@@ -3,10 +3,12 @@
 # Debian helper script for managing Debian packages.
 
 VERBOSE=""
+APT_FLAGS="-qy"
+APT_OUTPUT="/dev/null"
 
 do_help () {
-	cat 1>&2 <<EOF
-Usage: $0 [-v] <action> [arguments]
+	cat 1>&2 <<"EOF"
+Usage: solarpkg [-v] <action> [arguments]
 
 <action> is one of: clean, install, is-installed, list, refresh, remove, set-conf, upgrade
 
@@ -59,7 +61,11 @@ EOF
 
 while getopts ":v" opt; do
 	case $opt in
-		v) VERBOSE="1";;
+		v) 
+			VERBOSE="1"
+			APT_FLAGS="-y"
+			APT_OUTPUT="/dev/stdout"
+			;;
 
 		*) do_help; exit 1;;
 	esac
@@ -108,8 +114,8 @@ pkg_install_file () {
 	
 	# note: using apt-get here to provide support for installing dependencies
 	pkg_wait_not_busy
-	sudo apt-get install -qy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" \
-		--no-install-recommends "$pkg" >/dev/null </dev/null || exit $?
+	sudo apt-get install $APT_FLAGS -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" \
+		--no-install-recommends "$pkg" >$APT_OUTPUT </dev/null || exit $?
 	pkg_list_files "$pkg"
 }
 
@@ -124,8 +130,8 @@ pkg_install_repo () {
 	fi
 		
 	pkg_wait_not_busy
-	sudo apt-get install -qy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" \
-		--no-install-recommends $redo "$pkg${ver:+=$ver}" >/dev/null </dev/null || exit $?
+	sudo apt-get install $APT_FLAGS -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confnew" \
+		--no-install-recommends $redo "$pkg${ver:+=$ver}" >$APT_OUTPUT </dev/null || exit $?
 	
 	local fname="${pkg}_(dpkg-query -W -f '${Version}_${Architecture}' "$pkg").deb"
 	if [ -e "/var/cache/apt/archives/$fname" ]; then
@@ -153,14 +159,14 @@ pkg_remove () {
 	fi
 	pkg_wait_not_busy
 	if dpkg -s "$pkg" >/dev/null 2>&1; then
-		sudo apt-get remove -qy --purge "$pkg" >/dev/null </dev/null
+		sudo apt-get remove $APT_FLAGS --purge "$pkg" >$APT_OUTPUT </dev/null
 	fi
 }
 
 pkg_clean () {
 	pkg_wait_not_busy
-	sudo apt-get -qy autoremove >/dev/null </dev/null \
-		&& sudo apt-get clean -qy >/dev/null </dev/null
+	sudo apt-get $APT_FLAGS autoremove >$APT_OUTPUT </dev/null \
+		&& sudo apt-get clean $APT_FLAGS >$APT_OUTPUT </dev/null
 }
 
 # list name,version,installed (true|false)
@@ -198,7 +204,7 @@ pkg_is_installed () {
 
 pkg_refresh () {
 	pkg_wait_not_busy
-	sudo apt-get update -qy >/dev/null  2>&1 </dev/null
+	sudo apt-get update $APT_FLAGS >$APT_OUTPUT  2>&1 </dev/null
 }
 
 pkg_upgrade () {
@@ -211,7 +217,7 @@ pkg_upgrade () {
 	
 	pkg_wait_not_busy
 	sudo apt-get $action -qy -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
-		>/dev/null </dev/null
+		>$APT_OUTPUT </dev/null
 }
 
 case $ACTION in

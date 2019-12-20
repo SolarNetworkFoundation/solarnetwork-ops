@@ -1,0 +1,18 @@
+SUBSYSTEM!="tty", GOTO="gps_rules_end"
+ENV{.LOCAL_ifNum}="$attr{bInterfaceNumber}"
+
+# Quectel UC20; create /dev/QWS.UC20.XX links for each of the control, GPS, AT, and modem devices
+ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9003", SYMLINK+="QWS.UC20.%E{.LOCAL_ifNum}", MODE="0660", GROUP="dialout"
+ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9003", ENV{.LOCAL_ifNum}=="01", SYMLINK+="QWS.UC20.GPS"
+ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9003", ENV{.LOCAL_ifNum}=="02", SYMLINK+="QWS.UC20.AT"
+ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9003", ENV{.LOCAL_ifNum}=="03", SYMLINK+="QWS.UC20.MODEM"          
+
+# Quectel UC20; create /dev/gpsX link for GPS, register with gpsd
+ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9003", ENV{.LOCAL_ifNum}=="01", SYMLINK+="gps", TAG+="systemd", ENV{SYSTEMD_WANTS}="gpsdctl@%k.service"
+
+                     
+# Quectel UC20; create /dev/modem for 3G internet                                                    
+ATTRS{idVendor}=="05c6", ATTRS{idProduct}=="9003", ENV{.LOCAL_ifNum}=="03", SYMLINK+="modem"         
+                     
+LABEL="gps_rules_end"
+

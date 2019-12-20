@@ -1,0 +1,44 @@
+#!/bin/sh
+set -e
+
+systemctl daemon-reload
+
+service_up () {
+	name="$1"
+	start="$2"
+	if ! systemctl is-enabled "$name" >/dev/null; then
+		echo "Enabling $name..."
+		systemctl enable "$name" || true
+	fi
+	if [ -n "$start" ]; then
+		if ! systemctl is-active "$name" >/dev/null; then
+			systemctl start "$name" || true
+		else
+			systemctl restart "$name" || true
+		fi
+	fi
+}
+
+reload_udev () {
+	if [ -x /sbin/udevadm ]; then
+		/sbin/udevadm control --reload-rules && /sbin/udevadm trigger
+	fi
+}
+
+# Enable max_usb_current per 
+# https://github.com/sixfab/Sixfab_PPP_Installer/blob/ad9f62aaf02cee8e69f1278844aa9a4db145d0c1/ppp_installer/install.sh#L137-L141
+if grep -q '^max_usb_current=1' /boot/config.txt; then
+	true
+else
+	echo 'Enabling max_usb_current in /boot/config.txt; will be enabled on reboot.'
+	if grep -q 'max_usb_current' /boot/config.txt; then
+		# update
+		sed -i -e '/max_usb_current/c max_usb_current=1' /boot/config.txt || true
+	else
+		# add in
+		echo 'max_usb_current=1' >>/boot/config.txt
+	fi
+fi
+
+service_up sn-sixfab-3g-reconnect.timer true
+reload_udev

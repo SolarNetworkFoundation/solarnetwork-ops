@@ -1,0 +1,7 @@
+[Unit]
+Description=Mobile network auto reconnect
+
+[Service]
+Type=oneshot
+ExecStart=/usr/share/solarnode/bin/sixfab-3g-reconnect.sh
+KillMode=none
