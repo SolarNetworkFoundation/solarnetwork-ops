@@ -188,6 +188,12 @@ setup_pkgs () {
 	fi
 }
 
+setup_repos () {
+	if [ -e /etc/centos-release ]; then
+		pkg_install epel-release
+	fi
+}
+
 setup_hostname () {
 	if hostnamectl status --static |grep -q "$HOSTNAME"; then
 		echo "Hostname already set to $HOSTNAME."
@@ -307,16 +313,27 @@ setup_vnc () {
 		fi
 	fi
 	
-	if [ -e /etc/systemd/system/vncserver@:1.service ]; then
+	local unit_tmpl='/lib/systemd/system/vncserver@.service'
+	local unit_inst='/etc/systemd/system/vncserver@:1.service'
+	if [ -e /usr/lib/systemd/user/vncserver@.service ]; then
+		unit_tmpl='/usr/lib/systemd/user/vncserver@.service'
+	fi
+	if [ -e "$unit_inst" ]; then
 		echo "$CA_ADMIN_LOGIN VNC service already exists."
 	else
 		echo "Setting up $CA_ADMIN_LOGIN VNC service..."
 		if [ -z "$DRY_RUN" ]; then
-			cp /lib/systemd/system/vncserver@.service  /etc/systemd/system/vncserver@:1.service
-			sed -i \
-				-e "s/<USER>/$CA_ADMIN_LOGIN/" \
-				-e '/^PIDFile=/d' \
-				/etc/systemd/system/vncserver@\:1.service
+			cp "$unit_tmpl"  "$unit_inst"
+			if grep -q '^User=' "$unit_inst"; then
+				sed -i \
+					-e "s/<USER>/$CA_ADMIN_LOGIN/" \
+					-e '/^PIDFile=/d' \
+					"$unit_inst"
+			else
+				sed -i \
+					-e '/Type=forking/a\' -e 'WorkingDirectory=/home/'"$CA_ADMIN_LOGIN"'\nUser='"$CA_ADMIN_LOGIN"'\nGroup='"$CA_ADMIN_LOGIN" \
+					"$unit_inst"
+			fi
 			systemctl daemon-reload
 			systemctl enable vncserver@:1
 			systemctl start vncserver@:1
@@ -795,6 +812,7 @@ show_results () {
 
 setup_cfg_vars
 setup_pkgs
+setup_repos
 setup_hostname
 setup_dns
 setup_osuser
