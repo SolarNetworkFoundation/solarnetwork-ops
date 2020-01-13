@@ -518,12 +518,23 @@ setup_pki_user_p12 () {
 }
 
 setup_pki () {
-	pkg_install pki-ca "$PKI_REPO_EXCLUDE"
-	pkg_install dogtag-pki-server-theme "$PKI_REPO_EXCLUDE"
+	if dnf module list pki-core >/dev/null; then
+		if ! dnf module list --enabled pki-core >/dev/null 2>&1; then
+			dnf -y module enable pki-core
+		fi
+	fi
+
+	if [ "$os_type" = "FEDORA" ]; then
+		pkg_install pki-ca "$PKI_REPO_EXCLUDE"
+		pkg_install dogtag-pki-server-theme "$PKI_REPO_EXCLUDE"
+
+		# non-headless Java needed for console
+		pkg_install java-1.8.0-openjdk
+		pkg_install pki-console "$PKI_REPO_EXCLUDE"
+	else
+		pkg_install pki-ca
+	fi
 	
-	# non-headless Java needed for console
-	pkg_install java-1.8.0-openjdk
-	pkg_install pki-console "$PKI_REPO_EXCLUDE"
 	
 	setup_pki_pkcs12
 	
