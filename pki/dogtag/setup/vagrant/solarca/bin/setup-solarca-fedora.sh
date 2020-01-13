@@ -132,6 +132,13 @@ shift $(($OPTIND - 1))
 did_ds_ldif_import=""
 did_pki=""
 did_vnc=""
+os_type=""
+
+if [ -e /etc/centos-release ]; then
+	os_type="CENTOS"
+elif [ -e /etc/fedora-release ]; then
+	os_type="FEDORA"
+fi
 
 # install package if not already installed
 pkg_install () {
@@ -189,7 +196,7 @@ setup_pkgs () {
 }
 
 setup_repos () {
-	if [ -e /etc/centos-release ]; then
+	if [ "$os_type" = "CENTOS" ]; then
 		pkg_install epel-release
 	fi
 }
@@ -348,7 +355,17 @@ setup_desktop () {
 }
 
 setup_ds () {
-	pkg_install 389-ds
+	if dnf module list 389-ds >/dev/null; then
+		if ! dnf module list --enabled 389-ds >/dev/null 2>&1; then
+			dnf -y module enable 389-ds
+		fi
+	fi
+	if ! pkg_install 389-ds; then
+		if ! pkg_install 389-ds-base; then
+			echo 'Failed to find 389-ds or 389-ds-base packages.'
+			exit 1
+		fi
+	fi
 	pkg_install cockpit-389-ds
 
 	if dsctl -l 2>/dev/null |grep "slapd-$DS_INST_NAME"; then
@@ -359,8 +376,10 @@ setup_ds () {
 		else
 			echo 'Configuring DS inf...'
 			if [ -z "$DRY_RUN" ]; then
-				dscreate create-template ds.tmp
-				echo 'instance_name = ca' >>ds.tmp
+				if ! dscreate create-template ds.tmp; then
+					echo 'Failed to create 389 configuration template.'
+					exit 1
+				fi
 				sed \
 					-e "s/;instance_name = .*/instance_name = $DS_INST_NAME/" \
 					-e "s/;full_machine_name = .*/full_machine_name = $HOSTNAME/" \
@@ -378,16 +397,22 @@ setup_ds () {
 				fi
 			fi
 			if [ -z "$DRY_RUN" ]; then
-				# work around F29 bug for missing environment file
-				if [ ! -e /etc/sysconfig/dirsrv-ca ]; then
-					echo 'Creating /etc/sysconfig/dirsrv-ca environment file...'
-					touch /etc/sysconfig/dirsrv-ca
+				if [ "$os_type" = "FEDORA" ]; then
+					# work around F29 bug for missing environment file
+					if [ ! -e "/etc/sysconfig/dirsrv-$DS_INST_NAME" ]; then
+						echo "Creating /etc/sysconfig/dirsrv-$DS_INST_NAME environment file..."
+						if [ -e /etc/sysconfig/dirsrv ]; then
+							cp -a /etc/sysconfig/dirsrv "/etc/sysconfig/dirsrv-$DS_INST_NAME"
+						else
+							touch "/etc/sysconfig/dirsrv-$DS_INST_NAME"
+						fi
+					fi
 				fi
 				if ! dscreate from-file ds.inf; then
 					echo 'Failed to create 389 instance from ds.inf'
 					exit 1
 				fi
-				mv ds.inf ds-ca.inf
+				mv ds.inf "ds-$DS_INST_NAME.inf"
 			fi
 		fi
 	fi
