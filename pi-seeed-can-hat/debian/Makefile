@@ -1,5 +1,5 @@
 DIST = buster
-VERSION = 1.0.0-1$(if $(DIST),+$(DIST),)
+VERSION = 1.0.0-2$(if $(DIST),+$(DIST),)
 NAME = sn-pi-seeed-can-hat
 PATHS = boot etc lib usr var
 
@@ -14,7 +14,7 @@ deb : prep
 	-a armhf \
 	--force \
 	-d 'systemd (>= 232)' \
-	-d 'raspberrypi-kernel (= 1.20190925+1-1)' \
+	-d 'raspberrypi-kernel (= 1.20190925+1-1) | raspberrypi-kernel (= 1.20200212-1)' \
 	--before-install $(NAME).preinst \
 	--after-install $(NAME).postinst \
 	--before-remove $(NAME).prerm \
