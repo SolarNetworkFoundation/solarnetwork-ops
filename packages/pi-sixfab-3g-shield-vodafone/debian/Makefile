@@ -1,5 +1,5 @@
 DIST = 
-VERSION = 1.0.0-1$(if $(DIST),+$(DIST),)
+VERSION = 1.0.1-1$(if $(DIST),+$(DIST),)
 NAME = sn-pi-sixfab-3g-shield-vodafone
 PATHS = etc lib usr
 
