@@ -114,6 +114,18 @@ org.osgi.framework.system.packages = \
  javax.xml.bind.helpers;version="2.0",\
  javax.xml.bind.util,\
  javax.xml.bind.util;version="2.0",\
+ javax.xml.bind;version="2.2",\
+ javax.xml.bind.annotation;version="2.2",\
+ javax.xml.bind.annotation.adapters;version="2.2",\
+ javax.xml.bind.attachment;version="2.2",\
+ javax.xml.bind.helpers;version="2.2",\
+ javax.xml.bind.util;version="2.2",\
+ javax.xml.bind;version="2.3",\
+ javax.xml.bind.annotation;version="2.3",\
+ javax.xml.bind.annotation.adapters;version="2.3",\
+ javax.xml.bind.attachment;version="2.3",\
+ javax.xml.bind.helpers;version="2.3",\
+ javax.xml.bind.util;version="2.3",\
  javax.xml.crypto,\
  javax.xml.crypto;version="1.0",\
  javax.xml.crypto.dom,\
