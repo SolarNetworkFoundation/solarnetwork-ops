@@ -7,23 +7,23 @@
 			http://www.eclipse.org/virgo/schema/plan/eclipse-virgo-plan.xsd">
 
 	<!-- General -->
-	<artifact type="bundle" name="net.solarnetwork.common.pki.bc" version="[1.2,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.common.biz.dao" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.scheduler.standard" version="[1.0,2.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.common.pki.bc" version="1.2"/>
+	<artifact type="bundle" name="net.solarnetwork.central.common.biz.dao" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.scheduler.standard" version="1.0"/>
 
 	<!-- Support -->
-	<artifact type="bundle" name="net.solarnetwork.central.datum.biz.dao" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.dao.mybatis" version="[2.3,3.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.instructor.aop" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.instructor.biz.dao" version="[1.4,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.instructor.dao.mybatis" version="[1.2,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.dao.mybatis" version="[1.5,2.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.biz.dao" version="1.7"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.dao.mybatis" version="3.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.instructor.aop" version="1.7"/>
+	<artifact type="bundle" name="net.solarnetwork.central.instructor.biz.dao" version="1.8"/>
+	<artifact type="bundle" name="net.solarnetwork.central.instructor.dao.mybatis" version="1.5"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.dao.mybatis" version="2.0"/>
 
 	<!-- PKI -->
-	<artifact type="bundle" name="net.solarnetwork.central.user.pki.dogtag" version="[1.4,2.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.pki.dogtag" version="1.5"/>
 
 	<!-- SolarIn -->
-	<artifact type="bundle" name="net.solarnetwork.central.in.biz.dao" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.in.web" version="[1.0,2.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.central.in.biz.dao" version="2.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.in.web" version="2.0"/>
 
 </plan>
