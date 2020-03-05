@@ -4,6 +4,7 @@ GRANT ALL ON SCHEMA solarcommon TO solar;
 GRANT ALL ON SCHEMA solardatum TO solar;
 GRANT ALL ON SCHEMA solarnet TO solar;
 GRANT ALL ON SCHEMA solaruser TO solar;
+GRANT ALL ON SCHEMA solarev TO solar;
 
 GRANT USAGE ON SCHEMA public TO solarauth;
 GRANT USAGE ON SCHEMA solaruser TO solarauth;
