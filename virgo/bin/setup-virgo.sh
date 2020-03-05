@@ -11,6 +11,7 @@ APP_NAME="solarapp"
 CLEAN=""
 DRY_RUN=""
 IVY_FILE="example/ivy.xml"
+IVY_SETTINGS_FILE="../../solarnetwork-osgi-lib/ivysettings.xml"
 SN_BUILD_HOME="solarnetwork-build"
 VIRGO_HOME=""
 VERBOSE=""
@@ -36,6 +37,8 @@ Arguments:
                        be created here
  -i <ivy path>       - the Ivy build file that defines all the application's dependencies; this is
                        relative to the -b <sn build home> directory
+ -I <ivy set. path>  - the Ivy settings file that defines all the application's dependencies; this
+                       is relative to the -b <sn build home> directory
  -r                  - clean and recreate the application from scratch; this deletes any existing
                        deployment directory <virgo home>/<app name> and then deploys a new copy
  -t                  - test mode; do not deploy the application
@@ -43,12 +46,13 @@ Arguments:
 EOF
 }
 
-while getopts ":a:b:h:i:rtv" opt; do
+while getopts ":a:b:h:i:I:rtv" opt; do
 	case $opt in
 		a) APP_NAME="${OPTARG}";;
 		b) SN_BUILD_HOME="${OPTARG}";;
 		h) VIRGO_HOME="${OPTARG}";;
 		i) IVY_FILE="${OPTARG}";;
+		I) IVY_SETTINGS_FILE="${OPTARG}";;
 		r) CLEAN='TRUE';;
 		t) DRY_RUN='TRUE';;
 		v) VERBOSE='TRUE';;
@@ -191,7 +195,9 @@ fi
 if [ -n "$VERBOSE" ]; then
 	echo "Assembling base usr Virgo repository -> $VIRGO_HOME/$APP_NAME/repository/usr"
 fi
-ant -buildfile "$SN_BUILD_HOME/solarnet-deploy/virgo/build.xml" -Divy.file="$IVY_FILE" \
+ant -buildfile "$SN_BUILD_HOME/solarnet-deploy/virgo/build.xml" \
+	-Divy.file="$IVY_FILE" \
+	-Divy.settings="$IVY_SETTINGS_FILE" \
 	-Divy.resolve.refresh=true \
 	-Divy.cache.ttl.default=1m \
 	clean assemble
