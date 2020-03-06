@@ -10,6 +10,7 @@ virgoDownloadPath="/var/tmp/virgo-tomcat-server-${virgoVersion}.zip"
 APP_NAME="solarapp"
 CLEAN=""
 DRY_RUN=""
+ENV_NAME="dev"
 IVY_FILE="example/ivy.xml"
 IVY_SETTINGS_FILE="../../solarnetwork-osgi-lib/ivysettings.xml"
 SN_BUILD_HOME="solarnetwork-build"
@@ -18,7 +19,7 @@ VERBOSE=""
 
 do_help () {
 	cat 1>&2 <<EOF
-Usage: $0 -a <app name> -h <dest> -i <ivy conf> [-b <build home>] [-rtv]
+Usage: $0 -a <app name> -e <env name> -h <dest> -i <ivy conf> [-b <build home>] [-rtv]
 
 The following helper programs are used by this script:
 
@@ -27,12 +28,15 @@ The following helper programs are used by this script:
  * unzip  - to extract the Virgo archive
 
 If building from a reference template, overrides can be provided by placing files in a
-local/apphome/X directory, where X is the -a app name you're building.
+local/<env name>/<app name> directory.
 
 Arguments:
 
  -a <app name>       - the application to deploy; must be a directory in the apphome/ directory
  -b <sn build home>  - the path to the solarnetwork-build repository directory
+ -e <env name>       - the local build name; defaults to `dev`; allows creating different deployment
+                       directory trees such as `stage` or `prod` with different configuration files
+                       for different environments.
  -h <dest home>      - a directory to deploy the application to; a directory named <app name> will
                        be created here
  -i <ivy path>       - the Ivy build file that defines all the application's dependencies; this is
@@ -46,17 +50,18 @@ Arguments:
 EOF
 }
 
-while getopts ":a:b:h:i:I:rtv" opt; do
+while getopts ":a:b:e:h:i:I:rtv" opt; do
 	case $opt in
 		a) APP_NAME="${OPTARG}";;
 		b) SN_BUILD_HOME="${OPTARG}";;
+		e) ENV_NAME="${OPTARG}";;
 		h) VIRGO_HOME="${OPTARG}";;
 		i) IVY_FILE="${OPTARG}";;
 		I) IVY_SETTINGS_FILE="${OPTARG}";;
 		r) CLEAN='TRUE';;
 		t) DRY_RUN='TRUE';;
 		v) VERBOSE='TRUE';;
-		?)
+		*)
 			echo "Unknown argument ${OPTARG}"
 			do_help
 			exit 1
@@ -178,11 +183,11 @@ if [ -d "apphome/$APP_NAME" ]; then
 	fi
 	cp -RL "apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
 fi
-if [ -d "local/apphome/$APP_NAME" ]; then
+if [ -d "local/$ENV_NAME/$APP_NAME" ]; then
 	if [ -n "$VERBOSE" ]; then
-		echo "Copying local/apphome/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
+		echo "Copying local/$ENV_NAME/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
 	fi
-	cp -RL "local/apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
+	cp -RL "local/$ENV_NAME/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
 fi
 
 #
