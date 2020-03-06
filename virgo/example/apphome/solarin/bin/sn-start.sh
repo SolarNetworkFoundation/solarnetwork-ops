@@ -39,7 +39,7 @@ env_jdbc () {
 
 env_jdbc
 
-export JAVA_OPTS="-Dsolarnetwork.pidfile=$SCRIPT_DIR/../work/solarnet.pid -Dfelix.fileinstall.dir=$SCRIPT_DIR/../configuration/services -Dfelix.fileinstall.filter=.*\.cfg -Dfelix.fileinstall.noInitialDelay=true"
+export JAVA_OPTS="-Djdk.management.heapdump.allowAnyFileSuffix=true -Dsolarnetwork.pidfile=$SCRIPT_DIR/../work/solarnet.pid -Dfelix.fileinstall.dir=$SCRIPT_DIR/../configuration/services -Dfelix.fileinstall.filter=.*\.cfg -Dfelix.fileinstall.noInitialDelay=true"
 export JMX_PORT=9883
-echo "Starting Virgo HTTP on port 9083, HTTPS on port 9483, debug port 9983."
+echo "Starting Virgo HTTP @ 9083, AJP @ 9703, debug @ 9983."
 exec "$SCRIPT_DIR"/"$EXECUTABLE" start -debug 9983 "$@"

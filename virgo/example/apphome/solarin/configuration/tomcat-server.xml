@@ -59,9 +59,7 @@
     </Connector>
  -->
 
-    <!-- 
-    <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" enableLookups="false" />
-    -->
+    <Connector port="9703" protocol="AJP/1.3" redirectPort="9483" enableLookups="false" />
 
     <Engine name="Catalina" defaultHost="in.solarnetworkdev.net">
       <Realm className="org.apache.catalina.realm.JAASRealm" appName="virgo-kernel"
