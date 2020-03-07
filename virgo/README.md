@@ -3,7 +3,8 @@
 This directory contains scripts and configuration support for deploying Virgo based application
 servers for the SolarNet could services.
 
-## App setup script
+
+# App setup script
 
 The `bin/setup-virgo.sh` script helps to download Virgo and setup up a Virgo-based SolarNet
 application. You can copy or link to the reference application configurations in `example/apphome`
@@ -13,11 +14,20 @@ to get started.
 
 ```sh
 # Setup a SolarJobs application server in /home/solarnet/solarjobs
-$ cp -a example/apphome/solarjobs .
+$ cp -a example/apphome/solarjobs apphome
 $ ./bin/setup-virgo.sh -rv -h /home/solarnet -a solarjobs -i example/ivy-solarjobs.xml
 ```
 
-## Database connection
+## Local environment overrides
+
+You can use the `example/apphome` reference configurations as a staring point and provide
+customisations via an environment directory tree rooted in a `local/<env>/<app>` directory. Files
+found there will be copied _after_ the base application configuration tree. Pass `-e <env>` to the
+setup script with the name of your environment. For example, `-a solarjobs -e dev` would copy the
+contents of a `local/dev/solarjobs` directory after copying `apphome/solarjobs`.
+
+
+# Database connection
 
 The main Postgres database connection settings are defined in the
 `configuration/services/net.solarnetwork.jdbc.pool.hikari-central.cfg` file of each reference
@@ -30,7 +40,8 @@ For example:
 127.0.0.1       solar-database localhost
 ```
 
-## Docker image
+
+# Docker image
 
 The reference applications each contain a `Dockerfile` to support building a Docker image.
 For example, to build a SolarUser Docker image:
@@ -63,7 +74,8 @@ $ docker run --publish 9082:9082 --name solarquery --add-host solar-database:192
 $ docker run --publish 9083:9083 --name solarin --add-host solar-database:192.168.1.44 solarin
 ```
 
-## Virgo repository configuration
+
+# Virgo repository configuration
 
 The setup script creates two repositories for the application:
 
@@ -72,7 +84,8 @@ The setup script creates two repositories for the application:
 | `etc`      | For configuration files. |
 | `usr`      | For application bundles. |
 
-## Application boot sequence
+
+# Application boot sequence
 
 Virgo is configured to load a Virgo plan named `net.solarnetwork.{appname}.env` when started. The 
 reference applications in `example/apphome` all place this in the `etc` repository, for example 
@@ -84,7 +97,8 @@ encompasses the entire application, so Virgo deploys this _after_ the environmen
 loaded. For example, the `solarin/pickup/net.solarnetwork.solarin-1.0.plan` plan defines the SolarIn
 application.
 
-## Dynamic configuration factories
+
+# Dynamic configuration factories
 
 The Felix FileInstall plugin is configured and will look for configuration factories in the 
 `configuration/services` directory within the application. For example, you might need to include
