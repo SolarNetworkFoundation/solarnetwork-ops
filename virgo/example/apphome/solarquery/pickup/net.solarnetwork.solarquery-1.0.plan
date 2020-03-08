@@ -14,6 +14,11 @@
 	<!-- Support -->
 	<artifact type="bundle" name="net.solarnetwork.central.datum.biz.dao" version="1.7"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.dao.mybatis" version="3.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.in.biz.dao" version="2.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.instructor.biz.dao" version="1.8"/>
+	<artifact type="bundle" name="net.solarnetwork.central.instructor.dao.mybatis" version="1.5"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.aop" version="1.8"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.biz.dao" version="2.0"/>
 	<artifact type="bundle" name="net.solarnetwork.central.user.dao.mybatis" version="2.0"/>
 
 	<!-- SolarQuery -->
