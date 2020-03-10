@@ -10,3 +10,5 @@ GRANT ALL ON TABLE solaruser.user_alert_sit TO solarjobs;
 GRANT ALL ON TABLE solaruser.user_datum_delete_job TO solarjobs;
 GRANT ALL ON TABLE solaruser.user_export_task TO solarjobs;
 GRANT ALL ON TABLE solaruser.user_export_datum_conf TO solarjobs;
+
+GRANT EXECUTE ON FUNCTION solardatum.store_datum(timestamp with time zone, bigint, text, timestamp with time zone, text, boolean) TO solarjobs;
