@@ -130,6 +130,17 @@ if [ -e "$VIRGO_HOME/$APP_NAME/pickup/org.eclipse.virgo.apps.splash_${virgoVersi
 fi
 
 #
+# Remove docs, extras
+#
+if [ -e "$VIRGO_HOME/$APP_NAME/about_files" ];then
+	if [ -n "$VERBOSE" ]; then
+		echo "Removing Virgo documentation..."
+	fi
+	rm -rf "$VIRGO_HOME/$APP_NAME/about_files"
+	rm -rf "$VIRGO_HOME/$APP_NAME"/*.html
+fi
+
+#
 # Setup "env.plan" support
 #
 cd "$SETUP_HOME"
