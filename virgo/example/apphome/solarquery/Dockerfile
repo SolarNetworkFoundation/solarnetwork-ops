@@ -5,10 +5,8 @@ RUN groupadd -g 999 virgo && \
 
 COPY --chown=virgo:virgo . /opt/virgo
 
-RUN mkdir -p /opt/var/DeveloperCA && \
-    chown virgo:virgo /opt/var/DeveloperCA
-
 EXPOSE 9082
+EXPOSE 9702
 
 USER virgo
 
