@@ -8,8 +8,8 @@ RUN mkdir -p /opt/var/DeveloperCA && \
 
 COPY --chown=virgo:virgo . /opt/virgo
 
-EXPOSE 9082
-EXPOSE 9702
+EXPOSE 9083
+EXPOSE 9703
 
 USER virgo
 
