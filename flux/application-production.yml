@@ -1,0 +1,17 @@
+logging:
+  config: /var/lib/fluxhook/solarflux-vernemq-webhook-logback.xml
+  file: /var/log/fluxhook/solarflux-vernemq-webhook.log
+
+spring:
+  datasource:
+    url: "jdbc:postgresql://db.solarnetwork.net:55496/solarnetwork?ssl=true&sslfactory=org.postgresql.ssl.LibPQFactory&sslrootcert=/var/lib/fluxhook/solarnetwork-ca.crt&sslcert=/var/lib/fluxhook/solarauth.crt&sslkey=/var/lib/fluxhook/solarauth.key"
+    username: solarauth
+    password: 
+    tomcat:
+      initialSize: 1
+      maxActive: 15
+      minIdle: 1
+      maxIdle: 2
+
+auth:
+  nodeIpMask: 10.0.0.0/16
