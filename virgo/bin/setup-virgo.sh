@@ -132,7 +132,7 @@ fi
 #
 # Remove docs, extras
 #
-if [ -e "$VIRGO_HOME/$APP_NAME/about_files" ];then
+if [ -e "$VIRGO_HOME/$APP_NAME/about_files" ]; then
 	if [ -n "$VERBOSE" ]; then
 		echo "Removing Virgo documentation..."
 	fi
