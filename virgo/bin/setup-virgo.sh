@@ -141,6 +141,16 @@ if [ -e "$VIRGO_HOME/$APP_NAME/about_files" ]; then
 fi
 
 #
+# Remove hard-coded JAVA_OPTS="-Xmx1024m
+#
+if [ -e "$VIRGO_HOME/$APP_NAME/bin/dmk.sh" ]; then
+	if [ -n "$VERBOSE" ]; then
+		echo "Removing hard-coded JAVA_OPTS from $VIRGO_HOME/$APP_NAME/bin/dmk.sh"
+	fi
+	sed -i '' '/Xmx1024m/,/XX:MaxPermSize/d' "$VIRGO_HOME/$APP_NAME/bin/dmk.sh"
+fi
+
+#
 # Setup "env.plan" support
 #
 cd "$SETUP_HOME"
