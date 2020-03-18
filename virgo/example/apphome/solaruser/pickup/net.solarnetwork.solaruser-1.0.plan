@@ -8,9 +8,8 @@
 
 	<!-- General -->
 	<artifact type="bundle" name="net.solarnetwork.common.pki.bc" version="1.2"/>
-	<!--artifact type="bundle" name="net.solarnetwork.common.mqtt.netty" version="1.0"/-->
 	<artifact type="bundle" name="net.solarnetwork.central.common.biz.dao" version="1.0"/>
-	<artifact type="bundle" name="net.solarnetwork.central.common.cloud.aws" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.common.cloud.aws" version="1.1"/>
 	<artifact type="bundle" name="net.solarnetwork.central.scheduler.standard" version="1.0"/>
 
 	<!-- Support -->
@@ -22,11 +21,10 @@
 	<artifact type="bundle" name="net.solarnetwork.central.datum.export.dest.s3" version="1.0"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.export.standard" version="1.1"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.aop" version="1.0"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.biz.dao" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.biz.dao" version="1.2"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.dao.mybatis" version="1.2"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.standard" version="1.0"/>
 	<artifact type="bundle" name="net.solarnetwork.central.in.biz.dao" version="2.0"/>
-	<!--artifact type="bundle" name="net.solarnetwork.central.in.mqtt" version="1.2"/-->
 	<artifact type="bundle" name="net.solarnetwork.central.instructor.aop" version="1.7"/>
 	<artifact type="bundle" name="net.solarnetwork.central.instructor.biz.dao" version="1.8"/>
 	<artifact type="bundle" name="net.solarnetwork.central.instructor.dao.mybatis" version="1.5"/>

@@ -12,7 +12,7 @@
 
 	<!-- Shared -->
 	<artifact type="bundle" name="net.solarnetwork.central.common.biz.dao" version="1.0"/>
-	<artifact type="bundle" name="net.solarnetwork.central.common.cloud.aws" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.common.cloud.aws" version="1.1"/>
 	<artifact type="bundle" name="net.solarnetwork.central.scheduler.standard" version="1.1"/>
 
 	<!-- Datum -->
@@ -23,7 +23,7 @@
 	<artifact type="bundle" name="net.solarnetwork.central.datum.export.dest.s3" version="1.0"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.export.standard" version="1.1"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.flux" version="1.0"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.biz.dao" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.biz.dao" version="1.2"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.dao.mybatis" version="1.2"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.standard" version="1.0"/>
 
