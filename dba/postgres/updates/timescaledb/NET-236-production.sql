@@ -1,37 +1,24 @@
-ALTER SEQUENCE solarev.ocpp_system_user_seq OWNER TO solarnet;
-ALTER SEQUENCE solarev.ocpp_charge_point_seq OWNER TO solarnet;
-ALTER SEQUENCE solarev.ocpp_charge_tx_seq OWNER TO solarnet;
-ALTER SEQUENCE solarev.ocpp_system_user_seq OWNER TO solarnet;
-GRANT ALL ON SEQUENCE solarev.ocpp_authorization_seq TO solaruser;
-GRANT ALL ON SEQUENCE solarev.ocpp_charge_point_seq TO solaruser;
-GRANT ALL ON SEQUENCE solarev.ocpp_charge_tx_seq TO solaruser;
+CREATE SCHEMA IF NOT EXISTS solarev;
+
+GRANT ALL ON SCHEMA solarev TO solar;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev REVOKE ALL ON TABLES FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev REVOKE ALL ON SEQUENCES FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev REVOKE ALL ON FUNCTIONS FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev REVOKE ALL ON TYPES FROM PUBLIC;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev GRANT SELECT ON TABLES TO solar;
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev GRANT USAGE,SELECT ON SEQUENCES TO solar;
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev GRANT EXECUTE ON FUNCTIONS TO solar;
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev GRANT USAGE ON TYPES TO solar;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev GRANT ALL ON TABLES TO solarjobs;
+ALTER DEFAULT PRIVILEGES IN SCHEMA solarev GRANT ALL ON TABLES TO solaruser;
+
+\i init/updates/NET-236-ocpp.sql
+
 GRANT ALL ON SEQUENCE solarev.ocpp_charge_tx_seq TO solarinput;
-GRANT ALL ON SEQUENCE solarev.ocpp_system_user_seq TO solaruser;
-
-ALTER TABLE solarev.ocpp_authorization OWNER TO solarnet;
-GRANT SELECT ON TABLE solarev.ocpp_authorization TO solar;
-
-ALTER TABLE solarev.ocpp_charge_point OWNER TO solarnet;
-GRANT SELECT ON TABLE solarev.ocpp_charge_point TO solar;
 GRANT SELECT, UPDATE, REFERENCES, TRIGGER ON TABLE solarev.ocpp_charge_point TO solarinput;
-
-ALTER TABLE solarev.ocpp_charge_point_conn OWNER TO solarnet;
-GRANT SELECT ON TABLE solarev.ocpp_charge_point_conn TO solar;
 GRANT ALL ON TABLE solarev.ocpp_charge_point_conn TO solarinput;
-
-ALTER TABLE solarev.ocpp_charge_point_settings OWNER TO solarnet;
-GRANT SELECT ON TABLE solarev.ocpp_charge_point_settings TO solar;
-
-ALTER TABLE solarev.ocpp_charge_sess OWNER TO solarnet;
-GRANT SELECT ON TABLE solarev.ocpp_charge_sess TO solar;
 GRANT ALL ON TABLE solarev.ocpp_charge_sess TO solarinput;
-
-ALTER TABLE solarev.ocpp_charge_sess_reading OWNER TO solarnet;
-GRANT SELECT ON TABLE solarev.ocpp_charge_sess_reading TO solar;
 GRANT ALL ON TABLE solarev.ocpp_charge_sess_reading TO solarinput;
-
-ALTER TABLE solarev.ocpp_system_user OWNER TO solarnet;
-GRANT SELECT ON TABLE solarev.ocpp_system_user TO solar;
-
-ALTER TABLE solarev.ocpp_user_settings OWNER TO solarnet;
-GRANT SELECT ON TABLE solarev.ocpp_user_settings TO solar;
