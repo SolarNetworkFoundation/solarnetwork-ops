@@ -1,0 +1,25 @@
+#!/bin/sh
+# 
+# PROVIDE: cert_support
+# REQUIRE: NETWORKING
+# BEFORE: nginx
+
+. /etc/rc.subr
+
+MNT="/mnt/cert-support"
+
+name="cert_support"
+rcvar="${name}_enable"
+start_cmd="${name}_start"
+
+load_rc_config $name
+: ${cert_support_enable:=no}
+
+cert_support_start () {
+	if [ -z `mount |grep ${MNT}` ]; then
+		echo "Mounting ${MNT}"
+		mount -t nfs -o nfsv4 `fetch -q -o - http://169.254.169.254/latest/meta-data/placement/availability-zone`.fs-2b965081.efs.us-west-2.amazonaws.com:/ "${MNT}"
+	fi
+}
+
+run_rc_command "$1"
