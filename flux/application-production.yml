@@ -4,7 +4,7 @@ logging:
 
 spring:
   datasource:
-    url: "jdbc:postgresql://db.solarnetwork.net:55496/solarnetwork?ssl=true&sslfactory=org.postgresql.ssl.LibPQFactory&sslrootcert=/var/lib/fluxhook/solarnetwork-ca.crt&sslcert=/var/lib/fluxhook/solarauth.crt&sslkey=/var/lib/fluxhook/solarauth.key"
+    url: "jdbc:postgresql://solardb-a.solarnetwork.net:5432/solarnetwork?sslmode=require&sslcompression=false&sslrootcert=/var/lib/fluxhook/solarnetwork-ca.crt&sslcert=/var/lib/fluxhook/solarauth.crt&sslkey=/var/lib/fluxhook/solarauth.key"
     username: solarauth
     password: 
     tomcat:
