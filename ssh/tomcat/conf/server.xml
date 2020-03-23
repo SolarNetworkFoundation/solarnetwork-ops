@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Server port="8005" shutdown="SHUTDOWN">
+  <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+  <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+  <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+  <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+  <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+
+  <GlobalNamingResources>
+    <Resource name="UserDatabase" auth="Container"
+              type="org.apache.catalina.UserDatabase"
+              description="User database that can be updated and saved"
+              factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+              pathname="conf/tomcat-users.xml" />
+  </GlobalNamingResources>
+
+  <Service name="Catalina">
+
+		<Connector port="8080" protocol="org.apache.coyote.http11.Http11Nio2Protocol"
+			compression="on"
+			compressionMinSize="2048"
+			useSendfile="false"
+			compressibleMimeType="text/html,text/xml,application/xml,text/javascript,text/css,application/json,image/svg+xml"
+		/>
+
+		<Connector port="8443" protocol="org.apache.coyote.http11.Http11AprProtocol"
+			compression="on"
+			compressionMinSize="2048"
+			useSendfile="false"
+			compressibleMimeType="text/html,text/xml,application/xml,text/javascript,text/css,application/json,image/svg+xml"
+			SSLEnabled="true" scheme="https" secure="true">
+			<UpgradeProtocol className="org.apache.coyote.http2.Http2Protocol" />
+			<SSLHostConfig protocols="TLSv1.2">
+				<Certificate
+					certificateKeyFile="/mnt/cert-support/tls/ssh.solarnetwork.net.key"
+					certificateFile="/mnt/cert-support/tls/ssh.solarnetwork.net.cert"
+					certificateChainFile="/mnt/cert-support/tls/ssh.solarnetwork.net.chain"
+					type="RSA" />
+			</SSLHostConfig>
+		</Connector>
+
+    <Engine name="Catalina" defaultHost="localhost">
+
+      <Realm className="org.apache.catalina.realm.LockOutRealm">
+        <Realm className="org.apache.catalina.realm.UserDatabaseRealm"
+               resourceName="UserDatabase"/>
+      </Realm>
+
+      <Host name="localhost"  appBase="/usr/local/solarssh/webapps"
+            unpackWARs="true" autoDeploy="true">
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+               prefix="localhost_access_log" suffix=".log"
+               maxDays="90"
+               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+      </Host>
+    </Engine>
+  </Service>
+</Server>
+
