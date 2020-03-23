@@ -74,7 +74,7 @@
 			<MaxFileSize>5MB</MaxFileSize>
 		</triggeringPolicy>
 		<encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-			<Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] %-20.20thread %-40.40logger{40} %msg %ex%n</Pattern>
+			<Pattern>[%d{yyyy-MM-dd HH:mm:ss.SSS}] %-5level %-20.20thread %-40.40logger{40} %msg %ex%n</Pattern>
 		</encoder>
 	</appender>
 
