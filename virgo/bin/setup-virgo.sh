@@ -198,18 +198,7 @@ fi
 #
 # Sync apphome files
 #
-if [ -d "apphome/$APP_NAME" ]; then
-	if [ -n "$VERBOSE" ]; then
-		echo "Copying apphome/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
-	fi
-	cp -RL "apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
-fi
-if [ -d "local/$ENV_NAME/$APP_NAME" ]; then
-	if [ -n "$VERBOSE" ]; then
-		echo "Copying local/$ENV_NAME/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
-	fi
-	cp -RL "local/$ENV_NAME/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
-fi
+ant -buildfile build.xml -DVIRGO_HOME=$VIRGO_HOME -DAPP_NAME=$APP_NAME -DENV_NAME=$ENV_NAME
 
 #
 # Base usr repository contents
