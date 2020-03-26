@@ -385,6 +385,6 @@ zfs snapshot wal/9.6@pre-fetch; zfs snapshot idx/9.6@pre-fetch; zfs snapshot -r 
 Then ran restore like this:
 
 ```
-envdir ~/wal-e.d/env wal-e backup-fetch --restore-spec ~/wal-e-restore-spec.json /sndb/9.6/home LATEST
+envdir ~/wal-e.d/env ~/.local/bin/wal-e backup-fetch --restore-spec ~/wal-e-restore-spec.json /sndb/9.6/home LATEST
 ```
 
