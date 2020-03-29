@@ -1,0 +1,16 @@
+[Unit]
+Description=Virgo server
+
+[Service]
+Type=simple
+User=virgo
+Group=virgo
+WorkingDirectory=/usr/local/opt/virgo/%I
+ExecStartPre=/bin/sh -c '/usr/local/opt/virgo/bin/clean-bundle-cache.sh %I'
+ExecStart=/bin/bash -c '/usr/local/opt/virgo/%I/bin/sn-start.sh'
+SuccessExitStatus=143
+Restart=always
+RestartSec=5
+
+[Install]
+Alias=multi-user.target.wants/virgo@%i.service
