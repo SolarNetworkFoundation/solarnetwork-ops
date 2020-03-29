@@ -335,7 +335,7 @@ Setup `pg_hba.conf` with user/certificate authentication support.
 To restore the database from the latest wal-e backup, need to create a `recovery.conf` file:
 
 ```
-restore_command = 'envdir ~/wal-e.d/env wal-e wal-fetch %f %p'
+restore_command = 'envdir ~/wal-e.d/env ~/.local/bin/wal-e wal-fetch %f %p'
 standby_mode = on
 ```
 
