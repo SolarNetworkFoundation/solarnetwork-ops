@@ -21,7 +21,7 @@
 		</copy>		
 	</target>
 
-	<target name="copy-env" if="env.present" depends="copy-env-with-filter,copy-env-without-filter"/>
+	<target name="copy-env" if="env.present" depends="copy-env-with-filter,copy-env-without-filter,set-perms"/>
 
 	<target name="copy-env-without-filter" unless="env.props.present">
 		<echo message="Copying ${env.dir} → ${dest.dir}"/>
@@ -40,7 +40,7 @@
 
 	<target name="copy-env-with-filter" if="env.props.present">
 		<echo message="Copying ${env.dir} → ${dest.dir} using variables in ${env.props}"/>
-		<copy todir="${dest.dir}" overwrite="yes">
+		<copy todir="${dest.dir}" overwrite="yes" >
 			<fileset dir="${env.dir}">
 				<patternset>
 					<invert refid="filterable.pats"/>
@@ -55,6 +55,13 @@
 				<filtersfile file="${env.props}"/>
 			</filterset>
 		</copy>
+	</target>
+	
+	<!-- Make sure scripts have executable bit, which might have been lost by copy tasks. -->
+	<target name="set-perms">
+		<chmod perm="775">
+			<fileset dir="${dest.dir}/bin" includes="*.sh"/>
+		</chmod>		
 	</target>
 
 </project>
