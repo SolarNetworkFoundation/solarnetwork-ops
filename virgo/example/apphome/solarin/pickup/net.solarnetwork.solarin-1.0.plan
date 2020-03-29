@@ -24,7 +24,7 @@
 	<artifact type="bundle" name="net.solarnetwork.central.user.pki.dogtag" version="1.5"/>
 
 	<!-- SolarIn -->
-	<artifact type="bundle" name="net.solarnetwork.central.in.biz.dao" version="2.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.in.biz.dao" version="2.2"/>
 	<artifact type="bundle" name="net.solarnetwork.central.in.web" version="2.0"/>
 
 </plan>
