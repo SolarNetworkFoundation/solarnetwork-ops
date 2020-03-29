@@ -130,6 +130,16 @@ if [ -e "$VIRGO_HOME/$APP_NAME/pickup/org.eclipse.virgo.apps.splash_${virgoVersi
 fi
 
 #
+# Remove Windows scripts
+#
+if [ -d "$VIRGO_HOME/$APP_NAME/bin" ];then
+	if [ -n "$VERBOSE" ]; then
+		echo "Removing Windows support..."
+	fi
+	find "$VIRGO_HOME/$APP_NAME/bin" -type f \( -name '*.bat' -o -name '*.vbs' \) -delete
+fi
+
+#
 # Remove docs, extras
 #
 if [ -e "$VIRGO_HOME/$APP_NAME/about_files" ]; then
