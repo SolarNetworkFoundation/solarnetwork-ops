@@ -8,6 +8,6 @@
 
 	<artifact type="bundle" name="net.solarnetwork.central.ocpp.dao.mybatis" version="1.1"/>
 	<artifact type="bundle" name="net.solarnetwork.central.user.ocpp.aop" version="1.0"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.ocpp.biz.dao" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.ocpp.biz.dao" version="1.0"/>
 	
 </plan>
