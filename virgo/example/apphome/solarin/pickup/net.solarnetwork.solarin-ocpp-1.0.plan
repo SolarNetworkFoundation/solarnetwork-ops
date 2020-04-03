@@ -6,9 +6,10 @@
 			http://www.eclipse.org/virgo/schema/plan
 			http://www.eclipse.org/virgo/schema/plan/eclipse-virgo-plan.xsd">
 
-	<artifact type="bundle" name="net.solarnetwork.central.ocpp.dao.mybatis" version="1.0"/>
-	<artifact type="bundle" name="net.solarnetwork.central.ocpp.session" version="1.0"/>
-	<artifact type="bundle" name="net.solarnetwork.central.ocpp.v16.controller" version="1.0"/>
-	<artifact type="bundle" name="net.solarnetwork.central.in.ocpp.json" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.ocpp" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.ocpp.dao.mybatis" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.ocpp.session" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.ocpp.v16.controller" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.in.ocpp.json" version="1.1"/>
 	
 </plan>
