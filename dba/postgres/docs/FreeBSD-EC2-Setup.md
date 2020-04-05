@@ -514,4 +514,46 @@ Then ran restore like this:
 envdir ~/wal-e.d/env ~/.local/bin/wal-e backup-fetch --restore-spec ~/wal-e-restore-spec.json /sndb/9.6/home LATEST
 ```
 
-Once complete, can adjust `postgresql.conf` to suit the VM, then create AMI.
+Once complete, can adjust `postgresql.conf` to suit the VM.
+
+# Setup periodic maintenance support
+
+Create `~postgres/bin/index-chunk-maintenance.sh` and `~postgres/bin/solar-jobs.sh` scripts. Create
+`~postgres/netrc/solarjobs-admin` file with:
+
+```
+machine solarjobs.solarnetwork
+login solarnet-job-admin
+password <<PASSWORD>>
+```
+
+Then set permissions:
+
+```sh
+chmod 400 ~postgres/netrc/solarjobs-admin
+```
+
+# Cron jobs
+
+Set up some cronjobs for the `postgres` user:
+
+```sh
+echo 'cron_enable="YES"' >>/etc/rc.conf
+echo 'cron_flags="$cron_flags -J 15"' >>/etc/rc.conf
+```
+
+Then edit crontab  via `crontab -e -u postgres` with:
+
+```
+# Update statistics weekly
+0 4 * * Mon /usr/local/bin/vacuumdb -p 5432 --all --analyze-only
+
+# create base backup every Saturday
+0 3 * * Sat /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e backup-push /sndb/9.6/home
+
+# cleanup old backups every Sunday (keep last 9)
+0 3 * * Sun /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e delete --confirm retain 9
+
+# Run Hypertable reindex maintenance task weekly
+0 4 * * Sun /var/db/postgres/bin/index-chunk-maintenance.sh -c '-p 5432 -d solarnetwork' -n
+```
