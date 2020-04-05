@@ -557,3 +557,53 @@ Then edit crontab  via `crontab -e -u postgres` with:
 # Run Hypertable reindex maintenance task weekly
 0 4 * * Sun /var/db/postgres/bin/index-chunk-maintenance.sh -c '-p 5432 -d solarnetwork' -n
 ```
+
+# Postfix MTA
+
+The built-in Sendmail with FreeBSD does not support SASL which is required to use the SES smart host.
+Installed Postfix instead:
+
+```
+pkg install postfix
+sysrc postfix_enable="YES"
+sysrc sendmail_enable="NONE"
+install -m 0644 /usr/local/share/postfix/mailer.conf.postfix /usr/local/etc/mail/mailer.conf
+```
+
+Add the following lines to /etc/periodic.conf:
+
+```
+daily_clean_hoststat_enable="NO"
+daily_status_mail_rejects_enable="NO"
+daily_status_include_submit_mailq="NO"
+daily_submit_queuerun="NO"
+```
+
+See [the SES Postfix guide](https://docs.aws.amazon.com/ses/latest/DeveloperGuide/postfix.html)	for
+more details.
+
+Created `/usr/local/etc/postfix/sasl_passwd` file like
+
+```
+[email-smtp.us-west-2.amazonaws.com]:587 USERNAME:PASSWORD
+```
+
+Then added this to `/usr/local/etc/postfix/main.cf`:
+
+```
+alias_maps = hash:/etc/aliases
+relayhost = [email-smtp.us-west-2.amazonaws.com]:587
+smtp_tls_note_starttls_offer = yes
+smtp_tls_security_level = encrypt
+smtp_sasl_password_maps = hash:/usr/local/etc/postfix/sasl_passwd
+smtp_sasl_security_options = noanonymous
+smtp_sasl_auth_enable = yes
+smtp_use_tls = yes
+smtp_tls_CAfile = /usr/local/share/certs/ca-root-nss.crt
+```
+
+In `/etc/aliases` set:
+
+```
+root:	operations@solarnetwork.net
+```
