@@ -117,7 +117,7 @@ sysutils/tmux
 Configured the SNF repo:
 
 ```sh
-mkdir -p /usr/local/etc/ssl/certs 
+mkdir -p /usr/local/etc/ssl/certs
 curl -s  https://freebsd.repo.solarnetwork.org.nz/snf.cert \
   >/usr/local/etc/ssl/certs/snf.cert
 mkdir -p /usr/local/etc/pkg/repos
@@ -148,7 +148,7 @@ aesni_load="YES"
 cryptodev_load="YES"
 
 # Cap ZFS ARC to give room to database
-vfs.zfs.arc_max="8G"
+vfs.zfs.arc_max="6G"
 
 # Postgres
 kern.ipc.semmni="256"
@@ -189,7 +189,7 @@ sendmail_outbound_enable="NO"
 sendmail_msp_queue_enable="YES"
  
 # Postgres  
-postgresql_enable="NO"
+postgresql_enable="YES"
 postgresql_data="/sndb/9.6/home"
 postgresql_flags="-w -s -m fast"
 postgresql_initdb_flags="--encoding=utf-8 --locale=C"
@@ -215,7 +215,36 @@ cap_mkdb /etc/login.conf
 
 ## ZFS Setup
 
-Create `wal`, `idx`, and `dat` pools:
+Create `wal`, `idx`, and `dat` pools. To discover device names:
+
+```
+$ nvmecontrol devlist
+
+ nvme0: Amazon Elastic Block Store
+    nvme0ns1 (10240MB)              <-- boot volume
+ nvme1: Amazon Elastic Block Store
+    nvme1ns1 (102400MB)
+ nvme2: Amazon Elastic Block Store
+    nvme2ns1 (102400MB)
+ nvme3: Amazon Elastic Block Store
+    nvme3ns1 (51200MB)              <!-- wal volume
+```
+
+The boot and `wal` volumes can be easily identified by their sizes. The `dat` and `idx` volumes
+must be discovered by looking at their volume identifier:
+
+```
+$ nvmecontrol identify nvme1
+
+Controller Capabilities/Features
+================================
+Vendor ID:                   1d0f
+Subsystem Vendor ID:         1d0f
+Serial Number:               vol05a875893ee5351dd
+```
+
+The **Serial Number** property corresponds to the volume identifier assigned by AWS, which you can
+see in the AWS console.
 
 ```sh 
 zpool create -O canmount=off -m none wal /dev/nvd1
@@ -223,6 +252,14 @@ zpool create -O canmount=off -m none idx /dev/nvd2
 zpool create -O canmount=off -m none dat /dev/nvd3
 ```
 
+## Install Postgres
+
+```sh
+pkg install -r snf postgresql96-server postgresql96-plv8js postgresql96-contrib postgresql96-client timescaledb
+
+# assign to postgres login class
+pw usermod postgres -L postgres
+```
 Setup common dataset properties and create Postgres 9.6 filesystems:
 
 ```sh 
@@ -242,14 +279,9 @@ zfs create -o mountpoint=/sndb/$VER/home $HOME_POOL/$VER/home
 chown -R postgres:postgres /sndb/$VER
 ```
 
-## Install Postgres
+Then continue:
 
-```sh
-pkg install -r snf postgresql96-server postgresql96-plv8js postgresql96-contrib postgresql96-client timescaledb
-
-# assign to postgres login class
-pw usermod postgres -L postgres
-
+```
 # init db
 /usr/local/etc/rc.d/postgresql oneinitdb
 
@@ -298,7 +330,6 @@ pkg install sysutils/daemontools archivers/lzop sysutils/pv
 Then install wal-e:
 
 ```sh
-su - postgres
 pkg install -r snf python3 py37-pip
 su - postgres
 python3 -m pip install wal-e[aws] --user
@@ -329,8 +360,103 @@ chmod g+w /var/log/postgres
 
 Setup `pg_hba.conf` with user/certificate authentication support.
 
+## Configure Certbot
 
-## Initial database restore
+```
+pkg install py37-certbot py37-certbot-dns-route53
+echo 'weekly_certbot_enable="YES"' >>/etc/periodic.conf
+```
+
+Set up credentials for AWS:
+
+```sh
+mkdir ~/.aws
+touch ~/.aws/config
+chmod 600 ~/.aws/config
+```
+
+Then configured AWS credentials `~/.aws/config` like
+
+```
+[default]
+aws_access_key_id=AKIAIOSFODNN7EXAMPLE
+aws_secret_access_key=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+```
+
+Created initial certificate via:
+
+```sh
+certbot certonly --dns-route53 -d db.solarnetwork.net
+```
+
+Created renewal hook script `/usr/local/etc/letsencrypt/renewal-hooks/deploy/solardb.sh`
+
+```
+#!/bin/sh
+
+set -e
+
+daemon_cert_root=/sndb/9.6/home/tls
+for domain in $RENEWED_DOMAINS; do
+		# Make sure the certificate and private key files are
+		# never world readable, even just for an instant while
+		# we're copying them into daemon_cert_root.
+		umask 077
+
+		cp -f "$RENEWED_LINEAGE/fullchain.pem" "$daemon_cert_root/$domain.fullchain"
+		cp -f "$RENEWED_LINEAGE/privkey.pem" "$daemon_cert_root/$domain.key"
+
+		# Apply the proper file ownership and permissions for
+		# the daemon to read its certificate and key.
+		chmod 440 "$daemon_cert_root/$domain.fullchain" \
+				"$daemon_cert_root/$domain.key"
+				
+		chgrp postgres "$daemon_cert_root/$domain.fullchain" \
+				"$daemon_cert_root/$domain.key"
+done
+service postgresql reload >/dev/null
+```
+
+Ensure proper execute permissions set:
+
+```sh
+chmod 755 /usr/local/etc/letsencrypt/renewal-hooks/deploy/solardb.sh
+```
+
+Run the renew post-hook manually (**note** command below is for `sh`, **not** `csh`):
+
+```sh
+RENEWED_DOMAINS="db.solarnetwork.net" RENEWED_LINEAGE="/usr/local/etc/letsencrypt/live/db.solarnetwork.net" /usr/local/etc/letsencrypt/renewal-hooks/deploy/solardb.sh
+```
+
+Then configure links in `/sndb/9.6/home/tls`:
+
+```sh
+su - postgres
+cd /sndb/9.6/home/tls
+ln -s db.solarnetwork.net.fullchain server.crt
+ln -s db.solarnetwork.net.key server.key
+```
+
+# Install Munin
+
+```sh
+pkg install munin-node munin-contrib
+```
+
+Set up Postgres settings in `/usr/local/etc/munin/plugin-conf.d/plugins.conf` by adding:
+
+```
+[postgres_*]
+user postgres
+env.PGUSER postgres
+env.PGHOST /tmp
+env.PGPORT 5432
+```
+
+Then created appropriate links in `/usr/local/etc/munin/plugins`.
+
+# Initial database restore
 
 To restore the database from the latest wal-e backup, need to create a `recovery.conf` file:
 
@@ -388,3 +514,4 @@ Then ran restore like this:
 envdir ~/wal-e.d/env ~/.local/bin/wal-e backup-fetch --restore-spec ~/wal-e-restore-spec.json /sndb/9.6/home LATEST
 ```
 
+Once complete, can adjust `postgresql.conf` to suit the VM, then create AMI.
