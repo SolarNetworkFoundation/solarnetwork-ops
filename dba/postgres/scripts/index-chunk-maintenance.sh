@@ -13,7 +13,7 @@
 # the PAUSED variable inside the sub-shell.
 
 PSQL=$(which psql)
-PSQL_CONN_ARGS='-h tsdb -d solarnetwork -U postgres'
+PSQL_CONN_ARGS='-p 5432 -d solarnetwork -U postgres'
 CHUNK_MIN_AGE='1 week'
 CHUNK_MAX_AGE='24 weeks'
 REINDEX_MIN_AGE='11 weeks'
@@ -37,10 +37,10 @@ done
 shift $(($OPTIND - 1))
 
 # pull in solar-jobs.sh so we can pause/resume the SolarNet job scheduler during the maintenance
-NETRC_FILE="/usr/local/pgsql/netrc/solarjobs-admin"
-PRETTYJSON="/usr/local/bin/python2.7 -m json.tool"
-if [ -e /solar93/share/solar-jobs.sh ]; then
-	. /solar93/share/solar-jobs.sh
+NETRC_FILE="/var/db/postgres/netrc/solarjobs-admin"
+PRETTYJSON="/usr/local/bin/python3.7 -m json.tool"
+if [ -e /var/db/postgres/bin/solar-jobs.sh ]; then
+	. /var/db/postgres/bin/solar-jobs.sh
 fi
 
 PAUSED=0
