@@ -698,7 +698,7 @@ setup_pki () {
 				-srcstoretype pkcs12 -srcstorepass "$CA_AGENT_P12_PASS" -srckeypass "$CA_AGENT_P12_PASS" \
 				-destkeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks" \
 				-deststoretype jks -deststorepass "$CA_AGENT_JKS_PASS" -destkeypass "$CA_AGENT_JKS_PASS" \
-				-noprompt
+				-noprompt -srcalias $CA_AGENT_UID -destalias $CA_AGENT_UID
 		fi
 	fi
 
