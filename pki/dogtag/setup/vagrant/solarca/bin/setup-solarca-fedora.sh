@@ -738,14 +738,16 @@ setup_firewall () {
 }
 
 setup_cockpit () {
-	if systemctl status cockpit.socket |grep ' disabled;'; then
-		echo 'Enabling cockpit service...'
-		if [ -z "$DRY_RUN" ]; then
-			systemctl enable cockpit.socket
-			systemctl start cockpit.socket
+	if rpm -q cockpit >/dev/null; then
+		if systemctl status cockpit.socket |grep ' disabled;'; then
+			echo 'Enabling cockpit service...'
+			if [ -z "$DRY_RUN" ]; then
+				systemctl enable cockpit.socket
+				systemctl start cockpit.socket
+			fi
+		else
+			echo 'Cockpit service already enabled.'
 		fi
-	else
-		echo 'Cockpit service already enabled.'
 	fi
 }
 
