@@ -104,3 +104,30 @@ The Felix FileInstall plugin is configured and will look for configuration facto
 `configuration/services` directory within the application. For example, you might need to include
 a `net.solarnetwork.central.in.mqtt.MqttDataCollector-solarinstr.cfg` configuration to instantiate
 a MQTT client to push instructions to nodes.
+
+
+# ECS production build
+
+Building to ECS for production involves:
+
+ 1. Running the `setup-virgo.sh` script to assemble the application.
+ 2. Building a Docker image out of the assembled application.
+ 3. Tagging the Docker image.
+ 4. Pushing the Docker image to ECR.
+ 5. Deploying the Docker image to ECS as a service.
+ 
+Run the `setup-virgo.sh` script for the production environment tree. For example, for the SolarQuery
+application:
+
+```sh
+./bin/setup-virgo.sh -rv -h /tmp/virgo-aws -a solarquery -e prod-aws -i example/ivy-solarquery.xml
+
+docker build -t solarquery-prod /tmp/virgo-aws/solarquery
+
+docker tag solarquery-prod:latest 151824139716.dkr.ecr.us-west-2.amazonaws.com/sn-apps:solarquery-20200504A
+
+aws --profile snf ecr get-login-password --region us-west-2 | \
+    docker login --username AWS --password-stdin 151824139716.dkr.ecr.us-west-2.amazonaws.com
+
+docker push 151824139716.dkr.ecr.us-west-2.amazonaws.com/sn-apps:solarquery-20200504A
+```
