@@ -553,14 +553,30 @@ setup_pki () {
 		fi
 	fi
 	
+	# fix for https://bugzilla.redhat.com/show_bug.cgi?id=1755634 on F31
+	if [ -e /usr/share/java/ecj/ecj.jar -a -e /usr/share/pki/server/conf/pki.policy ]; then
+		if ! grep -q '/usr/share/java/ecj/ecj.jar' /usr/share/pki/server/conf/pki.policy; then
+			echo "Patching /usr/share/pki/server/conf/pki.policy for bug 1755634."
+			if [ -z "$DRY_RUN" ]; then
+				echo >>/usr/share/pki/server/conf/pki.policy
+				echo 'grant codeBase "file:/usr/share/java/ecj/ecj.jar" {' >>/usr/share/pki/server/conf/pki.policy
+				echo '    permission java.security.AllPermission;' >>/usr/share/pki/server/conf/pki.policy
+				echo '};' >>/usr/share/pki/server/conf/pki.policy
+			fi
+		else
+			echo '/usr/share/pki/server/conf/pki.policy already patched for bug 1755634'.
+		fi
+	fi
+	
 	# the system is enabled via pki-tomcatd.target now
 	if [ -z "$DRY_RUN" ]; then
 		systemctl enable pki-tomcatd.target
-		systemctl start pki-tomcatd.target
+		systemctl restart pki-tomcatd.target
 	fi
 	
-	# Give Dogtag chance to come up - -TODO: only if just started it
-	sleep 5
+	# Give Dogtag chance to come up
+	echo "Waiting a bit for Tomcat to start..."
+	sleep 10
 	
 	if certutil -L -d /root/.dogtag/nssdb -n "CA Certificate" -a &>/dev/null; then
 		echo "CA Root Certificate already imported into nssdb."
