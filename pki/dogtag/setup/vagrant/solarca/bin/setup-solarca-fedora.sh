@@ -583,7 +583,14 @@ setup_pki () {
 	else
 		echo "Importing CA Root Certificate into nssdb..."
 		if [ -z "$DRY_RUN" ]; then
-			pki client-cert-import "CA Certificate" --ca-server
+			if [ -e /etc/pki/pki-tomcat/ca/CS.cfg ]; then
+				# load from file to avoid prompt on untrusted cert
+				grep 'ca.signing.cert=' /etc/pki/pki-tomcat/ca/CS.cfg |sed 's/^ca.signing.cert=//' \
+					>/tmp/ca.crt
+				pki client-cert-import "CA Certificate" --ca-cert /tmp/ca.crt
+			else
+				pki client-cert-import "CA Certificate" --ca-server
+			fi
 		fi
 	fi
 	
@@ -598,7 +605,14 @@ setup_pki () {
 	else
 		echo "Importing CA Root Certificate into $CA_ADMIN_LOGIN's pkiconsole nssdb..."
 		if [ -z "$DRY_RUN" ]; then
-			sudo -u $CA_ADMIN_LOGIN pki -d "$CA_ADMIN_HOME/.dogtag-idm-console" client-cert-import "CA Certificate" --ca-server
+			if [ -e /etc/pki/pki-tomcat/ca/CS.cfg ]; then
+				# load from file to avoid prompt on untrusted cert
+				grep 'ca.signing.cert=' /etc/pki/pki-tomcat/ca/CS.cfg |sed 's/^ca.signing.cert=//' \
+					>/tmp/ca.crt
+				sudo -u $CA_ADMIN_LOGIN pki -d "$CA_ADMIN_HOME/.dogtag-idm-console" client-cert-import "CA Certificate" --ca-cert /tmp/ca.crt
+			else
+				sudo -u $CA_ADMIN_LOGIN pki -d "$CA_ADMIN_HOME/.dogtag-idm-console" client-cert-import "CA Certificate" --ca-server
+			fi
 		fi
 	fi
 	
