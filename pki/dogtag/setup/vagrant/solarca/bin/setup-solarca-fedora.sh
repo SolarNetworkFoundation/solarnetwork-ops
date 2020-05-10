@@ -758,12 +758,14 @@ setup_ds_import () {
 }
 
 setup_firewall () {
-	echo 'Opening ports 8080, 8443 in firewall...'
-	if [ -z "$DRY_RUN" ]; then
-		firewall-cmd --quiet --zone=public --add-port=8080/tcp
-		firewall-cmd --quiet --zone=public --add-port=8080/tcp --permanent
-		firewall-cmd --quiet --zone=public --add-port=8443/tcp
-		firewall-cmd --quiet --zone=public --add-port=8443/tcp --permanent
+	if which firewall-cmd >/dev/null 2>/dev/null; then
+		echo 'Opening ports 8080, 8443 in firewall...'
+		if [ -z "$DRY_RUN" ]; then
+			firewall-cmd --quiet --zone=public --add-port=8080/tcp
+			firewall-cmd --quiet --zone=public --add-port=8080/tcp --permanent
+			firewall-cmd --quiet --zone=public --add-port=8443/tcp
+			firewall-cmd --quiet --zone=public --add-port=8443/tcp --permanent
+		fi
 	fi
 }
 
