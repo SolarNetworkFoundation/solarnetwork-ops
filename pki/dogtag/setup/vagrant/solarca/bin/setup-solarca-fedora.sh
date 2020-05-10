@@ -887,8 +887,8 @@ setup_hostname
 setup_dns
 setup_osuser
 setup_swap
-setup_desktop
-setup_vnc
+#setup_desktop
+#setup_vnc
 setup_ds
 setup_pki
 if [ -n "$DS_IMPORT_LDIF" ]; then
