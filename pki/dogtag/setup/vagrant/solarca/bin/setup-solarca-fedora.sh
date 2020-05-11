@@ -19,7 +19,7 @@ DS_ROOT_PASS="admin.123"
 DS_SUFFIX="dc=solarnetworkdev,dc=net"
 DS_IMPORT_LDIF=""
 HOSTNAME="ca.solarnetworkdev.net"
-PKI_REPO_EXCLUDE="updates*"
+PKI_REPO_EXCLUDE=""
 SN_PROFILE_CONF="example/SolarNode.cfg"
 SN_IN_DNS_NAME="in.solarnetworkdev.net"
 SN_IN_JKS_PASS="dev123"
@@ -56,7 +56,7 @@ Arguments:
  -f <sec domain pw>     - the PKI security domain password, i.e. from ca.cfg; defaults to Secret.123
  -H <repo glob>         - exclude package repositories matching this glob when installing PKI;
                           this is done to limit the version to match what is available in CentOS;
-                          defaults to 'updates*'
+                          for example 'updates*'
  -h <host name>         - the FQDN for the machine; defaults to ca.solarnetworkdev.net
  -I <in JKS pw>         - the SolarIn JKS keystore password; defaults to dev123
  -i <in DNS name>       - the SoalrIn DNS name; defaults to in.solarentworkdev.net
