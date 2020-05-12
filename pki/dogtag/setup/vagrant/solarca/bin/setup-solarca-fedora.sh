@@ -536,10 +536,6 @@ setup_pki () {
 	if [ "$os_type" = "FEDORA" ]; then
 		pkg_install pki-ca "$PKI_REPO_EXCLUDE"
 		pkg_install dogtag-pki-server-theme "$PKI_REPO_EXCLUDE"
-
-		# non-headless Java needed for console
-		pkg_install java-1.8.0-openjdk
-		pkg_install pki-console "$PKI_REPO_EXCLUDE"
 	else
 		pkg_install pki-ca
 	fi
