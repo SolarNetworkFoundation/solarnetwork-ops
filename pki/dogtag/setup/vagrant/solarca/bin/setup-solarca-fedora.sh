@@ -501,7 +501,16 @@ setup_pki_user_p12 () {
 				else
 					if [ -n "$ca_user" ]; then
 						echo "Adding $user_uid certificate to user..."
-						sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$user_uid" --serial "$cert_id"
+
+						# The following (using --serial) is broken in Dogtag 10.8
+						#sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$user_uid" --serial "$cert_id"
+					
+						# SO found work-around by export to file, then importing from file
+						sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-show "$cert_id" \
+							--encoded --output "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$user_uid.crt"
+						
+						sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$user_uid" \
+							--input "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$user_uid.crt"
 					fi
 										
 					echo "Importing approved $user_uid certificate $cert_id to nssdb..."
