@@ -40,3 +40,5 @@ Use `fpm` to package the service via `make`. This package is architecture indepe
 ```sh
 $ make
 ```
+
+[fpm]: https://github.com/jordansissel/fpm
