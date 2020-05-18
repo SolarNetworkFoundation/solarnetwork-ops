@@ -103,7 +103,7 @@ $ grep internal= /var/lib/pki/pki-tomcat/conf/password.conf |awk -F= '{print $2;
 $ certutil -M -d /var/lib/pki/pki-tomcat/alias -n 'auditSigningCert cert-pki-tomcat CA' -t 'u,u,Pu'
 
 # Confirm by viewing
-$ certutil -L -d /var/lib/pki/pki-tomcat/alias -n 'caSigningCert cert-rootca CA'
+$ certutil -L -d /var/lib/pki/pki-tomcat/alias -n 'auditSigningCert cert-pki-tomcat CA'
 
 # Start PKI
 $ systemctl start pki-tomcatd@pki-tomcat.service
