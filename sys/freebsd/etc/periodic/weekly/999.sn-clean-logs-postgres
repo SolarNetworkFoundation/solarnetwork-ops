@@ -1,0 +1,3 @@
+#!/bin/sh
+/usr/local/share/sn/bin/clean-logs.sh -d 35 -v $@ /var/log/postgres
+
