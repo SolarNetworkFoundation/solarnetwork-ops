@@ -51,6 +51,7 @@
         
         <Valve className="org.apache.catalina.valves.AccessLogValve" directory="serviceability/logs/access"
                prefix="localhost_access" suffix=".log" 
+               maxDays="35"
                pattern="%t %h %u %H %m %U %s %D %b"/>
 
         <Valve className="org.eclipse.virgo.web.tomcat.support.ApplicationNameTrackingValve"/>
