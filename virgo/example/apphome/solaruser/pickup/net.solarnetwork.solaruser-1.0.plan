@@ -40,6 +40,10 @@
 	<artifact type="bundle" name="net.solarnetwork.central.user.billing.killbill" version="1.1"/>
 	<artifact type="bundle" name="net.solarnetwork.central.user.biz.dao" version="2.0"/>
 	<artifact type="bundle" name="net.solarnetwork.central.user.dao.mybatis" version="2.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.event.aop" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.event.biz.dao" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.event.dao.mybatis" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.event.noop" version="1.0"/>
 	<artifact type="bundle" name="net.solarnetwork.central.user.expire.aop" version="1.0"/>
 	<artifact type="bundle" name="net.solarnetwork.central.user.expire.biz.dao" version="1.1"/>
 	<artifact type="bundle" name="net.solarnetwork.central.user.expire.dao.mybatis" version="1.1"/>
