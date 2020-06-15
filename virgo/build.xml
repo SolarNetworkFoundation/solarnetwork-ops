@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project default="assemble">
+<project default="assemble" xmlns:if="ant:if">
 	<property name="app.name" value="${APP_NAME}"/>
 	<property name="env.name" value="${ENV_NAME}"/>
 	<property name="dest.dir" value="${VIRGO_HOME}/${app.name}"/>
@@ -60,9 +60,20 @@
 	</target>
 	
 	<!-- Make sure scripts have executable bit, which might have been lost by copy tasks. -->
-	<target name="set-perms">
+	<target name="set-perms" depends="set-perms-ssh">
 		<chmod perm="775">
 			<fileset dir="${dest.dir}/bin" includes="*.sh"/>
+		</chmod>		
+	</target>
+	
+	<target name="set-perms-ssh">
+		<available file="${dest.dir}/.ssh" type="dir" property="ssh.present"/>
+		<chmod perm="700" if:set="ssh.present">
+			<dirset dir="${dest.dir}" includes=".ssh"/>
+		</chmod>		
+		<available file="${dest.dir}/.ssh/authorized_keys" type="file" property="ssh.auth.present"/>
+		<chmod perm="600" if:set="ssh.auth.present">
+			<fileset dir="${dest.dir}/.ssh" includes="authorized_keys"/>
 		</chmod>		
 	</target>
 
