@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project default="assemble" xmlns:if="ant:if">
+	<property name="app.name" value="${APP_NAME}"/>
+	<property name="env.name" value="${ENV_NAME}"/>
+	<property name="dest.dir" value="${VIRGO_HOME}/${app.name}"/>
+	
+	<property name="app.dir" value="apphome/${app.name}"/>
+	<property name="env.dir" value="local/${env.name}/${app.name}"/>
+	<property name="env.props" value="local/${env.name}/${app.name}.properties"/>
+
+	<available file="${app.dir}" type="dir" property="app.present"/>
+	<available file="${env.dir}" type="dir" property="env.present"/>
+	<available file="${env.props}" type="file" property="env.props.present"/>
+
+	<target name="assemble" description="Assemble and deploy the application." depends="copy-app,copy-env"/>
+
+	<target name="copy-app" if="app.present">
+		<echo message="Copying ${app.dir} → ${dest.dir}"/>
+		<copy todir="${dest.dir}" overwrite="yes">
+			<fileset dir="${app.dir}" includes="**"/>
+		</copy>		
+	</target>
+
+	<target name="copy-env" if="env.present" depends="copy-env-with-filter,copy-env-without-filter,set-perms"/>
+
+	<target name="copy-env-without-filter" unless="env.props.present">
+		<echo message="Copying ${env.dir} → ${dest.dir}"/>
+		<copy todir="${dest.dir}" overwrite="yes">
+			<fileset dir="${env.dir}" includes="**" excludes="**/*.secret"/>
+		</copy>
+	</target>
+	
+	<!-- Pattern set to limit which files are filtered (i.e. so JAR files aren't filtered). -->
+	<patternset id="filterable.pats">
+		<include name="**/*.cfg"/>		
+		<include name="**/*.plan"/>
+		<include name="**/*.properties"/>
+		<include name="**/*.xml"/>
+	</patternset>
+
+	<target name="copy-env-with-filter" if="env.props.present">
+		<echo message="Copying ${env.dir} → ${dest.dir} using variables in ${env.props}"/>
+		<copy todir="${dest.dir}" overwrite="yes">
+			<fileset dir="${env.dir}">
+				<patternset>
+					<invert refid="filterable.pats"/>
+				</patternset>
+				<exclude name="**/*.secret"/>
+			</fileset>
+		</copy>
+		<copy todir="${dest.dir}" overwrite="yes">
+			<fileset dir="${env.dir}">
+				<patternset refid="filterable.pats"/>
+				<exclude name="**/*.secret"/>
+			</fileset>
+			<filterset begintoken="@@" endtoken="@@">
+				<filtersfile file="${env.props}"/>
+			</filterset>
+		</copy>
+	</target>
+	
+	<!-- Make sure scripts have executable bit, which might have been lost by copy tasks. -->
+	<target name="set-perms" depends="set-perms-ssh">
+		<chmod perm="775">
+			<fileset dir="${dest.dir}/bin" includes="*.sh"/>
+		</chmod>		
+	</target>
+	
+	<target name="set-perms-ssh">
+		<available file="${dest.dir}/.ssh" type="dir" property="ssh.present"/>
+		<chmod perm="700" if:set="ssh.present">
+			<dirset dir="${dest.dir}" includes=".ssh"/>
+		</chmod>		
+		<available file="${dest.dir}/.ssh/authorized_keys" type="file" property="ssh.auth.present"/>
+		<chmod perm="600" if:set="ssh.auth.present">
+			<fileset dir="${dest.dir}/.ssh" includes="authorized_keys"/>
+		</chmod>		
+	</target>
+
+</project>

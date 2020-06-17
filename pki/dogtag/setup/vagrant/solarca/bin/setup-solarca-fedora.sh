@@ -15,11 +15,11 @@ CA_AGENT_P12_PASS="Secret.123"
 CA_AGENT_JKS_PASS="dev123"
 DRY_RUN=""
 DS_INST_NAME="ca"
-DS_ROOT_PASS="admin"
+DS_ROOT_PASS="admin.123"
 DS_SUFFIX="dc=solarnetworkdev,dc=net"
 DS_IMPORT_LDIF=""
 HOSTNAME="ca.solarnetworkdev.net"
-PKI_REPO_EXCLUDE="updates*"
+PKI_REPO_EXCLUDE=""
 SN_PROFILE_CONF="example/SolarNode.cfg"
 SN_IN_DNS_NAME="in.solarnetworkdev.net"
 SN_IN_JKS_PASS="dev123"
@@ -56,7 +56,7 @@ Arguments:
  -f <sec domain pw>     - the PKI security domain password, i.e. from ca.cfg; defaults to Secret.123
  -H <repo glob>         - exclude package repositories matching this glob when installing PKI;
                           this is done to limit the version to match what is available in CentOS;
-                          defaults to 'updates*'
+                          for example 'updates*'
  -h <host name>         - the FQDN for the machine; defaults to ca.solarnetworkdev.net
  -I <in JKS pw>         - the SolarIn JKS keystore password; defaults to dev123
  -i <in DNS name>       - the SoalrIn DNS name; defaults to in.solarentworkdev.net
@@ -132,6 +132,13 @@ shift $(($OPTIND - 1))
 did_ds_ldif_import=""
 did_pki=""
 did_vnc=""
+os_type=""
+
+if [ -e /etc/centos-release ]; then
+	os_type="CENTOS"
+elif [ -e /etc/fedora-release ]; then
+	os_type="FEDORA"
+fi
 
 # install package if not already installed
 pkg_install () {
@@ -185,6 +192,12 @@ setup_pkgs () {
 			yum upgrade -y
 			yum makecache
 		fi
+	fi
+}
+
+setup_repos () {
+	if [ "$os_type" = "CENTOS" ]; then
+		pkg_install epel-release
 	fi
 }
 
@@ -307,16 +320,27 @@ setup_vnc () {
 		fi
 	fi
 	
-	if [ -e /etc/systemd/system/vncserver@:1.service ]; then
+	local unit_tmpl='/lib/systemd/system/vncserver@.service'
+	local unit_inst='/etc/systemd/system/vncserver@:1.service'
+	if [ -e /usr/lib/systemd/user/vncserver@.service ]; then
+		unit_tmpl='/usr/lib/systemd/user/vncserver@.service'
+	fi
+	if [ -e "$unit_inst" ]; then
 		echo "$CA_ADMIN_LOGIN VNC service already exists."
 	else
 		echo "Setting up $CA_ADMIN_LOGIN VNC service..."
 		if [ -z "$DRY_RUN" ]; then
-			cp /lib/systemd/system/vncserver@.service  /etc/systemd/system/vncserver@:1.service
-			sed -i \
-				-e "s/<USER>/$CA_ADMIN_LOGIN/" \
-				-e '/^PIDFile=/d' \
-				/etc/systemd/system/vncserver@\:1.service
+			cp "$unit_tmpl"  "$unit_inst"
+			if grep -q '^User=' "$unit_inst"; then
+				sed -i \
+					-e "s/<USER>/$CA_ADMIN_LOGIN/" \
+					-e '/^PIDFile=/d' \
+					"$unit_inst"
+			else
+				sed -i \
+					-e '/Type=forking/a\' -e 'WorkingDirectory=/home/'"$CA_ADMIN_LOGIN"'\nUser='"$CA_ADMIN_LOGIN"'\nGroup='"$CA_ADMIN_LOGIN" \
+					"$unit_inst"
+			fi
 			systemctl daemon-reload
 			systemctl enable vncserver@:1
 			systemctl start vncserver@:1
@@ -331,7 +355,17 @@ setup_desktop () {
 }
 
 setup_ds () {
-	pkg_install 389-ds
+	if dnf module list 389-ds >/dev/null; then
+		if ! dnf module list --enabled 389-ds >/dev/null 2>&1; then
+			dnf -y module enable 389-ds
+		fi
+	fi
+	if ! pkg_install 389-ds; then
+		if ! pkg_install 389-ds-base; then
+			echo 'Failed to find 389-ds or 389-ds-base packages.'
+			exit 1
+		fi
+	fi
 	pkg_install cockpit-389-ds
 
 	if dsctl -l 2>/dev/null |grep "slapd-$DS_INST_NAME"; then
@@ -342,8 +376,10 @@ setup_ds () {
 		else
 			echo 'Configuring DS inf...'
 			if [ -z "$DRY_RUN" ]; then
-				dscreate create-template ds.tmp
-				echo 'instance_name = ca' >>ds.tmp
+				if ! dscreate create-template ds.tmp; then
+					echo 'Failed to create 389 configuration template.'
+					exit 1
+				fi
 				sed \
 					-e "s/;instance_name = .*/instance_name = $DS_INST_NAME/" \
 					-e "s/;full_machine_name = .*/full_machine_name = $HOSTNAME/" \
@@ -361,16 +397,22 @@ setup_ds () {
 				fi
 			fi
 			if [ -z "$DRY_RUN" ]; then
-				# work around F29 bug for missing environment file
-				if [ ! -e /etc/sysconfig/dirsrv-ca ]; then
-					echo 'Creating /etc/sysconfig/dirsrv-ca environment file...'
-					touch /etc/sysconfig/dirsrv-ca
+				if [ "$os_type" = "FEDORA" ]; then
+					# work around F29 bug for missing environment file
+					if [ ! -e "/etc/sysconfig/dirsrv-$DS_INST_NAME" ]; then
+						echo "Creating /etc/sysconfig/dirsrv-$DS_INST_NAME environment file..."
+						if [ -e /etc/sysconfig/dirsrv ]; then
+							cp -a /etc/sysconfig/dirsrv "/etc/sysconfig/dirsrv-$DS_INST_NAME"
+						else
+							touch "/etc/sysconfig/dirsrv-$DS_INST_NAME"
+						fi
+					fi
 				fi
 				if ! dscreate from-file ds.inf; then
 					echo 'Failed to create 389 instance from ds.inf'
 					exit 1
 				fi
-				mv ds.inf ds-ca.inf
+				mv ds.inf "ds-$DS_INST_NAME.inf"
 			fi
 		fi
 	fi
@@ -459,7 +501,16 @@ setup_pki_user_p12 () {
 				else
 					if [ -n "$ca_user" ]; then
 						echo "Adding $user_uid certificate to user..."
-						sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$user_uid" --serial "$cert_id"
+
+						# The following (using --serial) is broken in Dogtag 10.8
+						#sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$user_uid" --serial "$cert_id"
+					
+						# SO found work-around by export to file, then importing from file
+						sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-cert-show "$cert_id" \
+							--encoded --output "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$user_uid.crt"
+						
+						sudo -u $CA_ADMIN_LOGIN pki -c "$CA_SEC_DOMAIN_PASS" -n "$admin_nickname" ca-user-cert-add "$user_uid" \
+							--input "$CA_ADMIN_HOME/.dogtag/pki-tomcat/$user_uid.crt"
 					fi
 										
 					echo "Importing approved $user_uid certificate $cert_id to nssdb..."
@@ -476,12 +527,19 @@ setup_pki_user_p12 () {
 }
 
 setup_pki () {
-	pkg_install pki-ca "$PKI_REPO_EXCLUDE"
-	pkg_install dogtag-pki-server-theme "$PKI_REPO_EXCLUDE"
+	if dnf module list pki-core >/dev/null; then
+		if ! dnf module list --enabled pki-core >/dev/null 2>&1; then
+			dnf -y module enable pki-core
+		fi
+	fi
+
+	if [ "$os_type" = "FEDORA" ]; then
+		pkg_install pki-ca "$PKI_REPO_EXCLUDE"
+		pkg_install dogtag-pki-server-theme "$PKI_REPO_EXCLUDE"
+	else
+		pkg_install pki-ca
+	fi
 	
-	# non-headless Java needed for console
-	pkg_install java-1.8.0-openjdk
-	pkg_install pki-console "$PKI_REPO_EXCLUDE"
 	
 	setup_pki_pkcs12
 	
@@ -500,21 +558,44 @@ setup_pki () {
 		fi
 	fi
 	
+	# fix for https://bugzilla.redhat.com/show_bug.cgi?id=1755634 on F31
+	if [ -e /usr/share/java/ecj/ecj.jar -a -e /usr/share/pki/server/conf/pki.policy ]; then
+		if ! grep -q '/usr/share/java/ecj/ecj.jar' /usr/share/pki/server/conf/pki.policy; then
+			echo "Patching /usr/share/pki/server/conf/pki.policy for bug 1755634."
+			if [ -z "$DRY_RUN" ]; then
+				echo >>/usr/share/pki/server/conf/pki.policy
+				echo 'grant codeBase "file:/usr/share/java/ecj/ecj.jar" {' >>/usr/share/pki/server/conf/pki.policy
+				echo '    permission java.security.AllPermission;' >>/usr/share/pki/server/conf/pki.policy
+				echo '};' >>/usr/share/pki/server/conf/pki.policy
+			fi
+		else
+			echo '/usr/share/pki/server/conf/pki.policy already patched for bug 1755634'.
+		fi
+	fi
+	
 	# the system is enabled via pki-tomcatd.target now
 	if [ -z "$DRY_RUN" ]; then
 		systemctl enable pki-tomcatd.target
-		systemctl start pki-tomcatd.target
+		systemctl restart pki-tomcatd.target
 	fi
 	
-	# Give Dogtag chance to come up - -TODO: only if just started it
-	sleep 5
+	# Give Dogtag chance to come up
+	echo "Waiting a bit for Tomcat to start..."
+	sleep 10
 	
 	if certutil -L -d /root/.dogtag/nssdb -n "CA Certificate" -a &>/dev/null; then
 		echo "CA Root Certificate already imported into nssdb."
 	else
 		echo "Importing CA Root Certificate into nssdb..."
 		if [ -z "$DRY_RUN" ]; then
-			pki client-cert-import "CA Certificate" --ca-server
+			if [ -e /etc/pki/pki-tomcat/ca/CS.cfg ]; then
+				# load from file to avoid prompt on untrusted cert
+				grep 'ca.signing.cert=' /etc/pki/pki-tomcat/ca/CS.cfg |sed 's/^ca.signing.cert=//' \
+					>/tmp/ca.crt
+				pki client-cert-import "CA Certificate" --ca-cert /tmp/ca.crt
+			else
+				pki client-cert-import "CA Certificate" --ca-server
+			fi
 		fi
 	fi
 	
@@ -529,7 +610,14 @@ setup_pki () {
 	else
 		echo "Importing CA Root Certificate into $CA_ADMIN_LOGIN's pkiconsole nssdb..."
 		if [ -z "$DRY_RUN" ]; then
-			sudo -u $CA_ADMIN_LOGIN pki -d "$CA_ADMIN_HOME/.dogtag-idm-console" client-cert-import "CA Certificate" --ca-server
+			if [ -e /etc/pki/pki-tomcat/ca/CS.cfg ]; then
+				# load from file to avoid prompt on untrusted cert
+				grep 'ca.signing.cert=' /etc/pki/pki-tomcat/ca/CS.cfg |sed 's/^ca.signing.cert=//' \
+					>/tmp/ca.crt
+				sudo -u $CA_ADMIN_LOGIN pki -d "$CA_ADMIN_HOME/.dogtag-idm-console" client-cert-import "CA Certificate" --ca-cert /tmp/ca.crt
+			else
+				sudo -u $CA_ADMIN_LOGIN pki -d "$CA_ADMIN_HOME/.dogtag-idm-console" client-cert-import "CA Certificate" --ca-server
+			fi
 		fi
 	fi
 	
@@ -645,7 +733,7 @@ setup_pki () {
 				-srcstoretype pkcs12 -srcstorepass "$CA_AGENT_P12_PASS" -srckeypass "$CA_AGENT_P12_PASS" \
 				-destkeystore "$CA_ADMIN_HOME/.dogtag/pki-tomcat/dogtag-client.jks" \
 				-deststoretype jks -deststorepass "$CA_AGENT_JKS_PASS" -destkeypass "$CA_AGENT_JKS_PASS" \
-				-noprompt
+				-noprompt -srcalias $CA_AGENT_UID -destalias $CA_AGENT_UID
 		fi
 	fi
 
@@ -675,24 +763,28 @@ setup_ds_import () {
 }
 
 setup_firewall () {
-	echo 'Opening ports 8080, 8443 in firewall...'
-	if [ -z "$DRY_RUN" ]; then
-		firewall-cmd --quiet --zone=public --add-port=8080/tcp
-		firewall-cmd --quiet --zone=public --add-port=8080/tcp --permanent
-		firewall-cmd --quiet --zone=public --add-port=8443/tcp
-		firewall-cmd --quiet --zone=public --add-port=8443/tcp --permanent
+	if which firewall-cmd >/dev/null 2>/dev/null; then
+		echo 'Opening ports 8080, 8443 in firewall...'
+		if [ -z "$DRY_RUN" ]; then
+			firewall-cmd --quiet --zone=public --add-port=8080/tcp
+			firewall-cmd --quiet --zone=public --add-port=8080/tcp --permanent
+			firewall-cmd --quiet --zone=public --add-port=8443/tcp
+			firewall-cmd --quiet --zone=public --add-port=8443/tcp --permanent
+		fi
 	fi
 }
 
 setup_cockpit () {
-	if systemctl status cockpit.socket |grep ' disabled;'; then
-		echo 'Enabling cockpit service...'
-		if [ -z "$DRY_RUN" ]; then
-			systemctl enable cockpit.socket
-			systemctl start cockpit.socket
+	if rpm -q cockpit >/dev/null; then
+		if systemctl status cockpit.socket |grep ' disabled;'; then
+			echo 'Enabling cockpit service...'
+			if [ -z "$DRY_RUN" ]; then
+				systemctl enable cockpit.socket
+				systemctl start cockpit.socket
+			fi
+		else
+			echo 'Cockpit service already enabled.'
 		fi
-	else
-		echo 'Cockpit service already enabled.'
 	fi
 }
 
@@ -795,12 +887,13 @@ show_results () {
 
 setup_cfg_vars
 setup_pkgs
+setup_repos
 setup_hostname
 setup_dns
 setup_osuser
 setup_swap
-setup_desktop
-setup_vnc
+#setup_desktop
+#setup_vnc
 setup_ds
 setup_pki
 if [ -n "$DS_IMPORT_LDIF" ]; then

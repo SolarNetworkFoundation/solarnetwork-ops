@@ -7,49 +7,53 @@
 			http://www.eclipse.org/virgo/schema/plan/eclipse-virgo-plan.xsd">
 
 	<!-- General -->
-	<artifact type="bundle" name="net.solarnetwork.common.pki.bc" version="[1.2,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.common.biz.dao" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.common.cloud.aws" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.scheduler.standard" version="[1.0,2.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.common.pki.bc" version="1.2"/>
+	<artifact type="bundle" name="net.solarnetwork.central.common.biz.dao" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.common.cloud.aws" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.scheduler.standard" version="1.0"/>
 
 	<!-- Support -->
-	<artifact type="bundle" name="net.solarnetwork.central.datum.aop" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.biz.dao" version="[1.2,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.dao.mybatis" version="[2.3,3.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.export.biz.dao" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.export.dao.mybatis" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.export.dest.s3" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.export.standard" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.aop" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.biz.dao" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.dao.mybatis" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.standard" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.in.biz.dao" version="[1.15,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.instructor.aop" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.instructor.biz.dao" version="[1.4,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.instructor.dao.mybatis" version="[1.2,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.query.aop" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.query.audit.jdbc" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.query.biz.dao" version="[2.2,3.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.aop" version="1.9"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.biz.dao" version="1.7"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.dao.mybatis" version="3.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.export.biz.dao" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.export.dao.mybatis" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.export.dest.s3" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.export.standard" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.aop" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.biz.dao" version="1.2"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.dao.mybatis" version="1.2"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.imp.standard" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.in.biz.dao" version="2.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.instructor" version="1.9"/>
+	<artifact type="bundle" name="net.solarnetwork.central.instructor.aop" version="1.7"/>
+	<artifact type="bundle" name="net.solarnetwork.central.instructor.biz.dao" version="1.8"/>
+	<artifact type="bundle" name="net.solarnetwork.central.instructor.dao.mybatis" version="1.5"/>
+	<artifact type="bundle" name="net.solarnetwork.central.query.aop" version="1.12"/>
+	<artifact type="bundle" name="net.solarnetwork.central.query.audit.jdbc" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.query.biz.dao" version="3.0"/>
 
 	<!-- SolarUser -->
-	<artifact type="bundle" name="net.solarnetwork.central.user.aop" version="[0.1,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.billing.aop" version="[0.1,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.billing.biz.dao" version="[0.1,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.billing.killbill" version="[0.1,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.biz.dao" version="[1.18.1,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.dao.mybatis" version="[1.5,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.expire.aop" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.expire.biz.dao" version="[0.1,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.expire.dao.mybatis" version="[0.1,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.export.aop" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.export.biz.dao" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.export.dao.mybatis" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.nim.cloud" version="[1.0,2.0)"/>
-	<artifact type="bundle" name="net.solarnetwork.central.user.web" version="[1.0,2.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.aop" version="1.8"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.billing.aop" version="0.2"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.billing.biz.dao" version="0.2"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.billing.killbill" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.biz.dao" version="2.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.dao.mybatis" version="2.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.event.aop" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.event.biz.dao" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.event.dao.mybatis" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.event.noop" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.expire.aop" version="1.0"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.expire.biz.dao" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.expire.dao.mybatis" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.export.aop" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.export.biz.dao" version="1.3"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.export.dao.mybatis" version="1.2"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.nim.cloud" version="1.2"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.web" version="2.2"/>
 
 	<!-- PKI -->
-	<artifact type="bundle" name="net.solarnetwork.central.user.pki.dogtag" version="[1.4,2.0)"/>
+	<artifact type="bundle" name="net.solarnetwork.central.user.pki.dogtag" version="1.5"/>
 
 </plan>
-

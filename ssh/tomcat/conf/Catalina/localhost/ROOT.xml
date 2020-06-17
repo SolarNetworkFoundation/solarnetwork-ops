@@ -1,0 +1,13 @@
+<Context docBase="/usr/local/solarssh/solarssh.war">
+  <Environment name="ssh.keyResource" value="file:/usr/local/solarssh/sshd-server-key" type="java.lang.String" override="false"/>
+  <Environment name="ssh.keyPassword" value="PASSWORD_HERE" type="java.lang.String" override="false"/>
+  <Environment name="ssh.host" value="ssh.solarnetwork.net" type="java.lang.String" override="false"/>
+  <Environment name="ssh.port" value="8022" type="java.lang.Integer" override="false"/>
+  <Environment name="ssh.reversePort.min" value="43332" type="java.lang.Integer" override="false"/>
+  <Environment name="ssh.reversePort.max" value="65332" type="java.lang.Integer" override="false"/>
+
+  <Environment name="solarnet.baseUrl" value="https://data.solarnetwork.net" type="java.lang.String" override="false"/>
+
+  <Environment name="logback.configurationFile" value="/usr/local/solarssh/logback.xml" type="java.lang.String" override="false"/>
+</Context>
+

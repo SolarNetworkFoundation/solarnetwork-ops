@@ -2,7 +2,7 @@
 <!-- https://groups.google.com/forum/#!topic/killbilling-users/KU7HMv5bBRk -->
 <catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="killbill-catalog.xsd">
 
-	<effectiveDate>2018-10-01T00:00:00+13:00</effectiveDate>
+	<effectiveDate>2020-06-01T00:00:00+13:00</effectiveDate>
 	<catalogName>SolarNetwork</catalogName>
 
 	<recurringBillingMode>IN_ADVANCE</recurringBillingMode>
@@ -255,6 +255,63 @@
 												<value>0.000009</value>
 											</price>
 										</prices>
+										<max>50000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumMetrics</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.000006</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.000006</value>
+											</price>
+										</prices>
+										<max>400000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumMetrics</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.000004</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.000004</value>
+											</price>
+										</prices>
+										<max>1000000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumMetrics</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.000002</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.000002</value>
+											</price>
+										</prices>
 										<max>999999999</max>
 										<!-- as high as possible -->
 									</tieredBlock>
@@ -302,6 +359,63 @@
 												<value>0.000002</value>
 											</price>
 										</prices>
+										<max>50000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumQueried</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.000001</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.000001</value>
+											</price>
+										</prices>
+										<max>400000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumQueried</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.0000005</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.0000005</value>
+											</price>
+										</prices>
+										<max>1000000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumQueried</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.0000002</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.0000002</value>
+											</price>
+										</prices>
 										<max>999999999</max>
 										<!-- as high as possible -->
 									</tieredBlock>
@@ -334,6 +448,63 @@
 					<usage name="stored-datum-daily-usage" billingMode="IN_ARREAR" usageType="CONSUMABLE">
 						<billingPeriod>MONTHLY</billingPeriod>
 						<tiers>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumStored</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.0000004</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.0000004</value>
+											</price>
+										</prices>
+										<max>50000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumStored</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.0000002</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.0000002</value>
+											</price>
+										</prices>
+										<max>400000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
+							<tier>
+								<blocks>
+									<tieredBlock>
+										<unit>DatumStored</unit>
+										<size>1</size>
+										<prices>
+											<price>
+												<currency>NZD</currency>
+												<value>0.00000005</value>
+											</price>
+											<price>
+												<currency>USD</currency>
+												<value>0.00000005</value>
+											</price>
+										</prices>
+										<max>1000000</max>
+									</tieredBlock>
+								</blocks>
+							</tier>
 							<tier>
 								<blocks>
 									<tieredBlock>

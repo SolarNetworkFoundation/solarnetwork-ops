@@ -1,0 +1,9 @@
+# Give ttyUSB devices stable symlink names based on physical port location (devpath)
+#
+# See the /usr/share/solarnode/bin/pi-tty-usb-namer.sh script for more info.
+
+KERNEL!="ttyUSB[0-9]*", GOTO="solarnode_ttyUSB_end"
+
+DRIVERS=="usb", PROGRAM="/usr/share/solarnode/bin/pi-tty-usb-namer.sh %s{devpath}", SYMLINK+="%c"
+
+LABEL="solarnode_ttyUSB_end"

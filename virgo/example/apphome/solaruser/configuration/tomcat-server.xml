@@ -29,32 +29,14 @@
   <Service name="Catalina">
     <Connector address="0.0.0.0" port="9081" 
                protocol="org.apache.coyote.http11.Http11NioProtocol"
-               connectionTimeout="20000" enableLookups="false" redirectPort="8444" />
+               connectionTimeout="20000" enableLookups="false" redirectPort="9481"
+               compression="on" 
+               compressionMinSize="1024"
+               useSendfile="false"
+               compressableMimeType="text/html,text/xml,application/xml,text/javascript,text/css,application/json,image/svg+xml"
+               />
 
-<!-- 
-    <Connector address="0.0.0.0" port="8443"
-               protocol="org.apache.coyote.http11.Http11NioProtocol"
-               sslImplementationName="org.apache.tomcat.util.net.jsse.JSSEImplementation"
-               SSLEnabled="true" scheme="https" secure="true" 
-               enableLookups="false" maxThreads="150">
-
-      <SSLHostConfig hostName="_default_"
-                     protocols="TLSv1.2" sslProtocol="TLSv1.2"
-                     honorCipherOrder="true"
-                     ciphers="EECDH+ECDSA+AESGCM:EECDH+aRSA+AESGCM:EECDH+ECDSA:EECDH:EDH+AESGCM:EDH:ECDH+AESGCM:ECDH+AES:ECDH:HIGH:MEDIUM:!RC4:!3DES:!CAMELLIA:!SEED:!aNULL:!MD5:!eNULL:!LOW:!EXP:!DSS:!PSK:!SRP"
-                     certificateVerification="none">
-        <Certificate type="RSA"
-                     certificateKeystoreFile="configuration/keystore"
-                     certificateKeystorePassword="changeit"
-                     certificateKeystoreType="JKS"/>
-      </SSLHostConfig>
-
-    </Connector>
- -->
-
-    <!-- 
-    <Connector port="8009" protocol="AJP/1.3" redirectPort="8443" enableLookups="false" />
-    -->
+    <Connector port="9701" protocol="AJP/1.3" redirectPort="9481" enableLookups="false" />
 
     <Engine name="Catalina" defaultHost="localhost">
       <Realm className="org.apache.catalina.realm.JAASRealm" appName="virgo-kernel"
@@ -69,6 +51,7 @@
         
         <Valve className="org.apache.catalina.valves.AccessLogValve" directory="serviceability/logs/access"
                prefix="localhost_access" suffix=".log" 
+               maxDays="35"
                pattern="%t %h %u %H %m %U %s %D %b"/>
 
         <Valve className="org.eclipse.virgo.web.tomcat.support.ApplicationNameTrackingValve"/>

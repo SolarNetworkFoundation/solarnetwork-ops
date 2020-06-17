@@ -4,6 +4,7 @@ GRANT ALL ON SCHEMA solarcommon TO solar;
 GRANT ALL ON SCHEMA solardatum TO solar;
 GRANT ALL ON SCHEMA solarnet TO solar;
 GRANT ALL ON SCHEMA solaruser TO solar;
+GRANT ALL ON SCHEMA solarev TO solar;
 
 GRANT USAGE ON SCHEMA public TO solarauth;
 GRANT USAGE ON SCHEMA solaruser TO solarauth;
@@ -62,12 +63,6 @@ GRANT ALL ON FUNCTION solaragg.aud_inc_datum_query_count(qdate timestamp with ti
 
 REVOKE ALL ON FUNCTION solaragg.populate_audit_acc_datum_daily(node bigint, source text) FROM PUBLIC;
 GRANT ALL ON FUNCTION solaragg.populate_audit_acc_datum_daily(node bigint, source text) TO solarinput;
-
-REVOKE ALL ON FUNCTION solaragg.process_agg_stale_datum(kind character, max integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION solaragg.process_agg_stale_datum(kind character, max integer) TO solarinput;
-
-REVOKE ALL ON FUNCTION solaragg.process_agg_stale_loc_datum(kind character, max integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION solaragg.process_agg_stale_loc_datum(kind character, max integer) TO solarinput;
 
 REVOKE ALL ON FUNCTION solaragg.process_one_agg_stale_datum(kind character) FROM PUBLIC;
 GRANT ALL ON FUNCTION solaragg.process_one_agg_stale_datum(kind character) TO solarinput;

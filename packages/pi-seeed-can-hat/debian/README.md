@@ -38,6 +38,16 @@ easily. For example:
 sudo /usr/share/solarnode/bin/sn-canctl.sh -d can0 listen-only on
 ```
 
+# Kernel downgrade
+
+This package requires a specific kernel version. To install that version, and then mark it so it
+doesn't accidentally get upgraded:
+
+```
+$ wget http://archive.raspberrypi.org/debian/pool/main/r/raspberrypi-firmware/raspberrypi-kernel_1.20190925+1-1_armhf.deb
+$ dpkg -i raspberrypi-kernel_1.20190925+1-1_armhf.deb
+$ apt-mark hold raspberrypi-kernel
+```
 
 # Packaging
 

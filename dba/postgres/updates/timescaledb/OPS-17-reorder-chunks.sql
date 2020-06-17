@@ -1,0 +1,13 @@
+SELECT add_reorder_policy('solardatum.da_datum', 'da_datum_pkey');
+SELECT add_reorder_policy('solardatum.da_loc_datum', 'da_loc_datum_pkey');
+SELECT add_reorder_policy('solaragg.agg_datum_hourly', 'agg_datum_hourly_pkey');
+SELECT add_reorder_policy('solaragg.agg_datum_daily', 'agg_datum_daily_pkey');
+SELECT add_reorder_policy('solaragg.agg_datum_monthly', 'agg_datum_monthly_pkey');
+SELECT add_reorder_policy('solaragg.agg_loc_datum_hourly', 'agg_loc_datum_hourly_pkey');
+SELECT add_reorder_policy('solaragg.agg_loc_datum_daily', 'agg_loc_datum_daily_pkey');
+SELECT add_reorder_policy('solaragg.agg_loc_datum_monthly', 'agg_loc_datum_monthly_pkey');
+SELECT add_reorder_policy('solaragg.aud_datum_hourly', 'aud_datum_hourly_pkey');
+SELECT add_reorder_policy('solaragg.aud_loc_datum_hourly', 'aud_loc_datum_hourly_pkey');
+SELECT add_reorder_policy('solaragg.aud_datum_daily', 'aud_datum_daily_pkey');
+SELECT add_reorder_policy('solaragg.aud_datum_monthly', 'aud_datum_monthly_pkey');
+SELECT add_reorder_policy('solaragg.aud_acc_datum_daily', 'aud_acc_datum_daily_pkey');

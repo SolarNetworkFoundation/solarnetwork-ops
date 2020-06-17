@@ -10,14 +10,16 @@ virgoDownloadPath="/var/tmp/virgo-tomcat-server-${virgoVersion}.zip"
 APP_NAME="solarapp"
 CLEAN=""
 DRY_RUN=""
+ENV_NAME="dev"
 IVY_FILE="example/ivy.xml"
+IVY_SETTINGS_FILE="../../solarnetwork-osgi-lib/ivysettings.xml"
 SN_BUILD_HOME="solarnetwork-build"
 VIRGO_HOME=""
 VERBOSE=""
 
 do_help () {
 	cat 1>&2 <<EOF
-Usage: $0 -a <app name> -h <dest> -i <ivy conf> [-b <build home>] [-rtv]
+Usage: $0 -a <app name> -e <env name> -h <dest> -i <ivy conf> [-b <build home>] [-rtv]
 
 The following helper programs are used by this script:
 
@@ -26,16 +28,21 @@ The following helper programs are used by this script:
  * unzip  - to extract the Virgo archive
 
 If building from a reference template, overrides can be provided by placing files in a
-local/apphome/X directory, where X is the -a app name you're building.
+local/<env name>/<app name> directory.
 
 Arguments:
 
  -a <app name>       - the application to deploy; must be a directory in the apphome/ directory
  -b <sn build home>  - the path to the solarnetwork-build repository directory
+ -e <env name>       - the local build name; defaults to `dev`; allows creating different deployment
+                       directory trees such as `stage` or `prod` with different configuration files
+                       for different environments.
  -h <dest home>      - a directory to deploy the application to; a directory named <app name> will
                        be created here
  -i <ivy path>       - the Ivy build file that defines all the application's dependencies; this is
                        relative to the -b <sn build home> directory
+ -I <ivy set. path>  - the Ivy settings file that defines all the application's dependencies; this
+                       is relative to the -b <sn build home> directory
  -r                  - clean and recreate the application from scratch; this deletes any existing
                        deployment directory <virgo home>/<app name> and then deploys a new copy
  -t                  - test mode; do not deploy the application
@@ -43,16 +50,18 @@ Arguments:
 EOF
 }
 
-while getopts ":a:b:h:i:rtv" opt; do
+while getopts ":a:b:e:h:i:I:rtv" opt; do
 	case $opt in
 		a) APP_NAME="${OPTARG}";;
 		b) SN_BUILD_HOME="${OPTARG}";;
+		e) ENV_NAME="${OPTARG}";;
 		h) VIRGO_HOME="${OPTARG}";;
 		i) IVY_FILE="${OPTARG}";;
+		I) IVY_SETTINGS_FILE="${OPTARG}";;
 		r) CLEAN='TRUE';;
 		t) DRY_RUN='TRUE';;
 		v) VERBOSE='TRUE';;
-		?)
+		*)
 			echo "Unknown argument ${OPTARG}"
 			do_help
 			exit 1
@@ -121,6 +130,37 @@ if [ -e "$VIRGO_HOME/$APP_NAME/pickup/org.eclipse.virgo.apps.splash_${virgoVersi
 fi
 
 #
+# Remove Windows scripts
+#
+if [ -d "$VIRGO_HOME/$APP_NAME/bin" ];then
+	if [ -n "$VERBOSE" ]; then
+		echo "Removing Windows support..."
+	fi
+	find "$VIRGO_HOME/$APP_NAME/bin" -type f \( -name '*.bat' -o -name '*.vbs' \) -delete
+fi
+
+#
+# Remove docs, extras
+#
+if [ -e "$VIRGO_HOME/$APP_NAME/about_files" ]; then
+	if [ -n "$VERBOSE" ]; then
+		echo "Removing Virgo documentation..."
+	fi
+	rm -rf "$VIRGO_HOME/$APP_NAME/about_files"
+	rm -rf "$VIRGO_HOME/$APP_NAME"/*.html
+fi
+
+#
+# Remove hard-coded JAVA_OPTS="-Xmx1024m
+#
+if [ -e "$VIRGO_HOME/$APP_NAME/bin/dmk.sh" ]; then
+	if [ -n "$VERBOSE" ]; then
+		echo "Removing hard-coded JAVA_OPTS from $VIRGO_HOME/$APP_NAME/bin/dmk.sh"
+	fi
+	sed -i '' '/Xmx1024m/,/XX:MaxPermSize/d' "$VIRGO_HOME/$APP_NAME/bin/dmk.sh"
+fi
+
+#
 # Setup "env.plan" support
 #
 cd "$SETUP_HOME"
@@ -168,18 +208,7 @@ fi
 #
 # Sync apphome files
 #
-if [ -d "apphome/$APP_NAME" ]; then
-	if [ -n "$VERBOSE" ]; then
-		echo "Copying apphome/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
-	fi
-	cp -RL "apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
-fi
-if [ -d "local/apphome/$APP_NAME" ]; then
-	if [ -n "$VERBOSE" ]; then
-		echo "Copying local/apphome/$APP_NAME contents -> $VIRGO_HOME/$APP_NAME"
-	fi
-	cp -RL "local/apphome/$APP_NAME/" "$VIRGO_HOME/$APP_NAME/"
-fi
+ant -buildfile build.xml -DVIRGO_HOME=$VIRGO_HOME -DAPP_NAME=$APP_NAME -DENV_NAME=$ENV_NAME
 
 #
 # Base usr repository contents
@@ -191,7 +220,9 @@ fi
 if [ -n "$VERBOSE" ]; then
 	echo "Assembling base usr Virgo repository -> $VIRGO_HOME/$APP_NAME/repository/usr"
 fi
-ant -buildfile "$SN_BUILD_HOME/solarnet-deploy/virgo/build.xml" -Divy.file="$IVY_FILE" \
+ant -buildfile "$SN_BUILD_HOME/solarnet-deploy/virgo/build.xml" \
+	-Divy.file="$IVY_FILE" \
+	-Divy.settings="$IVY_SETTINGS_FILE" \
 	-Divy.resolve.refresh=true \
 	-Divy.cache.ttl.default=1m \
 	clean assemble

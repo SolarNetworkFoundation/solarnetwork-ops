@@ -4,10 +4,10 @@
 # This script is meant to be sourced by other scripts that wish to use the functions
 # defined within it.
 
-NETRC_FILE=${NETRC_FILE:-"/root/netrc/solarjobs-admin"}
-JOBAPI_BASE=${JOBAPI_BASE:-"https://data.solarnetwork.net/solarjobs"}
+NETRC_FILE=${NETRC_FILE:-"/var/db/postgres/netrc/solarjobs-admin"}
+JOBAPI_BASE=${JOBAPI_BASE:-"http://solarjobs.solarnetwork:9080/solarjobs"}
 CURL=${CURL:-"/usr/local/bin/curl"}
-PRETTYJSON=${PRETTYJSON:-"/usr/local/bin/python -m json.tool"}
+PRETTYJSON=${PRETTYJSON:-"/usr/local/bin/python3.7 -m json.tool"}
 
 # functions for job scheduler
 scheduler_status () {

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plan name="net.solarnetwork.solarin-ocpp.plan" version="1.0" scoped="false" atomic="false"
+		xmlns="http://www.eclipse.org/virgo/schema/plan"
+		xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		xsi:schemaLocation="
+			http://www.eclipse.org/virgo/schema/plan
+			http://www.eclipse.org/virgo/schema/plan/eclipse-virgo-plan.xsd">
+
+	<artifact type="bundle" name="net.solarnetwork.central.ocpp" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.ocpp.dao.mybatis" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.ocpp.session" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.ocpp.v16.controller" version="1.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.in.ocpp.json" version="1.1"/>
+	
+</plan>

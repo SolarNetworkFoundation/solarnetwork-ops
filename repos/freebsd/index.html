@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+	<head>
+		<title>SolarNetwork Foundation FreeBSD Package Repository</title>
+		<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+		<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	</head>
+	<body>
+		<main class="col-12" role="main">
+			<h1>SolarNetwork Foundation FreeBSD Package Repository</h1>
+			<p>This is the SolarNetwork Foundation FreeBSD package repository, where we publish
+			custom-built FreeBSD packages for software used to host SolarNetwork applications.</p>
+			<p>You'll need to get the certificate used to sign the packages, which you can do via:</p>
+			<pre class="bg-light text-dark p-3"><code>$ mkdir -p /usr/local/etc/ssl/certs
+$ curl -s  https://freebsd.repo.solarnetwork.org.nz/snf.cert \
+    >/usr/local/etc/ssl/certs/snf.cert
+$ mkdir -p /usr/local/etc/pkg/repos</code></pre>
+			<p>Then create a repository configuration <code>/usr/local/etc/pkg/repos/snf.conf</code>
+			with content like:</p>
+			<pre class="bg-light text-dark p-3"><code>snf: {
+	url: "https://freebsd.repo.solarnetwork.org.nz/<span style="color: #e83e8c">REPO_NAME</span>/",
+	mirror_type: "http",
+	signature_type: "pubkey",
+	pubkey: "/usr/local/etc/ssl/certs/snf.cert",
+	enabled: yes,
+	priority: 100
+}</code></pre>
+			<div class="alert alert-warning" role="alert">
+				<b>Heads up!</b> You'll need to replace <code>REPO_NAME</code> with a valid
+				repository name for the application you're interested in.
+			</div>
+		</main>
+	</body>
+</html>
