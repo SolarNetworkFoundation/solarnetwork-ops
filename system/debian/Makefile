@@ -1,8 +1,9 @@
 NAME = sn-system
 DIST = 
-VERSION = 1.1.2-1$(if $(DIST),+$(DIST),)
+VERSION = 1.2.0-1$(if $(DIST),+$(DIST),)
+PATHS = etc lib usr var
 
-deb : 
+deb : prep
 	fpm -s dir -t deb \
 	-n $(NAME) \
 	-v $(VERSION) \
@@ -17,7 +18,10 @@ deb :
 	--replaces 'ifupdown' \
 	--after-install $(NAME).postinst \
 	--deb-no-default-config-files \
-	etc lib usr
+	$(PATHS)
+
+prep : 
+	find $(PATHS) -type f -name .DS_Store -delete
 
 clean : 
 	rm $(NAME)_$(VERSION)_all.deb
