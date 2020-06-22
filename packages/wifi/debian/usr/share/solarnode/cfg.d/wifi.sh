@@ -48,7 +48,6 @@ EOF
 		esac
 	done
 	shift $(($OPTIND - 1))
-	echo "configure c = ${country}, s = ${ssid}, p = ${password}; $*"
 	tmpfile=$(mktemp /tmp/sn-wifi.XXXXXX)
 	if [ -n "${country}" ]; then
 		echo "sn-wifi sn-wifi/country string $country" >>$tmpfile
