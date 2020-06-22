@@ -6,10 +6,10 @@ Before=network.target
 Wants=network.target
 
 [Path]
-Unit=wpa_supplicant-conf@%i.service
+Unit=sn-wifi-conf@%i.service
 PathExists=/etc/wpa_supplicant/wpa_supplicant-%i.conf
 PathChanged=/etc/wpa_supplicant/wpa_supplicant-%i.conf
 
 [Install]
-Alias=multi-user.target.wants/wpa_supplicant-conf@%i.path
+Alias=multi-user.target.wants/sn-wifi-conf@%i.path
 

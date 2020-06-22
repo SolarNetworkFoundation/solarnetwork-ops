@@ -11,5 +11,5 @@ Type=oneshot
 ExecStart=/bin/systemctl restart wpa_supplicant@%i.service
 
 [Install]
-Alias=multi-user.target.wants/wpa_supplicant-conf@%i.service
+Alias=multi-user.target.wants/sn-wifi-conf@%i.service
 
