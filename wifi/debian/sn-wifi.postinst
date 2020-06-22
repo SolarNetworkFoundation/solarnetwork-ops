@@ -3,10 +3,8 @@
 . /usr/share/debconf/confmodule
 
 # for testing, set WPA_CONF=/path/to/test.conf 
-WPA_CONF="${WPA_CONF:-/etc/wpa_supplicant/wpa_supplicant-wlan0.conf}"
+CFG_SCRIPT="${CFG_SCRIPT:-/usr/share/solarnode/bin/wifi-cfg.sh}"
 UDEV_PERSIST="${UDEV_PERSIST:-/etc/udev/rules.d/70-persistent-net.rules}"
-WPA_CONF_EXAMPLE="/usr/share/solarnode/example/wpa_supplicant-wlan0.conf"
-WPA_PP="/usr/bin/wpa_passphrase"
 
 db_get sn-wifi/country
 COUNTRY="${RET:-NZ}"
@@ -18,30 +16,7 @@ db_get sn-wifi/pass
 PASS="$RET"
 db_reset sn-wifi/pass
 
-if [ -n "$SSID" -a ${#PASS} -ge 8 -a -e "$WPA_PP" ]; then
-	PSK=$($WPA_PP "$SSID" "$PASS" |awk -F= '$1 ~ /psk/ && $1 !~ /#psk/ {print $2}')
-	if [ ! -e "$WPA_CONF" -a -e "$WPA_CONF_EXAMPLE" ]; then
-		# copy example
-		cp "$WPA_CONF_EXAMPLE" "$WPA_CONF" || true
-		chmod 640 "$WPA_CONF" || true
-	fi
-	if [ -e "$WPA_CONF" ]; then
-		cat /dev/null >"$WPA_CONF.tmp" || true
-		chmod 640 "$WPA_CONF.tmp" || true
-		sed -e "s/country=.*/country=$COUNTRY/" \
-			-e 's/ssid=.*/ssid="'"$SSID"'"/' \
-			-e '/#psk=.*/d' \
-			-e "s/psk=.*/psk=$PSK/" "$WPA_CONF" \
-			>"$WPA_CONF.tmp" || true
-		if diff -q "$WPA_CONF" "$WPA_CONF.tmp" >/dev/null; then
-			# unchanged
-			rm "$WPA_CONF.tmp" || true
-		else
-			# changed, so replace
-			mv -f "$WPA_CONF.tmp" "$WPA_CONF" || true
-		fi
-	fi
-fi
+echo "$PASS" | $CFG_SCRIPT -c "$COUNTRY" -s "$SSID"
 
 if [ ! -L "$UDEV_PERSIST" ]; then
 	if [ -e "$UDEV_PERSIST" ]; then
