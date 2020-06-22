@@ -16,8 +16,6 @@ db_get sn-wifi/pass
 PASS="$RET"
 db_reset sn-wifi/pass
 
-echo "$PASS" | $CFG_SCRIPT -c "$COUNTRY" -s "$SSID"
-
 if [ ! -L "$UDEV_PERSIST" ]; then
 	if [ -e "$UDEV_PERSIST" ]; then
 		rm -f "$UDEV_PERSIST" || true
@@ -47,11 +45,6 @@ if ! systemctl is-enabled systemd-networkd >/dev/null; then
 	systemctl enable systemd-networkd || true
 fi
 
-if ! systemctl is-enabled sn-wifi@wlan0.service >/dev/null; then
-	echo 'Enabling sn-wifi@wlan0.service...'
-	systemctl enable sn-wifi@wlan0.service || true
-fi
-
 if ! systemctl is-enabled sn-wifi-conf@wlan0.service >/dev/null; then
 	echo 'Enabling sn-wifi-conf@wlan0.service...'
 	systemctl enable sn-wifi-conf@wlan0.service || true
@@ -68,9 +61,15 @@ else
 	systemctl restart systemd-networkd || true
 fi
 
-if ! systemctl is-active sn-wifi-conf@wlan0.path >/dev/null; then
-	echo 'Starting sn-wifi-conf@wlan0.path...'
-	systemctl start sn-wifi-conf@wlan0.path || true
-else
-	systemctl restart sn-wifi-conf@wlan0.path || true
+if [ -n "$COUNTRY" -a -n "$SSID" -a -n "$PASS" ]; then
+	echo "$PASS" | $CFG_SCRIPT -c "$COUNTRY" -s "$SSID"
+
+	if ! systemctl is-active sn-wifi-conf@wlan0.path >/dev/null; then
+		echo 'Starting sn-wifi-conf@wlan0.path...'
+		systemctl start sn-wifi-conf@wlan0.path || true
+	else
+		systemctl restart sn-wifi-conf@wlan0.path || true
+	fi
+
 fi
+

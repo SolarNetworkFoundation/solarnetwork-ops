@@ -17,6 +17,7 @@ if [ "$1" = "purge" ]; then
 	if [ -e "$WPA_CONF" ]; then
 		rm -f "$WPA_CONF"
 	fi
-elif [ "$1" = "remove" ]; then
-	systemctl daemon-reload >/dev/null || true
 fi
+
+rm -f /etc/systemd/system/multi-user.target.wants/sn-wifi* /etc/systemd/system/multi-user.target.wants/wpa_supplicant*
+

@@ -1,6 +1,6 @@
 DIST = 
 VERSION = 1.1.0-0$(if $(DIST),+$(DIST),)
-PATHS = etc lib usr var
+PATHS = etc lib usr
 
 deb : prep
 	fpm -s dir -t deb \
