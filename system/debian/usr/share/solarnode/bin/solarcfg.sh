@@ -17,4 +17,4 @@ if [ ! -x "$SCRIPT" ]; then
 	exit 2
 fi
 
-$SERVICE "$@"
+$SCRIPT "$@"
