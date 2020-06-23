@@ -12,6 +12,11 @@
 # The following use will not prompt for the password:
 #
 #     echo "secret.123" |wifi-cfg.sh -c NZ -s FOOBAR
+#
+# The password can also be provided by a -p argument. The following will not 
+# prompt for a password:
+#
+#     wifi-cfg.sh -c NZ -s FOOBAR -p secret.123
 
 WPA_CONF="${WPA_CONF:-/etc/wpa_supplicant/wpa_supplicant-wlan0.conf}"
 WPA_CONF_EXAMPLE="/usr/share/solarnode/example/wpa_supplicant-wlan0.conf"
@@ -30,12 +35,14 @@ Arguments:
 
 	 -c <country>  - The WiFi 2-character country code.
 	 -s <ssid>     - The WiFi SSID to connect to.
+	 -p <password> - The WiFi password to use.
 EOF
 }
 
-while getopts ":c:s:" opt; do
+while getopts ":c:p:s:" opt; do
 	case $opt in
 		c) COUNTRY="${OPTARG}";;
+		p) PASS="${OPTARG}";;
 		s) SSID="${OPTARG}";;
 		*)
 			echo "Unknown option '$OPTARG'." 1>&2
@@ -55,10 +62,11 @@ if [ -z "$SSID" ];then
 	exit 1
 fi
 
-
-[ -t 0 ] && stty -echo
-read -p "Password: " -r PASS
-[ -t 0 ] && stty echo && printf "\n"
+if [ -z "$PASS" ]; then
+	[ -t 0 ] && stty -echo
+	read -p "Password: " -r PASS
+	[ -t 0 ] && stty echo && printf "\n"
+fi
 
 if [ -n "$SSID" -a ${#PASS} -ge 8 -a -e "$WPA_PP" ]; then
 	PSK=$($WPA_PP "$SSID" "$PASS" |awk -F= '$1 ~ /psk/ && $1 !~ /#psk/ {print $2}')
