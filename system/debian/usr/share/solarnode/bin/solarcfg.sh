@@ -11,7 +11,6 @@ SERVICE="$1"
 SCRIPT="$(find /usr/share/solarnode/cfg.d -name $SERVICE.\* -print -quit)"
 shift 1
 
-echo 
 if [ ! -x "$SCRIPT" ]; then
 	echo "Service '$SERVICE' not available." 1>&2
 	exit 2
