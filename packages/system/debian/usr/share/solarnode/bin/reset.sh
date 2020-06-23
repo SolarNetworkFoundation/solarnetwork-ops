@@ -18,4 +18,4 @@ while getopts ":a" opt; do
 	esac
 done
 
-find "${HOOK_DIR}" -type f -perm -500 -exec {} ${APP_ONLY} \;
+find "${HOOK_DIR}" -type f -perm -500 -exec sudo {} ${APP_ONLY} \;
