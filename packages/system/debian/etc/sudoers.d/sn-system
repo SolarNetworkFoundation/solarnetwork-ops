@@ -2,4 +2,5 @@ solar ALL = (root) NOPASSWD: /bin/systemctl status systemd-networkd, \
 	/bin/systemctl restart systemd-networkd, \
 	/sbin/reboot, \
 	/usr/share/solarnode/bin/solarcfg.sh, \
-	/usr/share/solarnode/bin/netctl.sh
+	/usr/share/solarnode/bin/netctl.sh, \
+	/usr/share/solarnode/reset.d/*
