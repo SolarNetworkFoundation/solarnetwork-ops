@@ -33,4 +33,4 @@ if systemctl is-enabled sn-wifi-conf@wlan0.service >/dev/null; then
 fi
 
 echo 'Removing WiFi connection configuration...'
-rm -vf "${CONF_DIR}"/wpa_supplicant@*.conf
+find "${CONF_DIR}" -type f -name 'wpa_supplicant-*.conf' -print -exec rm -f {} \;
