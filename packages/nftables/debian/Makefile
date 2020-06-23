@@ -15,6 +15,7 @@ deb : prep
 	--force \
 	-d 'cron (>= 3.0)' \
 	-d 'nftables (>= 0.9.0)' \
+	-d 'sudo (>= 1.8.10)' \
 	-d 'systemd (>= 232)' \
 	-d 'busybox-syslogd (>= 1:1.30.1)' \
 	--conflicts 'sn-iptables' \
