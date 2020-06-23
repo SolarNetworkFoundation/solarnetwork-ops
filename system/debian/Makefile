@@ -13,6 +13,7 @@ deb : prep
 	--description 'SolarNode system support' \
 	--license 'Apache License 2.0' \
 	-f \
+	-d 'sudo (>= 1.8.10)' \
 	-d 'systemd (>= 215)' \
 	--conflicts 'ifupdown' \
 	--replaces 'ifupdown' \
