@@ -1,0 +1,6 @@
+[Unit]
+Description=Reset SolarNode
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '/usr/share/solarnode/bin/reset.sh'
