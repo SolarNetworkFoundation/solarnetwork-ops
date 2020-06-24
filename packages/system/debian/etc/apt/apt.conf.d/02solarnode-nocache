@@ -1,4 +1,0 @@
-Dir::Cache {
-  srcpkgcache "";
-  pkgcache "";
-}

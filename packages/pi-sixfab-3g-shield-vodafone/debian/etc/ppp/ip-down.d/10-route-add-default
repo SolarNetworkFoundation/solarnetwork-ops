@@ -1,5 +1,0 @@
-#!/bin/sh
-
-if systemctl is-enabled systemd-networkd >/dev/null; then
-	systemctl restart systemd-networkd
-fi

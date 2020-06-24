@@ -1,5 +1,0 @@
-#!/usr/bin/env sh
-
-if [ -x /usr/share/solarnode/bin/nft-firewall.sh ]; then
-	sudo /usr/share/solarnode/bin/nft-firewall.sh "$@"
-fi

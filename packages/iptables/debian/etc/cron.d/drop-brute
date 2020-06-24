@@ -1,1 +1,0 @@
-*/2 * * * * root /usr/share/solarnode/bin/drop-brute.sh >/dev/null 2>&1

@@ -1,6 +1,0 @@
-#!/bin/sh -e
-
-mkdir -p /usr/share/solarnode/overlays
-mkdir -p /boot/overlays
-
-dpkg-divert --package snrpikernelhack --rename --divert /usr/share/solarnode/overlays/2xMCP2517FD.dtbo /boot/overlays/2xMCP2517FD.dtbo

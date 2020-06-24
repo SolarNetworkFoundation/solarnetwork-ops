@@ -1,7 +1,0 @@
-#!/bin/sh
-set -e
-
-# Enable hardware watchdog
-if [ -e /bin/udevadm ]; then
-	/bin/udevadm control --reload-rules && /bin/udevadm trigger
-fi
