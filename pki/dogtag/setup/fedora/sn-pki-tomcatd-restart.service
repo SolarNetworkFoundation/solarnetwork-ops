@@ -1,0 +1,6 @@
+[Unit]
+Description=Restart pki-tomcatd@pki-tomcat service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart pki-tomcatd@pki-tomcat.service
