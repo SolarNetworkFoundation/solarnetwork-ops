@@ -146,34 +146,42 @@ CREATE OR REPLACE FUNCTION solarbill.billing_tiers(ts date DEFAULT CURRENT_DATE)
 		min BIGINT,
 		cost_prop_in NUMERIC,
 		cost_datum_out NUMERIC,
-		cost_datum_stored NUMERIC
+		cost_datum_stored NUMERIC,
+		effective_date date
 	)
 	LANGUAGE plpgsql IMMUTABLE AS
 $$
 BEGIN
 	IF ts < '2020-06-01'::date THEN
 		RETURN QUERY SELECT * FROM ( VALUES
-			  (0::bigint, 		0.000009::numeric, 		0.000002::numeric, 	0.000000006::numeric)
-		) AS t(min, cost_prop_in, cost_datum_out, cost_datum_stored);
+			  (0::bigint, 		0.000009::numeric, 		0.000002::numeric, 	0.000000006::numeric, '2008-01-01'::date)
+		) AS t(min, cost_prop_in, cost_datum_out, cost_datum_stored, effective_date);
 	ELSE
 		RETURN QUERY SELECT * FROM ( VALUES
-			  (0::bigint, 		0.000009::numeric, 		0.000002::numeric, 	0.0000004::numeric)
-			, (50000::bigint, 	0.000006::numeric, 		0.000001::numeric, 	0.0000002::numeric)
-			, (400000::bigint, 	0.000004::numeric, 		0.0000005::numeric, 0.00000005::numeric)
-			, (1000000::bigint, 0.000002::numeric, 		0.0000002::numeric, 0.000000006::numeric)
-		) AS t(min, cost_prop_in, cost_datum_out, cost_datum_stored);
+			  (0::bigint, 		0.000009::numeric, 		0.000002::numeric, 	0.0000004::numeric, '2020-06-01'::date)
+			, (50000::bigint, 	0.000006::numeric, 		0.000001::numeric, 	0.0000002::numeric, '2020-06-01'::date)
+			, (400000::bigint, 	0.000004::numeric, 		0.0000005::numeric, 0.00000005::numeric, '2020-06-01'::date)
+			, (1000000::bigint, 0.000002::numeric, 		0.0000002::numeric, 0.000000006::numeric, '2020-06-01'::date)
+		) AS t(min, cost_prop_in, cost_datum_out, cost_datum_stored, effective_date);
 	END IF;
 END
 $$;
 
-CREATE OR REPLACE FUNCTION solarbill.billing_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
+CREATE OR REPLACE FUNCTION solarbill.billing_tier_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
 	RETURNS TABLE(
 		node_id BIGINT,
+		min	BIGINT,
 		prop_in BIGINT,
+		tier_prop_in BIGINT,
+		cost_prop_in NUMERIC,
 		prop_in_cost NUMERIC,
 		datum_stored BIGINT,
+		tier_datum_stored BIGINT,
+		cost_datum_stored NUMERIC,
 		datum_stored_cost NUMERIC,
 		datum_out BIGINT,
+		tier_datum_out BIGINT,
+		cost_datum_out NUMERIC,
 		datum_out_cost NUMERIC,
 		total_cost NUMERIC	
 	) LANGUAGE sql STABLE AS
@@ -194,7 +202,7 @@ $$
 	, stored AS (
 		SELECT 
 			acc.node_id
-			, SUM(acc.datum_count + acc.datum_hourly_count + acc.datum_monthly_count) AS datum_count
+			, SUM(acc.datum_count + acc.datum_hourly_count + acc.datum_daily_count + acc.datum_monthly_count) AS datum_count
 		FROM nodes nodes
 		INNER JOIN solaragg.aud_acc_datum_daily acc ON acc.node_id = ANY(nodes.nodes)
 			AND acc.ts_start >= nodes.sdate AND acc.ts_start < nodes.edate
@@ -203,8 +211,8 @@ $$
 	, datum AS (
 		SELECT
 			a.node_id
-			, SUM(a.prop_count) AS prop_count
-			, SUM(a.datum_q_count) AS datum_q_count
+			, SUM(a.prop_count)::bigint AS prop_count
+			, SUM(a.datum_q_count)::bigint AS datum_q_count
 		FROM nodes nodes
 		INNER JOIN solaragg.aud_datum_monthly a ON a.node_id = ANY(nodes.nodes)
 			AND a.ts_start >= nodes.sdate AND a.ts_start < nodes.edate
@@ -225,12 +233,50 @@ $$
 			, a.datum_q_count AS datum_out
 			, LEAST(GREATEST(a.datum_q_count - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(a.datum_q_count - tiers.min, 0))) AS tier_datum_out
 			, tiers.cost_datum_out
+			
+			
 		
 		FROM datum a
 		LEFT OUTER JOIN stored s ON s.node_id = a.node_id
 		CROSS JOIN tiers
 		WINDOW win AS (PARTITION BY a.node_id ORDER BY tiers.min)
 	)
+	SELECT
+		node_id
+		, min
+		, prop_in
+		, tier_prop_in
+		, cost_prop_in
+		, (tier_prop_in * cost_prop_in) AS prop_in_cost
+		
+		, datum_stored
+		, tier_datum_stored
+		, cost_datum_stored
+		, (tier_datum_stored * cost_datum_stored) AS datum_stored_cost
+		
+		, datum_out
+		, tier_datum_out
+		, cost_datum_out
+		, (tier_datum_out * cost_datum_out) AS datum_out_cost
+		
+		, ROUND((tier_prop_in * cost_prop_in) + (tier_datum_stored * cost_datum_stored) + (tier_datum_out * cost_datum_out), 2) AS total_cost
+	FROM costs
+	WHERE ROUND((tier_prop_in * cost_prop_in) + (tier_datum_stored * cost_datum_stored) + (tier_datum_out * cost_datum_out), 2) > 0
+	ORDER BY node_id
+$$;
+
+CREATE OR REPLACE FUNCTION solarbill.billing_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
+	RETURNS TABLE(
+		node_id BIGINT,
+		prop_in BIGINT,
+		prop_in_cost NUMERIC,
+		datum_stored BIGINT,
+		datum_stored_cost NUMERIC,
+		datum_out BIGINT,
+		datum_out_cost NUMERIC,
+		total_cost NUMERIC	
+	) LANGUAGE sql STABLE AS
+$$
 	SELECT 
 		node_id
 		, SUM(tier_prop_in)::bigint AS prop_in
@@ -243,7 +289,7 @@ $$
 		, SUM(tier_datum_out * cost_datum_out) AS datum_out_cost
 	
 		, ROUND(SUM(tier_prop_in * cost_prop_in) + SUM(tier_datum_stored * cost_datum_stored) + SUM(tier_datum_out * cost_datum_out), 2) AS total_cost
-	FROM costs
+	FROM solarbill.billing_tier_details(userid, ts_min, ts_max, effective_date) costs
 	GROUP BY node_id
 	HAVING ROUND(SUM(tier_prop_in * cost_prop_in) + SUM(tier_datum_stored * cost_datum_stored) + SUM(tier_datum_out * cost_datum_out), 2) > 0
 	ORDER BY node_id
