@@ -16,6 +16,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA solarbill GRANT ALL ON FUNCTIONS TO solarjobs
 ALTER DEFAULT PRIVILEGES IN SCHEMA solarbill GRANT ALL ON TYPES TO solarjobs;
 
 CREATE SEQUENCE IF NOT EXISTS solarbill.bill_seq;
+CREATE SEQUENCE IF NOT EXISTS solarbill.bill_inv_seq MINVALUE 1000 INCREMENT BY 1;
+
 
 -- table to store billing address records, so invoices can maintain immutable
 -- reference to billing address used at invoice generation time
@@ -52,7 +54,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS bill_account_user_idx ON solarbill.bill_accoun
 
 -- table to store immutable invoice information
 CREATE TABLE IF NOT EXISTS solarbill.bill_invoice (
-	id				uuid NOT NULL,
+	id				BIGINT NOT NULL DEFAULT nextval('solarbill.bill_inv_seq'),
 	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	acct_id			BIGINT NOT NULL,
 	addr_id			BIGINT NOT NULL,
@@ -68,20 +70,17 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_invoice (
 		ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-CREATE INDEX IF NOT EXISTS bill_invoice_acct_idx ON solarbill.bill_invoice (acct_id);
-
-CREATE INDEX IF NOT EXISTS bill_invoice_date_start_idx ON solarbill.bill_invoice (date_start);
-
-CREATE INDEX IF NOT EXISTS bill_invoice_date_end_idx ON solarbill.bill_invoice (date_end);
+CREATE INDEX IF NOT EXISTS bill_invoice_acct_date_idx ON solarbill.bill_invoice (acct_id, date_start DESC);
 
 -- table to store immutable invoice item information
 CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_item (
 	id				uuid NOT NULL,
 	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	inv_id			uuid NOT NULL,
+	inv_id			BIGINT NOT NULL,
 	item_type		SMALLINT NOT NULL DEFAULT 0,
 	amount			NUMERIC(11,2) NOT NULL,
 	quantity		NUMERIC NOT NULL,
+	item_key		CHARACTER VARYING(64) NOT NULL,
 	jmeta			jsonb,
 	CONSTRAINT bill_invoice_item_pkey PRIMARY KEY (inv_id, id),
 	CONSTRAINT bill_invoice_item_inv_fk FOREIGN KEY (inv_id)
@@ -94,7 +93,7 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_item (
 CREATE TABLE IF NOT EXISTS solarbill.bill_payment (
 	id				uuid NOT NULL,
 	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	inv_id			uuid,
+	inv_id			BIGINT,
 	pay_type		SMALLINT NOT NULL DEFAULT 0,
 	amount			NUMERIC(11,2) NOT NULL,
 	CONSTRAINT bill_payment_pkey PRIMARY KEY (id),
@@ -167,6 +166,17 @@ BEGIN
 END
 $$;
 
+/**
+ * Calculate the costs associated with billing tiers for all nodes for a given user on a given month.
+ *
+ * This calls the `solarbill.billing_tiers()` function to determine the pricing tiers to use
+ * at the given `effective_date`.
+ *
+ * @param userid the ID of the user to calculate the billing information for
+ * @param ts_min the start date to calculate the costs for (inclusive)
+ * @param ts_max the end date to calculate the costs for (exclusive)
+ * @param effective_date optional pricing date, to calculate the costs effective at that time
+ */
 CREATE OR REPLACE FUNCTION solarbill.billing_tier_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
 	RETURNS TABLE(
 		node_id BIGINT,
@@ -233,9 +243,6 @@ $$
 			, a.datum_q_count AS datum_out
 			, LEAST(GREATEST(a.datum_q_count - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(a.datum_q_count - tiers.min, 0))) AS tier_datum_out
 			, tiers.cost_datum_out
-			
-			
-		
 		FROM datum a
 		LEFT OUTER JOIN stored s ON s.node_id = a.node_id
 		CROSS JOIN tiers
@@ -265,30 +272,56 @@ $$
 	ORDER BY node_id
 $$;
 
+/**
+ * Calculate the costs associated with billing tiers for all nodes for a given user on a given month,
+ * with tiers aggregated per node.
+ *
+ * This calls the `solarbill.billing_tier_details()` function to determine the pricing tiers to use
+ * at the given `effective_date`.
+ *
+ * @param userid the ID of the user to calculate the billing information for
+ * @param ts_min the start date to calculate the costs for (inclusive)
+ * @param ts_max the end date to calculate the costs for (exclusive)
+ * @param effective_date optional pricing date, to calculate the costs effective at that time
+ */
 CREATE OR REPLACE FUNCTION solarbill.billing_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
 	RETURNS TABLE(
 		node_id BIGINT,
 		prop_in BIGINT,
 		prop_in_cost NUMERIC,
+		prop_in_tiers NUMERIC[],
+		prop_in_tiers_cost NUMERIC[],
 		datum_stored BIGINT,
 		datum_stored_cost NUMERIC,
+		datum_stored_tiers NUMERIC[],
+		datum_stored_tiers_cost NUMERIC[],
 		datum_out BIGINT,
 		datum_out_cost NUMERIC,
-		total_cost NUMERIC	
+		datum_out_tiers NUMERIC[],
+		datum_out_tiers_cost NUMERIC[],
+		total_cost NUMERIC,
+		total_tiers_cost NUMERIC[]
 	) LANGUAGE sql STABLE AS
 $$
 	SELECT 
 		node_id
 		, SUM(tier_prop_in)::bigint AS prop_in
 		, SUM(tier_prop_in * cost_prop_in) AS prop_in_cost
+		, ARRAY_AGG(tier_prop_in::NUMERIC) AS prop_in_tiers
+		, ARRAY_AGG(tier_prop_in * cost_prop_in) AS prop_in_tiers_cost
 	
 		, SUM(tier_datum_stored)::bigint AS datum_stored
 		, SUM(tier_datum_stored * cost_datum_stored) AS datum_stored_cost
+		, ARRAY_AGG(tier_datum_stored::NUMERIC) AS datum_stored_tiers
+		, ARRAY_AGG(tier_datum_stored * cost_datum_stored) AS datum_stored_tiers_cost
 	
 		, SUM(tier_datum_out)::bigint AS datum_out
 		, SUM(tier_datum_out * cost_datum_out) AS datum_out_cost
+		, ARRAY_AGG(tier_datum_out::NUMERIC) AS datum_out_tiers
+		, ARRAY_AGG(tier_datum_out * cost_datum_out) AS datum_out_tiers_cost
 	
 		, ROUND(SUM(tier_prop_in * cost_prop_in) + SUM(tier_datum_stored * cost_datum_stored) + SUM(tier_datum_out * cost_datum_out), 2) AS total_cost
+		, ARRAY_AGG((tier_prop_in * cost_prop_in) + (tier_datum_stored * cost_datum_stored) + (tier_datum_out * cost_datum_out)) AS total_tiers_cost
 	FROM solarbill.billing_tier_details(userid, ts_min, ts_max, effective_date) costs
 	GROUP BY node_id
 	HAVING ROUND(SUM(tier_prop_in * cost_prop_in) + SUM(tier_datum_stored * cost_datum_stored) + SUM(tier_datum_out * cost_datum_out), 2) > 0
