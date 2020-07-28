@@ -274,11 +274,14 @@ $$
 			AND a.ts_start >= nodes.sdate AND a.ts_start < nodes.edate
 		GROUP BY a.node_id
 	)
+	, n AS (
+		SELECT UNNEST(nodes) AS node_id FROM nodes
+	)
 	, costs AS (
 		SELECT
-			a.node_id
+			n.node_id
 			, tiers.min
-			, a.prop_count AS prop_in
+			, COALESCE(a.prop_count, 0) AS prop_in
 			, LEAST(GREATEST(a.prop_count - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(a.prop_count - tiers.min, 0))) AS tier_prop_in
 			, tiers.cost_prop_in
 		
@@ -286,13 +289,14 @@ $$
 			, LEAST(GREATEST(s.datum_count - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(s.datum_count - tiers.min, 0))) AS tier_datum_stored
 			, tiers.cost_datum_stored
 		
-			, a.datum_q_count AS datum_out
+			, COALESCE(a.datum_q_count, 0) AS datum_out
 			, LEAST(GREATEST(a.datum_q_count - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(a.datum_q_count - tiers.min, 0))) AS tier_datum_out
 			, tiers.cost_datum_out
-		FROM datum a
-		LEFT OUTER JOIN stored s ON s.node_id = a.node_id
+		FROM n
+		LEFT OUTER JOIN stored s ON s.node_id = n.node_id
+		LEFT OUTER JOIN datum a ON a.node_id = n.node_id
 		CROSS JOIN tiers
-		WINDOW win AS (PARTITION BY a.node_id ORDER BY tiers.min)
+		WINDOW win AS (PARTITION BY n.node_id ORDER BY tiers.min)
 	)
 	SELECT
 		node_id
