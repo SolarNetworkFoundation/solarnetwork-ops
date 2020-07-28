@@ -104,6 +104,7 @@ CREATE INDEX IF NOT EXISTS bill_invoice_item_inv_idx ON solarbill.bill_invoice_i
 -- there is no currency tracked here, just charges and payments to know the account status
 CREATE TABLE IF NOT EXISTS solarbill.bill_account_balance (
 	acct_id			BIGINT NOT NULL,
+	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	charge_total	NUMERIC(19,2) NOT NULL,
 	payment_total	NUMERIC(19,2) NOT NULL,
 	CONSTRAINT bill_account_balance_pkey PRIMARY KEY (acct_id),
@@ -116,7 +117,7 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_account_balance (
  * Trigger function to add/subtract from bill_account_balance as invoice items 
  * are updated.
  */
-CREATE OR REPLACE FUNCTION solarbill.maintain_bill_account_balance()
+CREATE OR REPLACE FUNCTION solarbill.maintain_bill_account_balance_charge()
 	RETURNS "trigger"  LANGUAGE 'plpgsql' VOLATILE AS $$
 DECLARE
 	diff NUMERIC(19,2) := 0;
@@ -153,22 +154,73 @@ BEGIN
 END;
 $$;
 
-CREATE TRIGGER bill_account_balance_tracker
+CREATE TRIGGER bill_account_balance_charge_tracker
     BEFORE INSERT OR DELETE OR UPDATE 
     ON solarbill.bill_invoice_item
     FOR EACH ROW
-    EXECUTE PROCEDURE solarbill.maintain_bill_account_balance();
+    EXECUTE PROCEDURE solarbill.maintain_bill_account_balance_charge();
 
 -- table to store bill payment and credit information
 -- pay_type specifies what type of payment, i.e. payment vs credit
 CREATE TABLE IF NOT EXISTS solarbill.bill_payment (
 	id				UUID NOT NULL DEFAULT uuid_generate_v4(),
 	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	inv_id			BIGINT,
+	acct_id			BIGINT NOT NULL,
 	pay_type		SMALLINT NOT NULL DEFAULT 0,
 	amount			NUMERIC(11,2) NOT NULL,
-	CONSTRAINT bill_payment_pkey PRIMARY KEY (id),
-	CONSTRAINT bill_payment_inv_fk FOREIGN KEY (inv_id)
+	currency		CHARACTER VARYING(3) NOT NULL,
+	ext_key			CHARACTER VARYING(64),
+	ref				TEXT,
+	CONSTRAINT bill_payment_pkey PRIMARY KEY (acct_id, id),
+	CONSTRAINT bill_payment_account_fk FOREIGN KEY (acct_id)
+		REFERENCES solarbill.bill_account (id) MATCH SIMPLE
+		ON UPDATE NO ACTION ON DELETE NO ACTION
+);
+
+/**
+ * Trigger function to add/subtract from bill_account_balance as invoice items 
+ * are updated.
+ */
+CREATE OR REPLACE FUNCTION solarbill.maintain_bill_account_balance_payment()
+	RETURNS "trigger"  LANGUAGE 'plpgsql' VOLATILE AS $$
+DECLARE
+	diff NUMERIC(19,2) := 0;
+	acct BIGINT;
+BEGIN
+	CASE TG_OP 
+		WHEN 'INSERT' THEN
+			diff := NEW.amount;
+			acct := NEW.acct_id;
+		WHEN 'UPDATE' THEN
+			diff := NEW.amount - OLD.amount;
+			acct := NEW.acct_id;
+		ELSE
+			diff := -OLD.amount;
+			acct := OLD.acct_id;
+	END CASE;
+	IF (diff < 0::NUMERIC(19,2)) OR (diff > 0::NUMERIC(19,2)) THEN
+		INSERT INTO solarbill.bill_account_balance (acct_id, charge_total, payment_total)
+		VALUES (acct, 0, diff)
+		ON CONFLICT (acct_id) DO UPDATE 
+			SET payment_total = 
+				solarbill.bill_account_balance.payment_total + EXCLUDED.payment_total;
+	END IF;
+
+	CASE TG_OP
+		WHEN 'INSERT', 'UPDATE' THEN
+			RETURN NEW;
+		ELSE
+			RETURN OLD;
+	END CASE;
+END;
+$$;
+
+CREATE TRIGGER bill_account_balance_payment_tracker
+    BEFORE INSERT OR DELETE OR UPDATE 
+    ON solarbill.bill_payment
+    FOR EACH ROW
+    EXECUTE PROCEDURE solarbill.maintain_bill_account_balance_payment();
+
 		REFERENCES solarbill.bill_invoice (id) MATCH SIMPLE
 		ON UPDATE NO ACTION ON DELETE NO ACTION
 );
