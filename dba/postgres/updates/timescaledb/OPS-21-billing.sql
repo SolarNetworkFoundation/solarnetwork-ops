@@ -99,6 +99,65 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_item (
 
 CREATE INDEX IF NOT EXISTS bill_invoice_item_inv_idx ON solarbill.bill_invoice_item (inv_id);
 
+-- table to keep track of account payment status
+-- there is no currency tracked here, just charges and payments to know the account status
+CREATE TABLE IF NOT EXISTS solarbill.bill_account_balance (
+	acct_id			BIGINT NOT NULL,
+	charge_total	NUMERIC(19,2) NOT NULL,
+	payment_total	NUMERIC(19,2) NOT NULL,
+	CONSTRAINT bill_account_balance_pkey PRIMARY KEY (acct_id),
+	CONSTRAINT bill_account_balance_acct_fk FOREIGN KEY (acct_id)
+		REFERENCES solarbill.bill_account (id) MATCH SIMPLE
+		ON UPDATE NO ACTION ON DELETE NO ACTION
+);
+
+/**
+ * Trigger function to add/subtract from bill_account_balance as invoice items 
+ * are updated.
+ */
+CREATE OR REPLACE FUNCTION solarbill.maintain_bill_account_balance()
+	RETURNS "trigger"  LANGUAGE 'plpgsql' VOLATILE AS $$
+DECLARE
+	diff NUMERIC(19,2) := 0;
+	acct BIGINT;
+BEGIN
+	SELECT acct_id FROM solarbill.bill_invoice
+	WHERE id = (CASE
+					WHEN TG_OP IN ('INSERT', 'UPDATE') THEN NEW.inv_id
+					ELSE OLD.inv_id
+				END)
+	INTO acct;
+	CASE TG_OP 
+		WHEN 'INSERT' THEN
+			diff := NEW.amount;
+		WHEN 'UPDATE' THEN
+			diff := NEW.amount - OLD.amount;
+		ELSE
+			diff := -OLD.amount;
+	END CASE;
+	IF (diff < 0::NUMERIC(19,2)) OR (diff > 0::NUMERIC(19,2)) THEN
+		INSERT INTO solarbill.bill_account_balance (acct_id, charge_total, payment_total)
+		VALUES (acct, diff, 0)
+		ON CONFLICT (acct_id) DO UPDATE 
+			SET charge_total = 
+				solarbill.bill_account_balance.charge_total + EXCLUDED.charge_total;
+	END IF;
+
+	CASE TG_OP
+		WHEN 'INSERT', 'UPDATE' THEN
+			RETURN NEW;
+		ELSE
+			RETURN OLD;
+	END CASE;
+END;
+$$;
+
+CREATE TRIGGER bill_account_balance_tracker
+    BEFORE INSERT OR DELETE OR UPDATE 
+    ON solarbill.bill_invoice_item
+    FOR EACH ROW
+    EXECUTE PROCEDURE solarbill.maintain_bill_account_balance();
+
 -- table to store bill payment and credit information
 -- pay_type specifies what type of payment, i.e. payment vs credit
 CREATE TABLE IF NOT EXISTS solarbill.bill_payment (
