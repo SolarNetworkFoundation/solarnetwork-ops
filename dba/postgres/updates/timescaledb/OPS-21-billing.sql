@@ -137,6 +137,42 @@ $$
 $$;
 
 /**
+ * Table to hold tax rates over time that are applied to specific invoice items for accounts in
+ * specific "tax zones". Zones are like geographic constructs like countries, states, cities, etc.
+ */
+CREATE TABLE IF NOT EXISTS solarbill.bill_tax_code (
+	id				BIGINT NOT NULL DEFAULT nextval('solarbill.bill_seq'),
+	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	tax_zone 		VARCHAR(36) NOT NULL,
+	item_key	 	VARCHAR(64) NOT NULL,
+	tax_code 		VARCHAR(255) NOT NULL,
+	tax_rate 		NUMERIC(15,9) NOT NULL,
+	valid_from 		TIMESTAMP WITH TIME ZONE NOT NULL,
+	valid_to 		TIMESTAMP WITH TIME ZONE,
+	CONSTRAINT bill_tax_codes_pkey PRIMARY KEY (id)
+);
+
+CREATE INDEX bill_tax_code_item_idx ON solarbill.bill_tax_code (tax_zone, item_key, tax_code);
+
+/**
+ * Table to hold tax items 
+ *
+CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_taxation (
+	inv_id 			BIGINT NOT NULL,
+	tax_id			BIGINT NOT NULL,
+	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	total_tax 		NUMERIC(11,2) NOT NULL,
+	CONSTRAINT bill_invoice_taxations_pkey PRIMARY KEY (inv_id, tax_id),
+	CONSTRAINT bill_invoice_taxations_inv_fk FOREIGN KEY (inv_id)
+		REFERENCES solarbill.bill_invoice (id) MATCH SIMPLE
+		ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT bill_invoice_taxations_tax_fk FOREIGN KEY (tax_id)
+		REFERENCES solarbill.tax_codes (id) MATCH SIMPLE
+		ON UPDATE NO ACTION ON DELETE NO ACTION
+);
+*/
+
+/**
  * Get the billing price tiers for a specific point in time.
  *
  * @param ts the billing effective date; defaults to the current date if not provided
