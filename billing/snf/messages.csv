@@ -69,10 +69,10 @@ $style()$
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,overviewTable.st,"overviewTable() ::= <<
 <table class=""overall"">
 	<tr>
-		<td rowspan=3 width=350px><img class=""logo"" src=""$messages.url-snf-logo-svg-data$""></td>
-		<td width=100px/>
-		<td width=225px/>
-		<td width=225px/>
+		<td rowspan=""3"" style=""vertical-align: top;""><img class=""logo"" src=""$messages.url-snf-logo-svg-data$""></td>
+		<td></td>
+		<td></td>
+		<td>&nbsp;</td>
 	</tr>
 	<tr>
 		<td></td>
@@ -118,7 +118,7 @@ $style()$
 		<td>GST &#x2116; 121-961-830</td>
 		<td></td>
 		<td></td>
-		<td class=""secondary"">$address.email$</td>
+		<td></td>
 	</tr>
 	<tr>
 		<td></td>
@@ -129,20 +129,24 @@ $style()$
 </table>
 >>"
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,style.st,"style() ::= <<
-	body '{' font-family:sans-serif; background-color:#FFF; '}'
+	body '{' 
+		font-family: sans-serif;
+		background-color: #FFF;  
+		margin: 2rem; '}'
 	footer '{' border-top:2px solid #F7C819;color:#666;margin-top:2rem; '}'
 	footer > p '{' margin-top:4px; margin-bottom: 4px; font-size:0.8rem; '}'
 	footer > p + p '{' border-top: 1px solid #ccc; padding-top: 2px; '}'
 	h1 '{' font-size:1.5rem; '}'
-	img.logo '{' width:300px; margin-bottom: 1rem; '}'
+	img.logo '{' width:240px; margin-top: 3px; '}'
 	kbd '{' font-size:1.1rem;font-weight:bold; '}'
+	table '{' width: 100%; '}'
 	table.overall td:first-child '{' color:#666; '}'
+	table.overall td:nth-child(2) '{' width: 1em; '}'
+	table.overall td:last-child '{' width: auto; '}'
 	th.hr '{' border-top: 2px solid black; '}'
 	td.hr '{' border-top: 1px solid #ccc; '}'
 	th '{' text-align:left; width:225px; '}'
-	.custom-field '{' display: none; '}'
 	.head '{' font-weight:bold; '}'
-	table.items '{' width: 100%; '}'
 	.items tbody td,
 	.items tbody th,
 	.items tfoot td,
