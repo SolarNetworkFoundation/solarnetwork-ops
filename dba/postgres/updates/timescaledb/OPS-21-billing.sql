@@ -88,6 +88,8 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_item (
 		ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
+CREATE INDEX IF NOT EXISTS bill_invoice_item_inv_idx ON solarbill.bill_invoice_item (inv_id);
+
 -- table to store bill payment and credit information
 -- pay_type specifies what type of payment, i.e. payment vs credit
 CREATE TABLE IF NOT EXISTS solarbill.bill_payment (
