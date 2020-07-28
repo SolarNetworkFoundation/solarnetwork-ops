@@ -125,7 +125,7 @@ ON solarbill.bill_account_task (created);
  * called within a transaction. The returned row will be locked, so that the external job can
  * delete it once complete. The oldest available row is returned.
  */
-CREATE OR REPLACE FUNCTION solarbill.claim_bill_acount_task()
+CREATE OR REPLACE FUNCTION solarbill.claim_bill_account_task()
   RETURNS solarbill.bill_account_task LANGUAGE SQL VOLATILE AS
 $$
 	SELECT * FROM solarbill.bill_account_task
