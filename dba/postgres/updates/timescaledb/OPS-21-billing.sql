@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS solarcommon.messages (
 	CONSTRAINT messages_pkey PRIMARY KEY (bundle,locale,vers,msg_key)
 );
 
+--DROP SCHEMA IF EXISTS solarbill CASCADE;
 CREATE SCHEMA IF NOT EXISTS solarbill;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA solarbill REVOKE ALL ON TABLES FROM PUBLIC;
