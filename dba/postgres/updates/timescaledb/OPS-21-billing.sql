@@ -83,7 +83,7 @@ CREATE INDEX IF NOT EXISTS bill_invoice_acct_date_idx ON solarbill.bill_invoice 
 
 -- table to store immutable invoice item information
 CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_item (
-	id				uuid NOT NULL DEFAULT VALUE uuid_generate_v4(),
+	id				uuid NOT NULL DEFAULT uuid_generate_v4(),
 	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	inv_id			BIGINT NOT NULL,
 	item_type		SMALLINT NOT NULL DEFAULT 0,
@@ -161,7 +161,7 @@ CREATE TRIGGER bill_account_balance_tracker
 -- table to store bill payment and credit information
 -- pay_type specifies what type of payment, i.e. payment vs credit
 CREATE TABLE IF NOT EXISTS solarbill.bill_payment (
-	id				uuid NOT NULL,
+	id				UUID NOT NULL DEFAULT uuid_generate_v4(),
 	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	inv_id			BIGINT,
 	pay_type		SMALLINT NOT NULL DEFAULT 0,
@@ -176,7 +176,7 @@ CREATE INDEX IF NOT EXISTS bill_payment_item_inv_idx ON solarbill.bill_payment (
 
 -- table to hold asynchronous account tasks
 CREATE TABLE IF NOT EXISTS solarbill.bill_account_task (
-	id				uuid NOT NULL DEFAULT VALUE uuid_generate_v4(),
+	id				uuid NOT NULL DEFAULT uuid_generate_v4(),
 	acct_id			BIGINT NOT NULL,
 	task_type		SMALLINT NOT NULL DEFAULT 0,
 	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
