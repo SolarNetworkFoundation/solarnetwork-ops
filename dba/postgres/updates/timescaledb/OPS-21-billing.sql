@@ -221,11 +221,24 @@ CREATE TRIGGER bill_account_balance_payment_tracker
     FOR EACH ROW
     EXECUTE PROCEDURE solarbill.maintain_bill_account_balance_payment();
 
+-- table to track payments associated with invoices
+CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_payment (
+	id				UUID NOT NULL DEFAULT uuid_generate_v4(),
+	acct_id			BIGINT NOT NULL,
+	pay_id			UUID NOT NULL,
+	inv_id			BIGINT NOT NULL,
+	amount			NUMERIC(11,2) NOT NULL,
+	CONSTRAINT bill_invoice_payment_pkey PRIMARY KEY (id),
+	CONSTRAINT bill_invoice_payment_payment_fk FOREIGN KEY (pay_id, acct_id)
+		REFERENCES solarbill.bill_payment (id, acct_id) MATCH SIMPLE
+		ON UPDATE NO ACTION ON DELETE NO ACTION,
+	CONSTRAINT bill_invoice_payment_invoice_fk FOREIGN KEY (inv_id)
 		REFERENCES solarbill.bill_invoice (id) MATCH SIMPLE
 		ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-CREATE INDEX IF NOT EXISTS bill_payment_item_inv_idx ON solarbill.bill_payment (inv_id);
+CREATE INDEX IF NOT EXISTS bill_invoice_payment_acct_inv_idx 
+ON solarbill.bill_invoice_payment (acct_id,inv_id);
 
 -- table to hold asynchronous account tasks
 CREATE TABLE IF NOT EXISTS solarbill.bill_account_task (
