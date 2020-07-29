@@ -14,7 +14,7 @@ $style()$
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,invoice.st,"invoice(invoice,address,messages) ::= ""<html><head>$head()$</head><body>$body()$</body></html>"""
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemDetailsUSAGE.st,"itemDetailsUSAGE() ::= <<
 <td class=""right"">$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedAmount$'}'; separator=""<br>""$</td>
-<td>$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedUnitType$'}'; separator=""<br>""$</td>
+<td class=""units"">$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedUnitType$'}'; separator=""<br>""$</td>
 >>"
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemRow.st,"itemRow(item) ::= <<
 <tr>
@@ -70,7 +70,7 @@ $style()$
 <table class=""overall"">
 	<tr>
 		<td rowspan=""3"" style=""vertical-align: top;""><img class=""logo"" src=""$messages.url-snf-logo-svg-data$""></td>
-		<td></td>
+		<td>&nbsp;</td>
 		<td></td>
 		<td>&nbsp;</td>
 	</tr>
@@ -141,7 +141,6 @@ $style()$
 	kbd '{' font-size:1.1rem;font-weight:bold; '}'
 	table '{' width: 100%; '}'
 	table.overall td:first-child '{' color:#666; '}'
-	table.overall td:nth-child(2) '{' width: 1em; '}'
 	table.overall td:last-child '{' width: auto; '}'
 	th.hr '{' border-top: 2px solid black; '}'
 	td.hr '{' border-top: 1px solid #ccc; '}'
@@ -156,13 +155,13 @@ $style()$
 		font-family: ""Andale Mono"",""Source Code Pro"",monospace; 
 		font-size: 0.8rem; 
 		padding-right: 0.5rem; '}'
-	.items td '{' padding-top: 2px; padding-bottom: 2px; vertical-align: top; '}'
+	.items td '{' padding-top: 2px; padding-bottom: 2px; vertical-align: text-bottom; '}'
 	.items tr *:last-child '{' text-align: right; '}'
 	.items th:nth-child(1) '{' width: auto; '}'
 	.items th:nth-child(2) '{' width: auto; '}'
 	.items th:nth-child(3) '{' width: auto; '}'
 	.items th:nth-child(5) '{' width: auto; '}'
-	.item .custom-field.nodeId '{' display: inline; '}'
+	.items .units '{' text-transform: lowercase; '}'
 	.right '{' text-align:right; '}'
 	.head.right '{' padding-right: 0.5rem; '}'
 	.secondary '{' color: #666; '}'
