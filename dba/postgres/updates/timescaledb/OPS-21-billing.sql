@@ -177,6 +177,9 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_payment (
 		ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
+CREATE INDEX IF NOT EXISTS bill_payment_account_created_idx 
+ON solarbill.bill_payment (acct_id, created DESC);
+
 /**
  * Trigger function to add/subtract from bill_account_balance as invoice items 
  * are updated.
@@ -224,6 +227,7 @@ CREATE TRIGGER bill_account_balance_payment_tracker
 -- table to track payments associated with invoices
 CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_payment (
 	id				UUID NOT NULL DEFAULT uuid_generate_v4(),
+	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	acct_id			BIGINT NOT NULL,
 	pay_id			UUID NOT NULL,
 	inv_id			BIGINT NOT NULL,
