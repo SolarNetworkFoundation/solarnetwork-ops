@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_account_balance (
 	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	charge_total	NUMERIC(19,2) NOT NULL,
 	payment_total	NUMERIC(19,2) NOT NULL,
+	avail_credit	NUMERIC(11,2) NOT NULL DEFAULT 0,
 	CONSTRAINT bill_account_balance_pkey PRIMARY KEY (acct_id),
 	CONSTRAINT bill_account_balance_acct_fk FOREIGN KEY (acct_id)
 		REFERENCES solarbill.bill_account (id) MATCH SIMPLE
@@ -155,10 +156,37 @@ END;
 $$;
 
 CREATE TRIGGER bill_account_balance_charge_tracker
-    BEFORE INSERT OR DELETE OR UPDATE 
+    AFTER INSERT OR DELETE OR UPDATE 
     ON solarbill.bill_invoice_item
     FOR EACH ROW
     EXECUTE PROCEDURE solarbill.maintain_bill_account_balance_charge();
+
+/**
+ * Claim a portion of the available credit in a bill_account_balance record.
+ *
+ * This will never claim more than the available credit in the account balance. Thus the returned
+ * amount might be less than the requested amount.
+ * 
+ * @param accountid the ID of the account to claim credit from
+ * @param max_claim the maximum amount to claim, or `NULL` for the full amount available
+ */
+CREATE OR REPLACE FUNCTION solarbill.claim_account_credit(
+	accountid BIGINT,
+	max_claim NUMERIC(11,2) DEFAULT NULL
+) RETURNS NUMERIC(11,2) LANGUAGE SQL VOLATILE AS
+$$
+	WITH claim AS (
+		SELECT GREATEST(0::NUMERIC(11,2), LEAST(avail_credit, COALESCE(max_claim, avail_credit))) AS claim
+		FROM solarbill.bill_account_balance
+		WHERE acct_id = accountid
+		FOR UPDATE
+	)
+	UPDATE solarbill.bill_account_balance
+	SET avail_credit = avail_credit - claim.claim
+	FROM claim
+	WHERE acct_id = accountid
+	RETURNING COALESCE(claim.claim, 0::NUMERIC(11,2))
+$$;
 
 -- table to store bill payment and credit information
 -- pay_type specifies what type of payment, i.e. payment vs credit
@@ -219,7 +247,7 @@ END;
 $$;
 
 CREATE TRIGGER bill_account_balance_payment_tracker
-    BEFORE INSERT OR DELETE OR UPDATE 
+    AFTER INSERT OR DELETE OR UPDATE 
     ON solarbill.bill_payment
     FOR EACH ROW
     EXECUTE PROCEDURE solarbill.maintain_bill_account_balance_payment();
@@ -288,19 +316,15 @@ CREATE TRIGGER bill_invoice_payment_checker
 CREATE OR REPLACE FUNCTION solarbill.validate_bill_payment()
 	RETURNS "trigger"  LANGUAGE 'plpgsql' VOLATILE AS $$
 DECLARE
-	avail 	NUMERIC(19,2) := 0;
+	avail 	NUMERIC(19,2) := NEW.amount;
 	inv_tot	NUMERIC(19,2) := 0;
 BEGIN
-	SELECT amount FROM solarbill.bill_payment
-	WHERE acct_id = NEW.acct_id AND id = NEW.pay_id
-	INTO avail;
-	
 	SELECT SUM(amount)::NUMERIC(19,2) FROM solarbill.bill_invoice_payment
 	WHERE acct_id = NEW.acct_id AND pay_id = NEW.id
 	INTO inv_tot;
 
 	IF (inv_tot > avail) THEN
-		RAISE EXCEPTION 'Invoice payments total amount % exceeds payment % amount %', inv_tot, NEW.pay_id, avail
+		RAISE EXCEPTION 'Invoice payments total amount % exceeds payment % amount %', inv_tot, NEW.id, avail
 		USING ERRCODE = 'integrity_constraint_violation',
 			SCHEMA = 'solarbill',
 			TABLE = 'bill_invoice_payment',
