@@ -12,6 +12,10 @@ $style()$
 </style>
 >>"
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,invoice.st,"invoice(invoice,address,messages) ::= ""<html><head>$head()$</head><body>$body()$</body></html>"""
+2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemDetailsCREDIT.st,"itemDetailsCREDIT() ::= <<
+<td></td>
+<td class=""secondary"">$messages.accountRemainingCredit$: $item.metadata.localizedAvailableCredit$</td>
+>>"
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemDetailsUSAGE.st,"itemDetailsUSAGE() ::= <<
 <td class=""right"">$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedAmount$'}'; separator=""<br>""$</td>
 <td class=""units"">$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedUnitType$'}'; separator=""<br>""$</td>
@@ -166,7 +170,9 @@ $style()$
 	.head.right '{' padding-right: 0.5rem; '}'
 	.secondary '{' color: #666; '}'
 >>"
+2008-01-01 00:00:00+13,snf.billing,en,account-credit.item,Account credit
 2008-01-01 00:00:00+13,snf.billing,en,accountOwnerName,Account
+2008-01-01 00:00:00+13,snf.billing,en,accountRemainingCredit,Remaining credit
 2008-01-01 00:00:00+13,snf.billing,en,bankDetails-NZD,"<p><b>NZD bank details</b>: SolarNetwork Foundation, <kbd>38-9018-0514203-00</kbd>, SWIFT code <kbd>KIWINZ22</kbd>.</p>"
 2008-01-01 00:00:00+13,snf.billing,en,bankDetails-USD,"<p><b>USD bank details</b>: KB2050621USD1SOLARNETWORK, <kbd>GB70CITI18500810683213</kbd>, SWIFT code <kbd>CITIGB2L</kbd>.</p>"
 2008-01-01 00:00:00+13,snf.billing,en,companyAddress,4 Norfolk Street
