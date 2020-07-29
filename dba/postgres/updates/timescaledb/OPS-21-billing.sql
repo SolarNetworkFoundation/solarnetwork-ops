@@ -244,6 +244,79 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_payment (
 CREATE INDEX IF NOT EXISTS bill_invoice_payment_acct_inv_idx 
 ON solarbill.bill_invoice_payment (acct_id,inv_id);
 
+CREATE INDEX IF NOT EXISTS bill_invoice_payment_pay_idx 
+ON solarbill.bill_invoice_payment (pay_id);
+
+/**
+ * Trigger function to prevent invoice payments from exceeding the payment amount.
+ */
+CREATE OR REPLACE FUNCTION solarbill.validate_bill_invoice_payment()
+	RETURNS "trigger"  LANGUAGE 'plpgsql' VOLATILE AS $$
+DECLARE
+	avail 	NUMERIC(19,2) := 0;
+	inv_tot	NUMERIC(19,2) := 0;
+BEGIN
+	SELECT amount FROM solarbill.bill_payment
+	WHERE acct_id = NEW.acct_id AND id = NEW.pay_id
+	INTO avail;
+	
+	SELECT SUM(amount)::NUMERIC(19,2) FROM solarbill.bill_invoice_payment
+	WHERE acct_id = NEW.acct_id AND inv_id = NEW.inv_id
+	INTO inv_tot;
+
+	IF (inv_tot > avail) THEN
+		RAISE EXCEPTION 'Invoice payments total amount % exceeds payment % amount %', inv_tot, NEW.pay_id, avail
+		USING ERRCODE = 'integrity_constraint_violation',
+			SCHEMA = 'solarbill',
+			TABLE = 'bill_invoice_payment',
+			COLUMN = 'amount',
+			HINT = 'Sum of invoice payments must not exceed the solarbill.bill_payment.amount they relate to.';
+	END IF;
+	RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER bill_invoice_payment_checker
+    AFTER INSERT OR UPDATE 
+    ON solarbill.bill_invoice_payment
+    FOR EACH ROW
+    EXECUTE PROCEDURE solarbill.validate_bill_invoice_payment();
+
+/**
+ * Trigger function to prevent payment modifications from going under total invoice payments amount.
+ */
+CREATE OR REPLACE FUNCTION solarbill.validate_bill_payment()
+	RETURNS "trigger"  LANGUAGE 'plpgsql' VOLATILE AS $$
+DECLARE
+	avail 	NUMERIC(19,2) := 0;
+	inv_tot	NUMERIC(19,2) := 0;
+BEGIN
+	SELECT amount FROM solarbill.bill_payment
+	WHERE acct_id = NEW.acct_id AND id = NEW.pay_id
+	INTO avail;
+	
+	SELECT SUM(amount)::NUMERIC(19,2) FROM solarbill.bill_invoice_payment
+	WHERE acct_id = NEW.acct_id AND pay_id = NEW.id
+	INTO inv_tot;
+
+	IF (inv_tot > avail) THEN
+		RAISE EXCEPTION 'Invoice payments total amount % exceeds payment % amount %', inv_tot, NEW.pay_id, avail
+		USING ERRCODE = 'integrity_constraint_violation',
+			SCHEMA = 'solarbill',
+			TABLE = 'bill_invoice_payment',
+			COLUMN = 'amount',
+			HINT = 'Sum of invoice payments must not exceed the solarbill.bill_payment.amount they relate to.';
+	END IF;
+	RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER bill_payment_checker
+    AFTER UPDATE 
+    ON solarbill.bill_payment
+    FOR EACH ROW
+    EXECUTE PROCEDURE solarbill.validate_bill_payment();
+
 -- table to hold asynchronous account tasks
 CREATE TABLE IF NOT EXISTS solarbill.bill_account_task (
 	id				uuid NOT NULL DEFAULT uuid_generate_v4(),
