@@ -34,11 +34,14 @@
 \i init/postgres-init-user-datum-export.sql
 \i init/postgres-init-user-datum-expire.sql
 \i init/postgres-init-user-datum-import.sql
+\i init/postgres-init-user-event-hook.sql
 \i init/postgres-init-ocpp-schema.sql
 \i tsdb-init-ocpp-schema.sql
 \i init/postgres-init-ocpp.sql
 \i init/postgres-init-quartz-schema.sql
 \i tsdb-init-quartz-schema.sql
 \i init/postgres-init-quartz.sql
+\i tsdb-init-billing-schema.sql
+\i tsdb-init-billing.sql
 
 \i tsdb-init-hypertables-support.sql

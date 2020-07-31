@@ -16,6 +16,8 @@ BEGIN
 	END LOOP;
 END;$$;
 
+GRANT SELECT ON TABLE solarcommon.messages TO solar;
+
 \i tsdb-init-permissions-solarauthn.sql
 \i tsdb-init-permissions-solarinput.sql
 \i tsdb-init-permissions-solarquery.sql
