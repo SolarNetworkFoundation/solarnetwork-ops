@@ -14,7 +14,7 @@ $style()$
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,invoice.st,"invoice(invoice,address,messages) ::= ""<html><head>$head()$</head><body>$body()$</body></html>"""
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemDetailsCREDIT.st,"itemDetailsCREDIT() ::= <<
 <td></td>
-<td class=""secondary"">$messages.accountRemainingCredit$: $item.metadata.localizedAvailableCredit$</td>
+<td class=""secondary"">$if(item.metadata.localizedAvailableCredit)$$messages.accountRemainingCredit$: $item.metadata.localizedAvailableCredit$$endif$</td>
 >>"
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemDetailsUSAGE.st,"itemDetailsUSAGE() ::= <<
 <td class=""right"">$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedAmount$'}'; separator=""<br>""$</td>
@@ -170,6 +170,7 @@ $style()$
 	.head.right '{' padding-right: 0.5rem; '}'
 	.secondary '{' color: #666; '}'
 >>"
+2008-01-01 00:00:00+13,snf.billing,en,account-credit-add.item,Account credit grant
 2008-01-01 00:00:00+13,snf.billing,en,account-credit.item,Account credit
 2008-01-01 00:00:00+13,snf.billing,en,accountOwnerName,Account
 2008-01-01 00:00:00+13,snf.billing,en,accountRemainingCredit,Remaining credit
