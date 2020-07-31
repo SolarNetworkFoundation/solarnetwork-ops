@@ -261,7 +261,7 @@ BEGIN
 	INTO avail;
 	
 	SELECT SUM(amount)::NUMERIC(19,2) FROM solarbill.bill_invoice_payment
-	WHERE acct_id = NEW.acct_id AND inv_id = NEW.inv_id
+	WHERE acct_id = NEW.acct_id AND inv_id = NEW.inv_id AND pay_id = NEW.pay_id
 	INTO inv_tot;
 
 	IF (inv_tot > avail) THEN
@@ -299,7 +299,7 @@ BEGIN
 		RAISE EXCEPTION 'Invoice payments total amount % exceeds payment % amount %', inv_tot, NEW.id, avail
 		USING ERRCODE = 'integrity_constraint_violation',
 			SCHEMA = 'solarbill',
-			TABLE = 'bill_invoice_payment',
+			TABLE = 'bill_payment',
 			COLUMN = 'amount',
 			HINT = 'Sum of invoice payments must not exceed the solarbill.bill_payment.amount they relate to.';
 	END IF;
