@@ -254,23 +254,43 @@ CREATE OR REPLACE FUNCTION solarbill.validate_bill_invoice_payment()
 	RETURNS "trigger"  LANGUAGE 'plpgsql' VOLATILE AS $$
 DECLARE
 	avail 	NUMERIC(19,2) := 0;
-	inv_tot	NUMERIC(19,2) := 0;
+	ded_tot	NUMERIC(19,2) := 0;
+	app_tot NUMERIC(19,2) := 0;
+	chg_tot	NUMERIC(19,2) := 0;
 BEGIN
 	SELECT amount FROM solarbill.bill_payment
 	WHERE acct_id = NEW.acct_id AND id = NEW.pay_id
 	INTO avail;
 	
-	SELECT SUM(amount)::NUMERIC(19,2) FROM solarbill.bill_invoice_payment
-	WHERE acct_id = NEW.acct_id AND inv_id = NEW.inv_id AND pay_id = NEW.pay_id
-	INTO inv_tot;
+	-- verify all invoice payments referencing this payment don't exceed funds
+	-- and all invoice payments don't exceed invoice charge total
+	-- by tracking sum of invoice payments deducted from this payment
+	-- and the sum of invoice payments applied to this invoice
+	SELECT 
+		SUM(CASE pay_id WHEN NEW.pay_id THEN amount ELSE 0 END)::NUMERIC(19,2),
+		SUM(CASE inv_id WHEN NEW.inv_id THEN amount ELSE 0 END)::NUMERIC(19,2)
+	FROM solarbill.bill_invoice_payment
+	WHERE acct_id = NEW.acct_id AND (pay_id = NEW.pay_id OR inv_id = NEW.inv_id)
+	INTO ded_tot, app_tot;
+	
+	SELECT SUM(amount)::NUMERIC(19,2) FROM solarbill.bill_invoice_item
+	WHERE acct_id = NEW.acct_id AND id = NEW.inv_id
+	INTO chg_tot;
 
-	IF (inv_tot > avail) THEN
-		RAISE EXCEPTION 'Invoice payments total amount % exceeds payment % amount %', inv_tot, NEW.pay_id, avail
+	IF (ded_tot > avail) THEN
+		RAISE EXCEPTION 'Invoice payments total amount % exceeds payment % amount %', ded_tot, NEW.pay_id, avail
 		USING ERRCODE = 'integrity_constraint_violation',
 			SCHEMA = 'solarbill',
 			TABLE = 'bill_invoice_payment',
 			COLUMN = 'amount',
 			HINT = 'Sum of invoice payments must not exceed the solarbill.bill_payment.amount they relate to.';
+	ELSIF (app_tot > chg_tot) THEN
+		RAISE EXCEPTION 'Applied invoice payments total amount % exceeds invoice % amount %', app_tot, NEW.inv_id, chg_tot
+		USING ERRCODE = 'integrity_constraint_violation',
+			SCHEMA = 'solarbill',
+			TABLE = 'bill_invoice_payment',
+			COLUMN = 'amount',
+			HINT = 'Sum of invoice payments must not exceed the sum of solarbill.bill_invoice_item.amount they relate to.';
 	END IF;
 	RETURN NULL;
 END;
@@ -556,4 +576,62 @@ $$
 	GROUP BY node_id
 	HAVING ROUND(SUM(tier_prop_in * cost_prop_in) + SUM(tier_datum_stored * cost_datum_stored) + SUM(tier_datum_out * cost_datum_out), 2) > 0
 	ORDER BY node_id
+$$;
+
+/**
+ * Make a payment, optionally adding an invoice payment.
+ *
+ * For example, to pay an invoice:
+ *
+ *     SELECT * FROM solarbill.add_payment(
+ *           accountid => 123
+ *         , pay_amount => '2.34'::NUMERIC
+ *         , pay_ref => 345::TEXT
+ *         , pay_date => CURRENT_TIMESTAMP
+ *     );
+ *
+ * @param accountid 	the account ID to add the payment to
+ * @param pay_amount 	the payment amount
+ * @param pay_ext_key	the optional payment external key
+ * @param pay_ref		the optional invoice payment reference; if an invoice ID then apply
+ * 						the payment to the given invoice
+ * @param pay_type		the payment type; the payment type
+ * @param pay_date		the payment date; defaults to current time
+ */
+CREATE OR REPLACE FUNCTION solarbill.add_payment(
+		  accountid 	BIGINT
+		, pay_amount 	NUMERIC(11,2)
+		, pay_ext_key 	CHARACTER VARYING(64) DEFAULT NULL
+		, pay_ref 		CHARACTER VARYING(64) DEFAULT NULL
+		, pay_type 		SMALLINT DEFAULT 1
+		, pay_date 		TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+	)
+	RETURNS solarbill.bill_payment
+	LANGUAGE plpgsql VOLATILE AS
+$$
+DECLARE
+	invid	BIGINT := solarcommon.to_bigint(pay_ref);
+	pay_rec solarbill.bill_payment;
+BEGIN
+	
+	INSERT INTO solarbill.bill_payment (created,acct_id,pay_type,amount,currency,ext_key,ref)
+	SELECT pay_date, a.id, pay_type, pay_amount, a.currency, pay_ext_key, 
+		CASE invid WHEN NULL THEN pay_ref ELSE NULL END AS ref
+	FROM solarbill.bill_account a
+	WHERE a.id = accountid
+	RETURNING *
+	INTO pay_rec;
+		
+	IF invid IS NOT NULL THEN
+		WITH tot AS (
+			SELECT SUM(ip.amount) AS total
+			FROM solarbill.bill_invoice_payment ip WHERE ip.inv_id = invid
+		)
+		INSERT INTO solarbill.bill_invoice_payment (created,acct_id, pay_id, inv_id, amount)
+		SELECT pay_date, pay_rec.acct_id, pay_rec.id, invid, LEAST(pay_amount, tot.total)
+		FROM tot;
+	END IF;
+	
+	RETURN pay_rec;
+END
 $$;
