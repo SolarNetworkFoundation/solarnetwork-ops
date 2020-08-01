@@ -274,7 +274,7 @@ BEGIN
 	INTO ded_tot, app_tot;
 	
 	SELECT SUM(amount)::NUMERIC(19,2) FROM solarbill.bill_invoice_item
-	WHERE acct_id = NEW.acct_id AND id = NEW.inv_id
+	WHERE inv_id = NEW.inv_id
 	INTO chg_tot;
 
 	IF (ded_tot > avail) THEN
@@ -635,3 +635,39 @@ BEGIN
 	RETURN pay_rec;
 END
 $$;
+
+/**
+ * View to show invoice details including account information, total amount, and paid amount.
+ */
+CREATE OR REPLACE VIEW solarbill.bill_invoice_info AS 
+	SELECT
+		  inv.id
+		, 'INV-' || solarcommon.to_baseX(inv.id, 36) AS inv_num
+		, inv.created
+		, inv.acct_id
+		, inv.addr_id
+		, inv.date_start
+		, inv.currency
+		, act.user_id
+		, adr.email
+		, adr.disp_name
+		, adr.country
+		, adr.time_zone
+		, itm.item_count
+		, itm.total_amount
+		, pay.paid_amount
+	FROM solarbill.bill_invoice inv
+	INNER JOIN solarbill.bill_account act ON act.id = inv.acct_id
+	INNER JOIN solarbill.bill_address adr ON adr.id = inv.addr_id
+	LEFT JOIN LATERAL (
+		SELECT 
+			  COUNT(itm.id) AS item_count
+			, SUM(itm.amount) AS total_amount
+		FROM solarbill.bill_invoice_item itm
+		WHERE itm.inv_id = inv.id
+		)  itm ON TRUE
+	LEFT JOIN LATERAL (
+		SELECT SUM(pay.amount) AS paid_amount
+		FROM solarbill.bill_invoice_payment pay
+		WHERE pay.inv_id = inv.id
+		) pay ON TRUE;
