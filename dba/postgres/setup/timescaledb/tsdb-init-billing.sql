@@ -70,8 +70,6 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_item (
 		ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-CREATE INDEX IF NOT EXISTS bill_invoice_item_inv_idx ON solarbill.bill_invoice_item (inv_id);
-
 -- table to keep track of account payment status
 -- there is no currency tracked here, just charges and payments to know the account status
 CREATE TABLE IF NOT EXISTS solarbill.bill_account_balance (
@@ -87,7 +85,7 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_account_balance (
 );
 
 /**
- * Trigger function to add/subtract from bill_account_balance as invoice items 
+ * Trigger function to add/subtract from bill_account_balance as invoice items
  * are updated.
  */
 CREATE OR REPLACE FUNCTION solarbill.maintain_bill_account_balance_charge()
@@ -102,19 +100,19 @@ BEGIN
 					ELSE OLD.inv_id
 				END)
 	INTO acct;
-	CASE TG_OP 
+	CASE TG_OP
 		WHEN 'INSERT' THEN
-			diff := NEW.amount;
+			diff := CASE NEW.item_key WHEN 'account-credit-add' THEN 0 ELSE NEW.amount END;
 		WHEN 'UPDATE' THEN
-			diff := NEW.amount - OLD.amount;
+			diff := CASE NEW.item_key WHEN 'account-credit-add' THEN 0 ELSE NEW.amount - OLD.amount END;
 		ELSE
-			diff := -OLD.amount;
+			diff := CASE NEW.item_key WHEN 'account-credit-add' THEN 0 ELSE -OLD.amount END;
 	END CASE;
 	IF (diff < 0::NUMERIC(19,2)) OR (diff > 0::NUMERIC(19,2)) THEN
 		INSERT INTO solarbill.bill_account_balance (acct_id, charge_total, payment_total)
 		VALUES (acct, diff, 0)
-		ON CONFLICT (acct_id) DO UPDATE 
-			SET charge_total = 
+		ON CONFLICT (acct_id) DO UPDATE
+			SET charge_total =
 				solarbill.bill_account_balance.charge_total + EXCLUDED.charge_total;
 	END IF;
 
@@ -128,7 +126,7 @@ END;
 $$;
 
 CREATE TRIGGER bill_account_balance_charge_tracker
-    AFTER INSERT OR DELETE OR UPDATE 
+    AFTER INSERT OR DELETE OR UPDATE
     ON solarbill.bill_invoice_item
     FOR EACH ROW
     EXECUTE PROCEDURE solarbill.maintain_bill_account_balance_charge();
@@ -138,7 +136,7 @@ CREATE TRIGGER bill_account_balance_charge_tracker
  *
  * This will never claim more than the available credit in the account balance. Thus the returned
  * amount might be less than the requested amount.
- * 
+ *
  * @param accountid the ID of the account to claim credit from
  * @param max_claim the maximum amount to claim, or `NULL` for the full amount available
  */
@@ -177,11 +175,11 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_payment (
 		ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-CREATE INDEX IF NOT EXISTS bill_payment_account_created_idx 
+CREATE INDEX IF NOT EXISTS bill_payment_account_created_idx
 ON solarbill.bill_payment (acct_id, created DESC);
 
 /**
- * Trigger function to add/subtract from bill_account_balance as invoice items 
+ * Trigger function to add/subtract from bill_account_balance as invoice items
  * are updated.
  */
 CREATE OR REPLACE FUNCTION solarbill.maintain_bill_account_balance_payment()
@@ -190,7 +188,7 @@ DECLARE
 	diff NUMERIC(19,2) := 0;
 	acct BIGINT;
 BEGIN
-	CASE TG_OP 
+	CASE TG_OP
 		WHEN 'INSERT' THEN
 			diff := NEW.amount;
 			acct := NEW.acct_id;
@@ -204,8 +202,8 @@ BEGIN
 	IF (diff < 0::NUMERIC(19,2)) OR (diff > 0::NUMERIC(19,2)) THEN
 		INSERT INTO solarbill.bill_account_balance (acct_id, charge_total, payment_total)
 		VALUES (acct, 0, diff)
-		ON CONFLICT (acct_id) DO UPDATE 
-			SET payment_total = 
+		ON CONFLICT (acct_id) DO UPDATE
+			SET payment_total =
 				solarbill.bill_account_balance.payment_total + EXCLUDED.payment_total;
 	END IF;
 
@@ -219,7 +217,7 @@ END;
 $$;
 
 CREATE TRIGGER bill_account_balance_payment_tracker
-    AFTER INSERT OR DELETE OR UPDATE 
+    AFTER INSERT OR DELETE OR UPDATE
     ON solarbill.bill_payment
     FOR EACH ROW
     EXECUTE PROCEDURE solarbill.maintain_bill_account_balance_payment();
@@ -241,10 +239,10 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_payment (
 		ON UPDATE NO ACTION ON DELETE NO ACTION
 );
 
-CREATE INDEX IF NOT EXISTS bill_invoice_payment_acct_inv_idx 
+CREATE INDEX IF NOT EXISTS bill_invoice_payment_acct_inv_idx
 ON solarbill.bill_invoice_payment (acct_id,inv_id);
 
-CREATE INDEX IF NOT EXISTS bill_invoice_payment_pay_idx 
+CREATE INDEX IF NOT EXISTS bill_invoice_payment_pay_idx
 ON solarbill.bill_invoice_payment (pay_id);
 
 /**
@@ -261,18 +259,18 @@ BEGIN
 	SELECT amount FROM solarbill.bill_payment
 	WHERE acct_id = NEW.acct_id AND id = NEW.pay_id
 	INTO avail;
-	
+
 	-- verify all invoice payments referencing this payment don't exceed funds
 	-- and all invoice payments don't exceed invoice charge total
 	-- by tracking sum of invoice payments deducted from this payment
 	-- and the sum of invoice payments applied to this invoice
-	SELECT 
+	SELECT
 		SUM(CASE pay_id WHEN NEW.pay_id THEN amount ELSE 0 END)::NUMERIC(19,2),
 		SUM(CASE inv_id WHEN NEW.inv_id THEN amount ELSE 0 END)::NUMERIC(19,2)
 	FROM solarbill.bill_invoice_payment
 	WHERE acct_id = NEW.acct_id AND (pay_id = NEW.pay_id OR inv_id = NEW.inv_id)
 	INTO ded_tot, app_tot;
-	
+
 	SELECT SUM(amount)::NUMERIC(19,2) FROM solarbill.bill_invoice_item
 	WHERE inv_id = NEW.inv_id
 	INTO chg_tot;
@@ -297,7 +295,7 @@ END;
 $$;
 
 CREATE TRIGGER bill_invoice_payment_checker
-    AFTER INSERT OR UPDATE 
+    AFTER INSERT OR UPDATE
     ON solarbill.bill_invoice_payment
     FOR EACH ROW
     EXECUTE PROCEDURE solarbill.validate_bill_invoice_payment();
@@ -328,7 +326,7 @@ END;
 $$;
 
 CREATE TRIGGER bill_payment_checker
-    AFTER UPDATE 
+    AFTER UPDATE
     ON solarbill.bill_payment
     FOR EACH ROW
     EXECUTE PROCEDURE solarbill.validate_bill_payment();
@@ -346,7 +344,7 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_account_task (
 		ON UPDATE NO ACTION ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS bill_account_task_created_idx 
+CREATE INDEX IF NOT EXISTS bill_account_task_created_idx
 ON solarbill.bill_account_task (created);
 
 /**
@@ -439,7 +437,7 @@ CREATE OR REPLACE FUNCTION solarbill.billing_tier_details(userid BIGINT, ts_min 
 		tier_datum_out BIGINT,
 		cost_datum_out NUMERIC,
 		datum_out_cost NUMERIC,
-		total_cost NUMERIC	
+		total_cost NUMERIC
 	) LANGUAGE sql STABLE AS
 $$
 	WITH tiers AS (
@@ -456,7 +454,7 @@ $$
 		GROUP BY nlt.time_zone
 	)
 	, stored AS (
-		SELECT 
+		SELECT
 			acc.node_id
 			, SUM(acc.datum_count + acc.datum_hourly_count + acc.datum_daily_count + acc.datum_monthly_count) AS datum_count
 		FROM nodes nodes
@@ -484,11 +482,11 @@ $$
 			, COALESCE(a.prop_count, 0) AS prop_in
 			, LEAST(GREATEST(a.prop_count - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(a.prop_count - tiers.min, 0))) AS tier_prop_in
 			, tiers.cost_prop_in
-		
+
 			, s.datum_count AS datum_stored
 			, LEAST(GREATEST(s.datum_count - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(s.datum_count - tiers.min, 0))) AS tier_datum_stored
 			, tiers.cost_datum_stored
-		
+
 			, COALESCE(a.datum_q_count, 0) AS datum_out
 			, LEAST(GREATEST(a.datum_q_count - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(a.datum_q_count - tiers.min, 0))) AS tier_datum_out
 			, tiers.cost_datum_out
@@ -505,17 +503,17 @@ $$
 		, tier_prop_in
 		, cost_prop_in
 		, (tier_prop_in * cost_prop_in) AS prop_in_cost
-		
+
 		, datum_stored
 		, tier_datum_stored
 		, cost_datum_stored
 		, (tier_datum_stored * cost_datum_stored) AS datum_stored_cost
-		
+
 		, datum_out
 		, tier_datum_out
 		, cost_datum_out
 		, (tier_datum_out * cost_datum_out) AS datum_out_cost
-		
+
 		, ROUND((tier_prop_in * cost_prop_in) + (tier_datum_stored * cost_datum_stored) + (tier_datum_out * cost_datum_out), 2) AS total_cost
 	FROM costs
 	WHERE ROUND((tier_prop_in * cost_prop_in) + (tier_datum_stored * cost_datum_stored) + (tier_datum_out * cost_datum_out), 2) > 0
@@ -553,23 +551,23 @@ CREATE OR REPLACE FUNCTION solarbill.billing_details(userid BIGINT, ts_min TIMES
 		total_tiers_cost NUMERIC[]
 	) LANGUAGE sql STABLE AS
 $$
-	SELECT 
+	SELECT
 		node_id
 		, SUM(tier_prop_in)::bigint AS prop_in
 		, SUM(tier_prop_in * cost_prop_in) AS prop_in_cost
 		, ARRAY_AGG(tier_prop_in::NUMERIC) AS prop_in_tiers
 		, ARRAY_AGG(tier_prop_in * cost_prop_in) AS prop_in_tiers_cost
-	
+
 		, SUM(tier_datum_stored)::bigint AS datum_stored
 		, SUM(tier_datum_stored * cost_datum_stored) AS datum_stored_cost
 		, ARRAY_AGG(tier_datum_stored::NUMERIC) AS datum_stored_tiers
 		, ARRAY_AGG(tier_datum_stored * cost_datum_stored) AS datum_stored_tiers_cost
-	
+
 		, SUM(tier_datum_out)::bigint AS datum_out
 		, SUM(tier_datum_out * cost_datum_out) AS datum_out_cost
 		, ARRAY_AGG(tier_datum_out::NUMERIC) AS datum_out_tiers
 		, ARRAY_AGG(tier_datum_out * cost_datum_out) AS datum_out_tiers_cost
-	
+
 		, ROUND(SUM(tier_prop_in * cost_prop_in) + SUM(tier_datum_stored * cost_datum_stored) + SUM(tier_datum_out * cost_datum_out), 2) AS total_cost
 		, ARRAY_AGG((tier_prop_in * cost_prop_in) + (tier_datum_stored * cost_datum_stored) + (tier_datum_out * cost_datum_out)) AS total_tiers_cost
 	FROM solarbill.billing_tier_details(userid, ts_min, ts_max, effective_date) costs
@@ -613,15 +611,15 @@ DECLARE
 	invid	BIGINT := solarcommon.to_bigint(pay_ref);
 	pay_rec solarbill.bill_payment;
 BEGIN
-	
+
 	INSERT INTO solarbill.bill_payment (created,acct_id,pay_type,amount,currency,ext_key,ref)
-	SELECT pay_date, a.id, pay_type, pay_amount, a.currency, pay_ext_key, 
+	SELECT pay_date, a.id, pay_type, pay_amount, a.currency, pay_ext_key,
 		CASE invid WHEN NULL THEN pay_ref ELSE NULL END AS ref
 	FROM solarbill.bill_account a
 	WHERE a.id = accountid
 	RETURNING *
 	INTO pay_rec;
-		
+
 	IF invid IS NOT NULL THEN
 		WITH tot AS (
 			SELECT SUM(ip.amount) AS total
@@ -631,7 +629,7 @@ BEGIN
 		SELECT pay_date, pay_rec.acct_id, pay_rec.id, invid, LEAST(pay_amount, tot.total)
 		FROM tot;
 	END IF;
-	
+
 	RETURN pay_rec;
 END
 $$;
@@ -639,7 +637,7 @@ $$;
 /**
  * View to show invoice details including account information, total amount, and paid amount.
  */
-CREATE OR REPLACE VIEW solarbill.bill_invoice_info AS 
+CREATE OR REPLACE VIEW solarbill.bill_invoice_info AS
 	SELECT
 		  inv.id
 		, 'INV-' || solarcommon.to_baseX(inv.id, 36) AS inv_num
@@ -660,7 +658,7 @@ CREATE OR REPLACE VIEW solarbill.bill_invoice_info AS
 	INNER JOIN solarbill.bill_account act ON act.id = inv.acct_id
 	INNER JOIN solarbill.bill_address adr ON adr.id = inv.addr_id
 	LEFT JOIN LATERAL (
-		SELECT 
+		SELECT
 			  COUNT(itm.id) AS item_count
 			, SUM(itm.amount) AS total_amount
 		FROM solarbill.bill_invoice_item itm
@@ -673,16 +671,39 @@ CREATE OR REPLACE VIEW solarbill.bill_invoice_info AS
 		) pay ON TRUE;
 
 /**
+ * View to show account details including address information and balance..
+ */
+CREATE OR REPLACE VIEW solarbill.bill_account_info AS
+	SELECT
+		  act.id
+		, act.created
+		, act.user_id
+		, act.currency
+		, act.locale
+		, act.addr_id
+		, adr.email
+		, adr.disp_name
+		, adr.country
+		, adr.time_zone
+		, bal.charge_total
+		, bal.payment_total
+		, bal.avail_credit
+	FROM solarbill.bill_account act
+	INNER JOIN solarbill.bill_address adr ON adr.id = act.addr_id
+	LEFT OUTER JOIN solarbill.bill_account_balance bal ON bal.acct_id = act.id;
+
+/**
  * Make a payment against a set of invoices.
  *
  * The payment is applied to invoices such that the full invoice amount is applied
- * going in oldest to newest invoice order, to up an overall maximum amount of the 
+ * going in oldest to newest invoice order, to up an overall maximum amount of the
  * payment amount.
  *
  * For example, to pay an invoice:
  *
  *     SELECT * FROM solarbill.add_invoice_payments(
  *           accountid => 123
+ *         , pay_amount => '2.34'::NUMERIC
  *         , pay_date => CURRENT_TIMESTAMP
  *         , inv_ids => ARRAY[1,2,3]
  *     );
@@ -709,22 +730,30 @@ CREATE OR REPLACE FUNCTION solarbill.add_invoice_payments(
 	LANGUAGE plpgsql VOLATILE AS
 $$
 DECLARE
-	pay_rec solarbill.bill_payment;
+	pay_rec 		solarbill.bill_payment;
 BEGIN
-	
+
 	INSERT INTO solarbill.bill_payment (created,acct_id,pay_type,amount,currency,ext_key,ref)
 	SELECT pay_date, a.id, pay_type, pay_amount, a.currency, pay_ext_key, pay_ref
 	FROM solarbill.bill_account a
 	WHERE a.id = accountid
 	RETURNING *
 	INTO pay_rec;
-		
+
+	IF NOT FOUND THEN
+		RAISE EXCEPTION 'Account % not found.', accountid
+		USING ERRCODE = 'integrity_constraint_violation',
+			SCHEMA = 'solarbill',
+			TABLE = 'bill_account',
+			COLUMN = 'id';
+    END IF;
+
 	IF inv_ids IS NOT NULL THEN
 		WITH payment AS (
 			SELECT pay_amount AS payment
 		)
 		, invoice_payments AS (
-			SELECT 
+			SELECT
 				inv.id AS inv_id
 				, inv.total_amount - COALESCE(inv.paid_amount, 0::NUMERIC(11,2)) AS due
 				, GREATEST(0, LEAST(
@@ -741,8 +770,17 @@ BEGIN
 		INSERT INTO solarbill.bill_invoice_payment (created,acct_id, pay_id, inv_id, amount)
 		SELECT pay_date, pay_rec.acct_id, pay_rec.id, applied_payments.inv_id, applied_payments.applied
 		FROM applied_payments;
+
+		IF NOT FOUND THEN
+			RAISE EXCEPTION 'Invoice(s) % not found for account % payment %.', inv_ids, accountid, pay_amount
+			USING ERRCODE = 'integrity_constraint_violation',
+				SCHEMA = 'solarbill',
+				TABLE = 'bill_invoice_payment',
+				COLUMN = 'inv_id',
+				HINT = 'The specified invoice(s) may not exist, might be for a different account, or might be fully paid already.';
+		END IF;
 	END IF;
-	
+
 	RETURN pay_rec;
 END
 $$;
