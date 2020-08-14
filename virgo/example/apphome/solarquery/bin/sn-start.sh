@@ -23,37 +23,37 @@ export cygwin=false
 
 env_jdbc () {
 	local args=""
-	
+
 	if [ -n "$SN_JDBC_URL" ]; then
 		args="$args --set jdbc.url=$SN_JDBC_URL"
 	fi
-	
+
 	if [ -n "$SN_JDBC_USER" ]; then
 		args="$args --set jdbc.user=$SN_JDBC_USER"
 	fi
-	
+
 	if [ -n "$SN_JDBC_PASS" ]; then
 		args="$args --set jdbc.pass=$SN_JDBC_PASS"
 	fi
-	
+
 	java -jar "$SCRIPT_DIR"/sn-prop-util.jar modify --file "$JDBC_CONF" $args
 }
 
 env_jdbc_rw () {
 	local args=""
-	
+
 	if [ -n "$SN_JDBC_URL_RW" ]; then
 		args="$args --set jdbc.url=$SN_JDBC_URL_RW"
 	fi
-	
+
 	if [ -n "$SN_JDBC_USER" ]; then
 		args="$args --set jdbc.user=$SN_JDBC_USER_RW"
 	fi
-	
+
 	if [ -n "$SN_JDBC_PASS" ]; then
 		args="$args --set jdbc.pass=$SN_JDBC_PASS_RW"
 	fi
-	
+
 	java -jar "$SCRIPT_DIR"/sn-prop-util.jar modify --file "$JDBC_CONF_RW" $args
 }
 
@@ -63,7 +63,7 @@ if [ -e "$JDBC_CONF_RW" ]; then
 	env_jdbc_rw
 fi
 
-export JAVA_OPTS="-Xmx768m -Djdk.management.heapdump.allowAnyFileSuffix=true -Dsolarnetwork.pidfile=$SCRIPT_DIR/../work/solarnet.pid -Dfelix.fileinstall.dir=$SCRIPT_DIR/../configuration/services -Dfelix.fileinstall.filter=.*\.cfg -Dfelix.fileinstall.noInitialDelay=true -Dfelix.fileinstall.enableConfigSave=false"
+export JAVA_OPTS="-Xmx768m -Djava.awt.headless=true -Djdk.management.heapdump.allowAnyFileSuffix=true -Dsolarnetwork.pidfile=$SCRIPT_DIR/../work/solarnet.pid -Dfelix.fileinstall.dir=$SCRIPT_DIR/../configuration/services -Dfelix.fileinstall.filter=.*\.cfg -Dfelix.fileinstall.noInitialDelay=true -Dfelix.fileinstall.enableConfigSave=false"
 export JMX_PORT=9882
 echo "Starting Virgo HTTP @ 9082, AJP @ 9702, debug @ 9982."
 exec "$SCRIPT_DIR"/"$EXECUTABLE" start -debug 9982 "$@"
