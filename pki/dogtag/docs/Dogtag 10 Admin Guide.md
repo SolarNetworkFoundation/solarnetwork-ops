@@ -7,13 +7,13 @@ system, which is used to administer SolarNode certificates.
 
 The server is an EC2 instance. Connect via `ssh` like this:
 
-	ssh -i ~/keys/matt-solarnetwork.pem ec2-user@ca.solarnetwork.net
+	ssh -i ~/keys/matt-solarnetwork.pem fedora@ca.solarnetwork.net
 
 # VNC
 
 The server runs VNC, which you can tunnel over SSH like this:
 
-	ssh -CL5901:localhost:5901 -i ~/keys/matt-solarnetwork.pem ec2-user@ca.solarnetwork.net
+	ssh -CL5901:localhost:5901 -i ~/keys/matt-solarnetwork.pem fedora@ca.solarnetwork.net
 
 If VNC is not running or working, you can try restarting the service via
 
@@ -157,7 +157,65 @@ Before CA system certificates expire, such as the `CN=CA Signing Certificate`,
 they must be renewed. Submit renewal requests and approve them using the web
 GUI. Then renew via the command line **or** the console:
 
-## Renew via command line
+## List available system certificates
+
+List the aliases (nicknames) for the system certificates (as `root` user):
+
+```
+$ pki-server subsystem-cert-find ca
+
+-----------------
+5 entries matched
+-----------------
+  Serial No: 65554
+  Cert ID: signing
+  Nickname: caSigningCert cert-rootca CA
+  Token: internal
+
+  Serial No: 65536
+  Cert ID: ocsp_signing
+  Nickname: ocspSigningCert cert-pki-tomcat CA
+  Token: internal
+
+  Serial No: 65537
+  Cert ID: sslserver
+  Nickname: Server-Cert cert-pki-tomcat
+  Token: internal
+
+  Serial No: 65538
+  Cert ID: subsystem
+  Nickname: subsystemCert cert-pki-tomcat
+  Token: internal
+
+  Serial No: 65539
+  Cert ID: audit_signing
+  Nickname: auditSigningCert cert-pki-tomcat CA
+  Token: internal
+```
+
+Can then view certificate dates for a given nickname:
+
+```
+$ certutil -L -d /var/lib/pki/pki-tomcat/alias -n "caSigningCert cert-rootca CA" | egrep "Serial|Before|After"
+
+        Serial Number: 65554 (0x10012)
+            Not Before: Fri May 15 04:44:26 2020
+            Not After : Tue May 15 04:44:26 2040
+
+```
+
+Here's a one-liner to print out the dates for all subsystem certificates:
+
+```bash
+pki-server subsystem-cert-find ca |grep Nickname |awk 'BEGIN { FS = ": " }; {print $2}' \
+  |while read nick; do echo "$nick:"; \
+  certutil -L -d /var/lib/pki/pki-tomcat/alias -n "$nick" |egrep "Serial|Before|After"; done
+```
+
+## Review system certificate
+
+**TODO**; the following are old Dogtag instructions:
+
 
 	certutil -D -d /etc/pki/rootca/alias -n 'Server-Cert cert-rootca'
 	certutil -A -d /etc/pki/rootca/alias -n 'Server-Cert cert-rootca' -t 'cu,cu,cu' -a -i ca.solarnetwork.net.crt
