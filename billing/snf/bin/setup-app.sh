@@ -99,7 +99,7 @@ fi
 # Copy built app
 #
 if [ -n "$VERBOSE" ]; then
-	echo "Building app in [$SRC_DIR/$APP_BUILD_DIR]"
+	echo "Copying app to [$APP_HOME/$APP_NAME]"
 fi
 cp -R "$SRC_DIR/$APP_BUILD_DIR/build/libs/$APP_ARTIFACT_NAME"* "$APP_HOME/$APP_NAME"
 
