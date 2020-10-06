@@ -54,9 +54,11 @@ AWS_REGION
 AWS_SECRET_ACCESS_KEY
 PGPORT
 WALE_S3_PREFIX
+WALE_S3_STORAGE_CLASS
 ```
 
 Each file contains the associated value. The `WALE_S3_PREFIX` is `s3://snf-internal/backups/postgres/96`.
+The `WALE_S3_STORAGE_CLASS` is `STANDARD_IA`.
 
 # Create base backup
 
