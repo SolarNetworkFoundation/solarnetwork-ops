@@ -1,7 +1,0 @@
-[Unit]
-Description=Close discarded SolarSSH sessions
-
-[Service]
-Type=oneshot
-WorkingDirectory=/home/solar
-ExecStart=/bin/bash -c 'for uid in `/usr/share/solarnode/bin/solarssh.sh list |/bin/grep error`; do /usr/share/solarnode/bin/solarssh.sh -c $uid stop; done'

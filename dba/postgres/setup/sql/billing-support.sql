@@ -54,7 +54,7 @@ $$
 	, stored AS (
 		SELECT 
 			acc.node_id
-			, SUM(acc.datum_count + acc.datum_hourly_count + acc.datum_monthly_count) AS datum_count
+			, SUM(acc.datum_count + acc.datum_hourly_count + acc.datum_daily_count + acc.datum_monthly_count) AS datum_count
 		FROM solaragg.aud_acc_datum_daily acc
 		INNER JOIN solarnet.node_local_time nlt ON nlt.node_id = acc.node_id
 		WHERE 

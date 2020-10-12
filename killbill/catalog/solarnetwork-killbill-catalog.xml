@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- https://groups.google.com/forum/#!topic/killbilling-users/KU7HMv5bBRk -->
+
 <catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="killbill-catalog.xsd">
 
-	<effectiveDate>2020-06-01T00:00:00+13:00</effectiveDate>
+	<effectiveDate>2020-06-01T03:00:00+13:00</effectiveDate>
 	<catalogName>SolarNetwork</catalogName>
 
 	<recurringBillingMode>IN_ADVANCE</recurringBillingMode>
@@ -220,6 +220,7 @@
 		</plan>
 
 		<plan name="api-posted-datum-metric-monthly-usage">
+			<effectiveDateForExistingSubscriptions>2020-06-01T03:00:00+13:00</effectiveDateForExistingSubscriptions>
 			<product>PostedDatumMetrics</product>
 			<initialPhases>
 				<phase type="TRIAL">
@@ -312,7 +313,7 @@
 												<value>0.000002</value>
 											</price>
 										</prices>
-										<max>999999999</max>
+										<max>-1</max>
 										<!-- as high as possible -->
 									</tieredBlock>
 								</blocks>
@@ -324,6 +325,7 @@
 		</plan>
 
 		<plan name="api-queried-datum-monthly-usage">
+			<effectiveDateForExistingSubscriptions>2020-06-01T03:00:00+13:00</effectiveDateForExistingSubscriptions>
 			<product>QueriedDatum</product>
 			<initialPhases>
 				<phase type="TRIAL">
@@ -416,7 +418,7 @@
 												<value>0.0000002</value>
 											</price>
 										</prices>
-										<max>999999999</max>
+										<max>-1</max>
 										<!-- as high as possible -->
 									</tieredBlock>
 								</blocks>
@@ -428,6 +430,7 @@
 		</plan>
 
 		<plan name="api-stored-datum-monthly-usage">
+			<effectiveDateForExistingSubscriptions>2020-06-01T03:00:00+13:00</effectiveDateForExistingSubscriptions>
 			<product>StoredDatum</product>
 			<initialPhases>
 				<phase type="TRIAL">
@@ -520,7 +523,7 @@
 												<value>0.000000006</value>
 											</price>
 										</prices>
-										<max>999999999</max>
+										<max>-1</max>
 										<!-- as high as possible -->
 									</tieredBlock>
 								</blocks>

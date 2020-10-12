@@ -1,6 +1,0 @@
-[Unit]
-Description=Clean out old motion media files
-
-[Service]
-Type=oneshot
-ExecStart=/usr/share/solarnode/bin/clean-motion-oldmedia.sh

@@ -1,2 +1,0 @@
-APT::Periodic::Enable "0";
-APT::Periodic::BackupLevel "0";

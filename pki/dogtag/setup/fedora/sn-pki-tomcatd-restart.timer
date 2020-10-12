@@ -1,0 +1,9 @@
+[Unit]
+Description=Restart pki-tomcatd@pki-tomcat service weekly to work around memory leak
+
+[Timer]
+OnCalendar=weekly
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

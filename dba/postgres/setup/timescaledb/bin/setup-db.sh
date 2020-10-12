@@ -147,12 +147,14 @@ if [ -n "$DRY_RUN" ]; then
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS plv8 WITH SCHEMA pg_catalog'"
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public'"
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public'"
+	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS "'"uuid-ossp"'" WITH SCHEMA public'"
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS timescaledb WITH SCHEMA public'"
 else
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c "CREATE DATABASE $PG_DB WITH ENCODING='UTF8' OWNER=$PG_DB_OWNER TEMPLATE=$PG_TEMPLATE_DB LC_COLLATE='C' LC_CTYPE='C' ${PG_DB_TABLESPACE:+TABLESPACE=$PG_DB_TABLESPACE}" || exit 5
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS plv8 WITH SCHEMA pg_catalog" || exit 6
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public" || exit 7
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public" || exit 8
+	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS "'"uuid-ossp"'" WITH SCHEMA public" || exit 8
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS timescaledb WITH SCHEMA public" || exit 9
 fi
 
@@ -209,9 +211,9 @@ if [ -n "$VERBOSE" ]; then
 	echo "Setting ownership of database objects..."
 fi
 if [ -n "$DRY_RUN" ]; then
-	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solaragg', 'solarcommon', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res'"
+	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solaragg', 'solarcommon', 'solarbill', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res'"
 else		
-	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solaragg', 'solarcommon', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res" || exit 11
+	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solaragg', 'solarcommon', 'solarbill', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res" || exit 11
 fi
 
 echo
