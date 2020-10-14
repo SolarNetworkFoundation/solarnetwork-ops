@@ -27,6 +27,101 @@ CREATE TABLE solardatm.da_datm (
 	CONSTRAINT da_datm_pkey PRIMARY KEY (stream_id, ts)
 );
 
+/**
+ * Migrate a single `da_datum` row into the `solardatm.da_datm` table.
+ *
+ * This function accepts the "current" property name arrays as an optimisation when migrating
+ * multiple rows of data. If the given datum has properties that are not found in any of the
+ * given name arrays, the name will be added and then the associated `solardatm.da_datm_meta`
+ * column updated to match. The name arrays are declared as `INOUT` so that the updated values
+ * can be saved and used again, helping reduce the amount of updates needed to the
+ * `solardatm.da_datm_meta` table.
+ *
+ * @param sid 		the stream ID to use
+ * @param d 		the datum to migrate
+ * @param p_i		the stream instantaneous property names; possibly appeneded to
+ * @param p_a 		the stream accumulating property names; possible appended to
+ * @param p_s		the stream status property names; possible appended to
+ */
+CREATE OR REPLACE FUNCTION solardatm.migrate_datum(
+		sid 		UUID,
+		d 			solardatum.da_datum,
+		INOUT p_i 	TEXT[],
+		INOUT p_a 	TEXT[],
+		INOUT p_s 	TEXT[]
+	) LANGUAGE plpgsql VOLATILE AS
+$$
+DECLARE
+	-- property name arrays
+	p		RECORD;
+
+	-- property value arrays
+	v_i 	NUMERIC[];
+	v_a		NUMERIC[];
+	v_s		TEXT[];
+
+	idx		INTEGER;
+BEGIN
+	-- copy instantaneous props
+	FOR p IN SELECT * FROM jsonb_each_text(d.jdata_i) LOOP
+		idx := COALESCE(array_position(p_i, p.key), 0);
+		IF idx < 1 THEN
+			UPDATE solardatm.da_datm_meta SET names_i = CASE
+					WHEN COALESCE(array_position(names_i, p.key), 0) < 1 THEN array_append(names_i, p.key)
+					ELSE names_i
+					END
+			WHERE stream_id = sid
+			RETURNING names_i INTO p_i;
+			idx := array_position(p_i, p.key);
+		END IF;
+		v_i[idx] := p.value::numeric;
+	END LOOP;
+
+	-- copy accumulating props
+	FOR p IN SELECT * FROM jsonb_each_text(d.jdata_a) LOOP
+		idx := COALESCE(array_position(p_a, p.key), 0);
+		IF idx < 1 THEN
+			UPDATE solardatm.da_datm_meta SET names_a = CASE
+					WHEN COALESCE(array_position(names_a, p.key), 0) < 1 THEN array_append(names_a, p.key)
+					ELSE names_a
+					END
+			WHERE stream_id = sid
+			RETURNING names_a INTO p_a;
+			idx := array_position(p_a, p.key);
+		END IF;
+		v_a[idx] := p.value::numeric;
+	END LOOP;
+
+	-- copy status props
+	FOR p IN SELECT * FROM jsonb_each_text(d.jdata_s) LOOP
+		idx := COALESCE(array_position(p_s, p.key), 0);
+		IF idx < 1 THEN
+			UPDATE solardatm.da_datm_meta SET names_s = CASE
+					WHEN COALESCE(array_position(names_s, p.key), 0) < 1 THEN array_append(names_s, p.key)
+					ELSE names_i
+					END
+			WHERE stream_id = sid
+			RETURNING names_s INTO p_s;
+			idx := array_position(p_s, p.key);
+		END IF;
+		v_s[idx] := p.value;
+	END LOOP;
+
+	INSERT INTO solardatm.da_datm (stream_id, ts, posted, data_i, data_a, data_s, data_t)
+	VALUES (
+		sid
+		, d.ts
+		, d.posted
+		, CASE WHEN COALESCE(array_length(v_i, 1), 0) < 1 THEN NULL ELSE v_i END
+		, CASE WHEN COALESCE(array_length(v_a, 1), 0) < 1 THEN NULL ELSE v_a END
+		, CASE WHEN COALESCE(array_length(v_s, 1), 0) < 1 THEN NULL ELSE v_s END
+		, d.jdata_t
+	)
+	ON CONFLICT DO NOTHING;
+END;
+$$;
+
+
 CREATE OR REPLACE FUNCTION solardatm.migrate_datum(
 	node 			BIGINT,
 	src 			TEXT,
@@ -38,17 +133,10 @@ DECLARE
 	sid 	UUID;
 
 	-- property name arrays
-	p		RECORD;
 	p_i		TEXT[];
 	p_a		TEXT[];
 	p_s		TEXT[];
 
-	-- property value arrays
-	v_i 	NUMERIC[];
-	v_a		NUMERIC[];
-	v_s		TEXT[];
-
-	idx		INTEGER;
 	d		solardatum.da_datum;
 	rcount 	BIGINT := 0;
 	curs 	NO SCROLL CURSOR FOR
@@ -72,70 +160,15 @@ BEGIN
 		INTO sid, p_i, p_a, p_s;
 	END IF;
 
-	FOR d IN curs LOOP
-		v_i := ARRAY[]::NUMERIC[];
-		v_a := ARRAY[]::NUMERIC[];
-		v_s := ARRAY[]::TEXT[];
-
-		-- copy instantaneous props
-		FOR p IN SELECT * FROM jsonb_each_text(d.jdata_i) LOOP
-			idx := COALESCE(array_position(p_i, p.key), 0);
-			IF idx < 1 THEN
-				UPDATE solardatm.da_datm_meta SET names_i = CASE
-						WHEN COALESCE(array_position(names_i, p.key), 0) < 1 THEN array_append(names_i, p.key)
-						ELSE names_i
-						END
-				WHERE stream_id = sid
-				RETURNING names_i INTO p_i;
-				idx := array_position(p_i, p.key);
-			END IF;
-			v_i[idx] := p.value::numeric;
-		END LOOP;
-
-		-- copy accumulating props
-		FOR p IN SELECT * FROM jsonb_each_text(d.jdata_a) LOOP
-			idx := COALESCE(array_position(p_a, p.key), 0);
-			IF idx < 1 THEN
-				UPDATE solardatm.da_datm_meta SET names_a = CASE
-						WHEN COALESCE(array_position(names_a, p.key), 0) < 1 THEN array_append(names_a, p.key)
-						ELSE names_a
-						END
-				WHERE stream_id = sid
-				RETURNING names_a INTO p_a;
-				idx := array_position(p_a, p.key);
-			END IF;
-			v_a[idx] := p.value::numeric;
-		END LOOP;
-
-		-- copy status props
-		FOR p IN SELECT * FROM jsonb_each_text(d.jdata_s) LOOP
-			idx := COALESCE(array_position(p_s, p.key), 0);
-			IF idx < 1 THEN
-				UPDATE solardatm.da_datm_meta SET names_s = CASE
-						WHEN COALESCE(array_position(names_s, p.key), 0) < 1 THEN array_append(names_s, p.key)
-						ELSE names_i
-						END
-				WHERE stream_id = sid
-				RETURNING names_s INTO p_s;
-				idx := array_position(p_s, p.key);
-			END IF;
-			v_s[idx] := p.value;
-		END LOOP;
-
-		INSERT INTO solardatm.da_datm (stream_id, ts, posted, data_i, data_a, data_s, data_t)
-		VALUES (
-			sid
-			, d.ts
-			, d.posted
-			, CASE WHEN COALESCE(array_length(v_i, 1), 0) < 1 THEN NULL ELSE v_i END
-			, CASE WHEN COALESCE(array_length(v_a, 1), 0) < 1 THEN NULL ELSE v_a END
-			, CASE WHEN COALESCE(array_length(v_s, 1), 0) < 1 THEN NULL ELSE v_s END
-			, d.jdata_t
-		)
-		ON CONFLICT DO NOTHING;
-
+	OPEN curs;
+	LOOP
+		FETCH curs INTO d;
+		EXIT WHEN NOT FOUND;
+		SELECT * FROM solardatm.migrate_datum(sid, d, p_i, p_a, p_s)
+		INTO p_i, p_a, p_s;
 		rcount := rcount + 1;
 	END LOOP;
+	CLOSE curs;
 
 	RETURN rcount;
 END;
