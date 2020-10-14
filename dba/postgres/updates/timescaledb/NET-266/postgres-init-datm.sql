@@ -3,28 +3,28 @@ CREATE SCHEMA IF NOT EXISTS solardatm;
 
 -- stream indirection table
 CREATE TABLE solardatm.da_datm_meta (
-    stream_id 	UUID NOT NULL DEFAULT uuid_generate_v4(),
-	node_id 	BIGINT NOT NULL,
-	source_id 	CHARACTER VARYING(64) NOT NULL,
-	created 	TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated 	TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    names_i    	TEXT[],
-    names_a    	TEXT[],
-    names_s    	TEXT[],
-    jdata		JSONB,
-    CONSTRAINT da_datm_meta_pkey PRIMARY KEY (stream_id),
+	stream_id	UUID NOT NULL DEFAULT uuid_generate_v4(),
+	node_id		BIGINT NOT NULL,
+	source_id	CHARACTER VARYING(64) NOT NULL,
+	created		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	names_i		TEXT[],
+	names_a		TEXT[],
+	names_s		TEXT[],
+	jdata		JSONB,
+	CONSTRAINT da_datm_meta_pkey PRIMARY KEY (stream_id),
 	CONSTRAINT da_datm_meta_unq UNIQUE (node_id, source_id)
 );
 
 CREATE TABLE solardatm.da_datm (
-  stream_id 	UUID NOT NULL,
-  ts 			TIMESTAMP WITH TIME ZONE NOT NULL,
-  posted 		TIMESTAMP WITH TIME ZONE NOT NULL,
-  data_i 		NUMERIC[],
-  data_a 		NUMERIC[],
-  data_s 		TEXT[],
-  data_t 		TEXT[],
-  CONSTRAINT da_datm_pkey PRIMARY KEY (stream_id, ts)
+	stream_id	UUID NOT NULL,
+	ts			TIMESTAMP WITH TIME ZONE NOT NULL,
+	posted		TIMESTAMP WITH TIME ZONE NOT NULL,
+	data_i		NUMERIC[],
+	data_a		NUMERIC[],
+	data_s		TEXT[],
+	data_t		TEXT[],
+	CONSTRAINT da_datm_pkey PRIMARY KEY (stream_id, ts)
 );
 
 CREATE OR REPLACE FUNCTION solardatm.migrate_datum(
