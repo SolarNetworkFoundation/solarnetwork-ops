@@ -548,14 +548,14 @@ Then edit crontab  via `crontab -e -u postgres` with:
 # Update statistics weekly
 0 4 * * Mon /usr/local/bin/vacuumdb -p 5432 --all --analyze-only
 
-# create base backup every Saturday
-0 3 * * Sat /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e backup-push /sndb/9.6/home
+# create base backup 1st and 15th of every month
+0 3 1,15 * * /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e backup-push /sndb/9.6/home
 
 # cleanup old backups every Sunday (keep last 9)
-0 3 * * Sun /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e delete --confirm retain 9
+0 3 5,20 * * /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e delete --confirm retain 3
 
 # Run Hypertable reindex maintenance task weekly
-0 4 * * Sun /var/db/postgres/bin/index-chunk-maintenance.sh -c '-p 5432 -d solarnetwork' -n
+#0 4 * * Sun /var/db/postgres/bin/index-chunk-maintenance.sh -c '-p 5432 -d solarnetwork' -n
 ```
 
 # Postfix MTA
