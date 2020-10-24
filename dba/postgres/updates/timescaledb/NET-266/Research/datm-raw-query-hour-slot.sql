@@ -20,7 +20,7 @@ CREATE OR REPLACE FUNCTION solardatm.find_datm_for_time_span(
 		data_t		TEXT[],
 		inclusion	SMALLINT,
 		portion		DOUBLE PRECISION
-	) LANGUAGE SQL STABLE ROWS 500 AS
+	) LANGUAGE SQL STABLE ROWS 2000 AS
 $$
 	WITH b AS (
 		(
