@@ -27,6 +27,7 @@ migrate_range () {
 
 echo `date` Creating da_datm hypertable
 
+# initial hypertable chunk size 1 year
 psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 	"SELECT * FROM public.create_hypertable(
 	'solardatm.da_datm'::regclass,
@@ -36,11 +37,14 @@ psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 
 echo `date` Starting datum migration
 
+# load oldest data into 1-year chunks
 migrate_range '2009-12-01 13:00:00+13' '2015-11-01 13:00:00+13'
 
+# now bump down chunk interval to 60 days as data volume increased
 psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 	"SELECT public.set_chunk_time_interval('solardatm.da_datm', INTERVAL '60 days')"
 
-migrate_range '2015-11-01 13:00:00+13' '2020-12-04 13:00:00+13'
+# load remaining data into 60-day chunks
+migrate_range '2015-11-01 13:00:00+13' '2021-01-01 00:00:00+13'
 
 echo `date` Finished datum migration
