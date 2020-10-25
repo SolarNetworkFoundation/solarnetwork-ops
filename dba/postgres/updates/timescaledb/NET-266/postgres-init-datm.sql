@@ -74,7 +74,14 @@ BEGIN
 			RETURNING names_i INTO p_i;
 			idx := array_position(p_i, p.key);
 		END IF;
-		v_i[idx] := p.value::numeric;
+		-- catch cast exceptions: saw example of 'Infinity' string
+		BEGIN
+			v_i[idx] := p.value::numeric;
+		EXCEPTION WHEN others THEN
+			RAISE WARNING 'JSON value not numeric: node %, source %, ts %, i.key %, i.value %',
+				d.node_id, d.source_id, d.ts, p.key, p.value;
+			v_i[idx] := NULL;
+		END;
 	END LOOP;
 
 	-- copy accumulating props
@@ -89,7 +96,13 @@ BEGIN
 			RETURNING names_a INTO p_a;
 			idx := array_position(p_a, p.key);
 		END IF;
-		v_a[idx] := p.value::numeric;
+		BEGIN
+			v_a[idx] := p.value::numeric;
+		EXCEPTION WHEN others THEN
+			RAISE WARNING 'JSON value not numeric: node %, source %, ts %, i.key %, i.value %',
+				d.node_id, d.source_id, d.ts, p.key, p.value;
+			v_i[idx] := NULL;
+		END;
 	END LOOP;
 
 	-- copy status props
