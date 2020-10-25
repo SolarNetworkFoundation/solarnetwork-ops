@@ -15,13 +15,13 @@ migrate_range () {
 			ORDER BY lower(ranges[1]::tstzrange)"); do
 		echo `date` "Migrating chunk $chunk..."
 		time psql -q -h $HOST -p $PORT -U $USER -d $DB -c '\pset pager off' -c \
-			"WITH months AS (
-				SELECT d.node_id, date_trunc('month', d.ts) AS ts_start, d.source_id
+			"WITH ranges AS (
+				SELECT d.node_id, d.source_id, min(d.ts) AS ts_min, max(d.ts) AS ts_max
 				FROM $chunk d
-				GROUP BY d.node_id, date_trunc('month', d.ts), d.source_id
+				GROUP BY d.node_id, d.source_id
 			)
-			SELECT * FROM months, solardatm.migrate_datum(months.node_id, months.source_id,
-				months.ts_start, months.ts_start + interval '1 month') AS migrated"
+			SELECT * FROM ranges, solardatm.migrate_datum(ranges.node_id, ranges.source_id,
+				ranges.ts_min, ranges.ts_max + interval '1 ms') AS migrated"
 	done
 }
 
