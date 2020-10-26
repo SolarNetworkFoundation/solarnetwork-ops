@@ -21,7 +21,7 @@ migrate_datum_range () {
 				GROUP BY d.node_id, d.source_id
 			)
 			SELECT * FROM ranges, solardatm.migrate_datum(ranges.node_id, ranges.source_id,
-				ranges.ts_min, ranges.ts_max + interval '1 ms') AS migrated"
+				ranges.ts_min, ranges.ts_max + interval '1 ms') AS migrated" 2>&1
 	done
 }
 
@@ -41,7 +41,7 @@ migrate_loc_datum_range () {
 				GROUP BY d.loc_id, d.source_id
 			)
 			SELECT * FROM ranges, solardatm.migrate_loc_datum(ranges.loc_id, ranges.source_id,
-				ranges.ts_min, ranges.ts_max + interval '1 ms') AS migrated"
+				ranges.ts_min, ranges.ts_max + interval '1 ms') AS migrated" 2>&1
 	done
 }
 
