@@ -29,12 +29,14 @@ WITH ids AS (
 , d AS (
 	(
 	SELECT d.*
-	FROM ids, solardatm.find_time_least(ids.stream_id) d
+	FROM ids
+	INNER JOIN solardatm.find_time_least(ids.stream_id) d ON d.stream_id = ids.stream_id
 	)
 	UNION ALL
 	(
 	SELECT d.*
-	FROM ids, solardatm.find_time_greatest(ids.stream_id) d
+	FROM ids
+	INNER JOIN solardatm.find_time_greatest(ids.stream_id) d ON d.stream_id = ids.stream_id
 	)
 )
 SELECT * FROM d

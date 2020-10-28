@@ -45,6 +45,19 @@ CREATE TABLE solardatm.da_datm (
 
 CREATE UNIQUE INDEX IF NOT EXISTS da_datm_unq_reverse ON solardatm.da_datm (stream_id, ts DESC);
 
+-- datum aux table
+CREATE TABLE solardatm.da_datm_aux (
+	stream_id	UUID NOT NULL,
+	ts			TIMESTAMP WITH TIME ZONE NOT NULL,
+	atype 		solardatum.da_datum_aux_type NOT NULL DEFAULT 'Reset'::solardatum.da_datum_aux_type,
+	updated 	TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	notes 		TEXT,
+	jdata_af 	JSONB,
+	jdata_as 	JSONB,
+	jmeta 		JSONB,
+	CONSTRAINT da_datm_aux_pkey PRIMARY KEY (stream_id, ts, atype)
+);
+
 /**
  * Migrate a JSON datum into the `solardatm.da_datm` table.
  *
@@ -418,9 +431,9 @@ $$;
 /**
  * Add or update a datum record. The data is stored in the `solardatm.da_datm` table.
  *
+ * @param ddate the datum timestamp
  * @param node 	the node ID
  * @param src 	the source ID
- * @param ts 	the datum timestamp
  * @param rdate the date the datum was received by SolarNetwork
  * @param jdata the datum JSON object (with jdata_i, jdata_a, jdata_s, and jdata_t properties)
  * @param track if `TRUE` then also insert results of `solardatum.calculate_stale_datum()`
@@ -429,9 +442,9 @@ $$;
  *                     `solardatum.da_datum_range` table up-to-date
  */
 CREATE OR REPLACE FUNCTION solardatm.store_datum(
+	ddate 			TIMESTAMP WITH TIME ZONE,
 	node 			BIGINT,
 	src 			TEXT,
-	ddate 			TIMESTAMP WITH TIME ZONE,
 	rdate 			TIMESTAMP WITH TIME ZONE,
 	jdata 			TEXT,
 	track 			BOOLEAN DEFAULT TRUE)
@@ -467,10 +480,10 @@ BEGIN
 	END IF;
 
 	SELECT * FROM solardatm.migrate_datum_json(sid, ts_crea, src, ts_recv,
-					jdata_json->jdata_i,
-					jdata_json->jdata_a,
-					jdata_json->jdata_s,
-					solarcommon.json_array_to_text_array(jdata_json->jdata_t),
+					jdata_json->'i',
+					jdata_json->'a',
+					jdata_json->'s',
+					solarcommon.json_array_to_text_array(jdata_json->'t'),
 					p_i, p_a, p_s)
 	INTO p_i, p_a, p_s, is_insert;
 
@@ -500,9 +513,9 @@ $$;
 /**
  * Add or update a location datum record. The data is stored in the `solardatm.da_datm` table.
  *
+ * @param ddate the datum timestamp
  * @param loc 	the location ID
  * @param src 	the source ID
- * @param ts 	the datum timestamp
  * @param rdate the date the datum was received by SolarNetwork
  * @param jdata the datum JSON object (with jdata_i, jdata_a, jdata_s, and jdata_t properties)
  * @param track if `TRUE` then also insert results of `solardatum.calculate_stale_datum()`
@@ -511,9 +524,9 @@ $$;
  *                     `solardatum.da_datum_range` table up-to-date
  */
 CREATE OR REPLACE FUNCTION solardatm.store_loc_datum(
+	ddate 			TIMESTAMP WITH TIME ZONE,
 	loc 			BIGINT,
 	src 			TEXT,
-	ddate 			TIMESTAMP WITH TIME ZONE,
 	rdate 			TIMESTAMP WITH TIME ZONE,
 	jdata 			TEXT,
 	track 			BOOLEAN DEFAULT TRUE)
@@ -549,10 +562,10 @@ BEGIN
 	END IF;
 
 	SELECT * FROM solardatm.migrate_loc_datum_json(sid, ts_crea, src, ts_recv,
-					jdata_json->jdata_i,
-					jdata_json->jdata_a,
-					jdata_json->jdata_s,
-					solarcommon.json_array_to_text_array(jdata_json->jdata_t),
+					jdata_json->'i',
+					jdata_json->'a',
+					jdata_json->'s',
+					solarcommon.json_array_to_text_array(jdata_json->'t'),
 					p_i, p_a, p_s)
 	INTO p_i, p_a, p_s, is_insert;
 

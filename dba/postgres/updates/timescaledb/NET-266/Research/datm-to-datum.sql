@@ -1,7 +1,10 @@
 -- convert datm to datum component form
 --EXPLAIN ANALYZE
-SELECT d.stream_id
+SELECT
+	  d.stream_id
 	, d.ts
+	, min(m.node_id)
+	, min(m.source_id)
 	, jsonb_object_agg(r.name_i, r.data_i) FILTER (WHERE r.name_i IS NOT NULL AND r.data_i IS NOT NULL) as jdata_i
 	, jsonb_object_agg(r.name_a, r.data_a) FILTER (WHERE r.name_a IS NOT NULL AND r.data_a IS NOT NULL) as jdata_a
 	, jsonb_object_agg(r.name_s, r.data_s) FILTER (WHERE r.name_s IS NOT NULL AND r.data_s IS NOT NULL) as jdata_s
@@ -18,8 +21,11 @@ ORDER BY d.stream_id, d.ts
 
 -- convert datm to datum form
 --EXPLAIN ANALYZE
-SELECT d.stream_id
+SELECT
+	  d.stream_id
 	, d.ts
+	, min(m.node_id)
+	, min(m.source_id)
 	, solarcommon.jdata_from_components(
 		jsonb_object_agg(r.name_i, r.data_i) FILTER (WHERE r.name_i IS NOT NULL AND r.data_i IS NOT NULL)
 		, jsonb_object_agg(r.name_a, r.data_a) FILTER (WHERE r.name_a IS NOT NULL AND r.data_a IS NOT NULL)
