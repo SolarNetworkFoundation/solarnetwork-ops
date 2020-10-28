@@ -5,6 +5,19 @@ PORT="5432"
 USER="solarnet"
 DB="solarnetwork"
 
+while getopts ":d:h:p:U:" opt; do
+	case $opt in
+		d) solarnetwork="${OPTARG}";;
+		h) HOST="${OPTARG}";;
+		p) PORT="${OPTARG}";;
+		U) USER="${OPTARG}";;
+		*)
+			echo "Unknown argument: ${OPTARG}"
+			exit 1
+	esac
+done
+shift $(($OPTIND - 1))
+
 migrate_datum_range () {
 	local start_date="$1"
 	local end_date="$2"
@@ -45,17 +58,20 @@ migrate_loc_datum_range () {
 	done
 }
 
-echo `date` Creating da_datm hypertable
+echo `date` "Creating da_datm hypertable"
 
-# initial hypertable chunk size 1 year
-psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
+# initial hypertable chunk size 1 year; drop extra index first for faster insert
+psql -q -h $HOST -p $PORT -U $USER -d $DB \
+	-c \
+	"DROP INDEX IF EXISTS solardatm.da_datm_unq_reverse" \
+	-c \
 	"SELECT * FROM public.create_hypertable(
 	'solardatm.da_datm'::regclass,
 	'ts'::name,
 	chunk_time_interval => interval '360 days',
 	create_default_indexes => FALSE)"
 
-echo `date` Starting datum migration
+echo `date` "Starting datum migration"
 
 # load oldest data into 1-year chunks
 migrate_datum_range '2009-12-01 13:00:00+13' '2015-11-01 13:00:00+13'
@@ -69,5 +85,11 @@ migrate_datum_range '2015-11-01 13:00:00+13' '2021-01-01 00:00:00+13'
 
 # migrate location datum
 migrate_loc_datum_range '2008-01-02 01:00:00+13' '2022-01-01 00:00:00+13'
+
+# recreate dropped index
+echo `date` "Recreating da_datm_unq_reverse index"
+time psql -q -h $HOST -p $PORT -U $USER -d $DB \
+	-c \
+	"CREATE UNIQUE INDEX IF NOT EXISTS da_datm_unq_reverse ON solardatm.da_datm (stream_id, ts DESC)"
 
 echo `date` Finished datum migration
