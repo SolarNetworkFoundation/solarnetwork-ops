@@ -80,5 +80,4 @@ $$
 	WHERE d.ts >= r.range_start
 		AND d.ts <= r.range_end
 	WINDOW slot AS (PARTITION BY d.stream_id ORDER BY d.ts RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
-	;
 $$;
