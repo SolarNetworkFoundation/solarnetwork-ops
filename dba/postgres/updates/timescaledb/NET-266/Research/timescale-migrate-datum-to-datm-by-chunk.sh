@@ -65,6 +65,8 @@ psql -q -h $HOST -p $PORT -U $USER -d $DB \
 	-c \
 	"DROP INDEX IF EXISTS solardatm.da_datm_unq_reverse" \
 	-c \
+	"ALTER INDEX solardatm.da_datm_pkey SET TABLESPACE solarindex" \
+	-c \
 	"SELECT * FROM public.create_hypertable(
 	'solardatm.da_datm'::regclass,
 	'ts'::name,
@@ -90,6 +92,7 @@ migrate_loc_datum_range '2008-01-02 01:00:00+13' '2022-01-01 00:00:00+13'
 echo `date` "Recreating da_datm_unq_reverse index"
 time psql -q -h $HOST -p $PORT -U $USER -d $DB \
 	-c \
-	"CREATE UNIQUE INDEX IF NOT EXISTS da_datm_unq_reverse ON solardatm.da_datm (stream_id, ts DESC)"
+	"CREATE UNIQUE INDEX IF NOT EXISTS da_datm_unq_reverse
+	ON solardatm.da_datm (stream_id, ts DESC) TABLESPACE solarindex"
 
 echo `date` Finished datum migration
