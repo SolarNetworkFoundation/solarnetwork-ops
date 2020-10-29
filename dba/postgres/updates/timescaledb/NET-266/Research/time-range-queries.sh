@@ -2,7 +2,7 @@
 CREATE OR REPLACE FUNCTION solardatm.find_time_least(sid uuid)
 	RETURNS solardatm.da_datm LANGUAGE sql STABLE AS
 $$
-	SELECT DISTINCT ON (ts) *
+	SELECT *
 	FROM solardatm.da_datm
 	WHERE stream_id = sid
 	ORDER BY ts
@@ -12,7 +12,7 @@ $$;
 CREATE OR REPLACE FUNCTION solardatm.find_time_greatest(sid uuid)
 	RETURNS solardatm.da_datm LANGUAGE sql STABLE AS
 $$
-	SELECT DISTINCT ON (ts) *
+	SELECT *
 	FROM solardatm.da_datm
 	WHERE stream_id = sid
 	ORDER BY ts DESC
