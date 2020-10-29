@@ -22,6 +22,8 @@ CREATE OR REPLACE FUNCTION solardatm.find_datm_for_time_span(
 		portion		DOUBLE PRECISION
 	) LANGUAGE SQL STABLE ROWS 2000 AS
 $$
+	-- first find boundary datum (least, greatest) for given time range that satisfies both the
+	-- clock and reading aggregate time windows
 	WITH b AS (
 		(
 		-- latest on/before start
@@ -45,6 +47,7 @@ $$
 		LIMIT 1
 		)
 	)
+	-- combine boundary rows into single range row with start/end columns
 	, r AS (
 		SELECT
 			stream_id
@@ -53,6 +56,7 @@ $$
 		FROM b
 		GROUP BY stream_id
 	)
+	-- query for raw datum using the boundary range previously found
 	SELECT
 		  d.stream_id
 		, d.ts
@@ -70,7 +74,6 @@ $$
 				1 - EXTRACT(epoch FROM (start_ts - d.ts)) / EXTRACT(epoch FROM (lead(d.ts) OVER slot - d.ts))
 			WHEN d.ts > end_ts THEN
 				0
-				--EXTRACT(epoch FROM (d.ts - end_ts)) / EXTRACT(epoch FROM (d.ts - lag(d.ts) OVER slot))
 			WHEN lead(d.ts) OVER slot > end_ts THEN
 				EXTRACT(epoch FROM (end_ts - d.ts)) / EXTRACT(epoch FROM (lead(d.ts) OVER slot - d.ts))
 			ELSE 1
@@ -79,5 +82,5 @@ $$
 	INNER JOIN solardatm.da_datm d ON d.stream_id = r.stream_id
 	WHERE d.ts >= r.range_start
 		AND d.ts <= r.range_end
-	WINDOW slot AS (PARTITION BY d.stream_id ORDER BY d.ts RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
+	WINDOW slot AS (ORDER BY d.ts RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
 $$;
