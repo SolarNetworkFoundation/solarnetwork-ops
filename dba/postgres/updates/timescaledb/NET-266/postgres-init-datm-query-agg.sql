@@ -17,37 +17,23 @@
 /**
  * Find datm records for an aggregate time range, supporting both "clock" and "reading" spans.
  *
- * The output `inclusion` column will be -1, 0, or 1 depending on if the row's ts is less than,
- * within, or greater than the `start_ts` and `end_ts` range.
- *
- * The output `portion` column will contain a number between 0 and 1 (inclusive) that represents
- * the portion of that row that is within the `start_ts` - `end_ts` range when compared to an
- * adjacent row outside that range. In other words, it can be used for "clock" periods to
- * normalize data across the time range boundaries.
- *
  * @param sid 				the stream ID to find datm for
  * @param start_ts			the minimum date (inclusive)
  * @param end_ts 			the maximum date (exclusive)
- * @param tolerance_clock 	the maximum time to look forward/backward for adjacent datm within
- *                          the "clock" period
- * @param tolerance_read 	the maximum time to look forward/backward for adjacent datm within
- *                          the "reading" period
+ * @param tolerance 		the maximum time to look forward/backward for adjacent datm
  */
 CREATE OR REPLACE FUNCTION solardatm.find_datm_for_time_span(
-		sid uuid,
-		start_ts TIMESTAMP WITH TIME ZONE,
-		end_ts TIMESTAMP WITH TIME ZONE,
-		tolerance_clock INTERVAL DEFAULT interval '1 hour',
-		tolerance_read INTERVAL DEFAULT interval '3 months'
+		sid 		UUID,
+		start_ts 	TIMESTAMP WITH TIME ZONE,
+		end_ts 		TIMESTAMP WITH TIME ZONE,
+		tolerance 	INTERVAL DEFAULT interval '3 months'
 	) RETURNS TABLE(
 		stream_id 	UUID,
 		ts 			TIMESTAMP WITH TIME ZONE,
 		data_i		NUMERIC[],
 		data_a		NUMERIC[],
 		data_s		TEXT[],
-		data_t		TEXT[],
-		inclusion	SMALLINT,
-		portion		DOUBLE PRECISION
+		data_t		TEXT[]
 	) LANGUAGE SQL STABLE ROWS 2000 AS
 $$
 	-- first find boundary datum (least, greatest) for given time range that satisfies both the
@@ -59,7 +45,7 @@ $$
 		FROM solardatm.da_datm d
 		WHERE d.stream_id = sid
 			AND d.ts <= start_ts
-			AND d.ts > start_ts - tolerance_read
+			AND d.ts > start_ts - tolerance
 		ORDER BY d.stream_id, d.ts DESC
 		LIMIT 1
 		)
@@ -70,7 +56,7 @@ $$
 		FROM solardatm.da_datm d
 		WHERE d.stream_id = sid
 			AND d.ts >= end_ts
-			AND d.ts < end_ts + tolerance_clock
+			AND d.ts < end_ts + tolerance
 		ORDER BY d.stream_id, d.ts
 		LIMIT 1
 		)
@@ -88,39 +74,14 @@ $$
 	SELECT
 		  d.stream_id
 		, d.ts
-		-- only include data_i in output when within clock tolerance
-		, CASE
-			WHEN d.ts < start_ts - tolerance_clock THEN NULL::numeric[]
-			ELSE d.data_i
-			END AS data_i
+		, d.data_i
 		, d.data_a
 		, d.data_s
 		, d.data_t
-		, CASE
-			WHEN d.ts < start_ts THEN -1::SMALLINT
-			WHEN d.ts >= end_ts THEN 1::SMALLINT
-			ELSE 0::SMALLINT
-			END AS inclusion
-		-- calculate "clock" portion
-		, CASE
-			-- in case reading span includes extra rows beyond clock period, ignore this portion
-			-- or this before clock tolerance or this after clock period
-			WHEN lead(d.ts) OVER slot < start_ts OR d.ts < start_ts - tolerance_clock OR d.ts > end_ts THEN
-				0
-			-- when this timestamp is before clock period allocate portion within clock period
-			WHEN d.ts < start_ts THEN
-				EXTRACT(epoch FROM (COALESCE(lead(d.ts) OVER slot, start_ts) - start_ts)) / EXTRACT(epoch FROM (COALESCE(lead(d.ts) OVER slot, start_ts) - d.ts))
-			-- when next timestamp is after clock period allocate portion within clock period
-			WHEN lead(d.ts) OVER slot > end_ts THEN
-				EXTRACT(epoch FROM (end_ts - d.ts)) / EXTRACT(epoch FROM (lead(d.ts) OVER slot - d.ts))
-			-- otherwise fully within clock period
-			ELSE 1
-			END AS portion
 	FROM r
 	INNER JOIN solardatm.da_datm d ON d.stream_id = r.stream_id
 	WHERE d.ts >= r.range_start
 		AND d.ts <= r.range_end
-	WINDOW slot AS (ORDER BY d.ts RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
 $$;
 
 
@@ -128,29 +89,20 @@ $$;
  * Find datm records for an aggregate time range, supporting both "clock" and "reading" spans,
  * including "reset" auxiliary records.
  *
- * The output `inclusion` column will be -1, 0, or 1 depending on if the row's ts is less than,
- * within, or greater than the `start_ts` and `end_ts` range.
- *
- * The output `portion` column will contain a number between 0 and 1 (inclusive) that represents
- * the portion of that row that is within the `start_ts` - `end_ts` range when compared to an
- * adjacent row outside that range. In other words, it can be used for "clock" periods to
- * normalize data across the time range boundaries.
+ * The output `rtype` column will be 0, 1, or 2 if the row is a "raw" datum, "final reset" datum,
+ * or "starting reset" datum.
  *
  * @param sid 				the stream ID to find datm for
  * @param start_ts			the minimum date (inclusive)
  * @param end_ts 			the maximum date (exclusive)
- * @param tolerance_clock 	the maximum time to look forward/backward for adjacent datm within
- *                          the "clock" period
- * @param tolerance_read 	the maximum time to look forward/backward for adjacent datm within
- *                          the "reading" period
+ * @param tolerance 		the maximum time to look forward/backward for adjacent datm
  * @see solardatm.find_datm_for_time_span()
  */
 CREATE OR REPLACE FUNCTION solardatm.find_datm_for_time_span_with_aux(
-		sid uuid,
-		start_ts TIMESTAMP WITH TIME ZONE,
-		end_ts TIMESTAMP WITH TIME ZONE,
-		tolerance_clock INTERVAL DEFAULT interval '1 hour',
-		tolerance_read INTERVAL DEFAULT interval '3 months'
+		sid 		UUID,
+		start_ts 	TIMESTAMP WITH TIME ZONE,
+		end_ts 		TIMESTAMP WITH TIME ZONE,
+		tolerance 	INTERVAL DEFAULT interval '3 months'
 	) RETURNS TABLE(
 		stream_id 	UUID,
 		ts 			TIMESTAMP WITH TIME ZONE,
@@ -158,14 +110,13 @@ CREATE OR REPLACE FUNCTION solardatm.find_datm_for_time_span_with_aux(
 		data_a		NUMERIC[],
 		data_s		TEXT[],
 		data_t		TEXT[],
-		inclusion	SMALLINT,
-		portion		DOUBLE PRECISION
+		rtype		SMALLINT
 	) LANGUAGE SQL STABLE ROWS 2000 AS
 $$
 	-- find raw data for given time range
 	WITH d AS (
-		SELECT d.*, 0 AS rr
-		FROM solardatm.find_datm_for_time_span(sid, start_ts, end_ts) d
+		SELECT d.*, 0::SMALLINT AS rr
+		FROM solardatm.find_datm_for_time_span(sid, start_ts, end_ts, tolerance) d
 	)
 	-- find reset records for same time range, split into two rows for each record: final
 	-- and starting accumulating values
@@ -175,12 +126,13 @@ $$
 			, aux.ts - unnest(ARRAY['1 millisecond','0'])::interval AS ts
 			, m.names_a
 			, unnest(ARRAY[aux.jdata_af, aux.jdata_as]) AS jdata_a
+			, unnest(ARRAY[1::SMALLINT, 2::SMALLINT]) AS rr
 		FROM solardatm.da_datm_aux aux
 		INNER JOIN solardatm.da_datm_meta m ON m.stream_id = aux.stream_id
 		WHERE aux.atype = 'Reset'::solardatum.da_datum_aux_type
 			AND aux.stream_id = sid
-			AND aux.ts >= start_ts - tolerance_read
-			AND aux.ts <= end_ts + tolerance_read
+			AND aux.ts >= start_ts - tolerance
+			AND aux.ts <= end_ts + tolerance
 	)
 	-- convert reset record rows into datm rows by turning jdata_a JSON into data_a value array,
 	-- respecting the array order defined by solardatm.da_datm_meta.names_a and excluding values
@@ -194,25 +146,10 @@ $$
 				FILTER (WHERE array_position(aux.names_a, p.key::text) IS NOT NULL)::numeric[] AS data_a
 			, NULL::text[] AS data_s
 			, NULL::text[] AS data_t
-			, CASE
-				WHEN aux.ts < start_ts THEN -1::SMALLINT
-				WHEN aux.ts >= end_ts THEN 1::SMALLINT
-				ELSE 0::SMALLINT
-				END AS inclusion
-			, CASE
-				WHEN aux.ts < start_ts THEN
-					1 - EXTRACT(epoch FROM (start_ts - aux.ts)) / EXTRACT(epoch FROM (lead(aux.ts) OVER slot - aux.ts))
-				WHEN aux.ts > end_ts THEN
-					0
-				WHEN lead(aux.ts) OVER slot > end_ts THEN
-					EXTRACT(epoch FROM (end_ts - aux.ts)) / EXTRACT(epoch FROM (lead(aux.ts) OVER slot - aux.ts))
-				ELSE 1
-				END AS portion
-			, 1 AS rr
+			, min(aux.rr) AS rr
 		FROM aux
 		INNER JOIN jsonb_each(aux.jdata_a) AS p(key,val) ON TRUE
 		GROUP BY aux.stream_id, aux.ts
-		WINDOW slot AS (ORDER BY aux.ts RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
 	)
 	-- combine raw datm with reset datm
 	, combined AS (
@@ -222,7 +159,7 @@ $$
 	)
 	-- group all results by time so that reset records with the same time as a raw record
 	-- override the raw record
-	SELECT DISTINCT ON (ts) stream_id, ts, data_i, data_a, data_s, data_t, inclusion, portion
+	SELECT DISTINCT ON (ts) stream_id, ts, data_i, data_a, data_s, data_t, rr
 	FROM combined
 	ORDER BY ts, rr DESC
 $$;
@@ -277,30 +214,47 @@ $$
 			sid,
 			start_ts,
 			end_ts,
-			tolerance_clock,
 			tolerance_read
 		)
 	)
 	-- calculate time-weights for data_i values per property
 	, wi AS (
 		SELECT
-			p.idx AS idx
+			  p.idx AS idx
 			, p.val AS val
-			, ((p.val + lead(p.val) OVER slot) / 2) * (EXTRACT(epoch FROM (lead(d.ts) OVER slot - d.ts)) / EXTRACT(epoch FROM (end_ts - start_ts)) * d.portion) AS wval
+			, CASE
+				WHEN d.ts < start_ts
+					THEN 0
+
+				WHEN lag(d.ts) OVER slot + tolerance_clock < start_ts
+					THEN 0
+
+				WHEN lag(d.ts) OVER slot < start_ts
+					THEN  EXTRACT(epoch FROM (d.ts - start_ts)) / EXTRACT(epoch FROM (d.ts - lag(d.ts) OVER slot))
+
+				WHEN d.ts > end_ts + tolerance_clock
+					THEN 0
+
+				WHEN d.ts > end_ts AND lag(d.ts) OVER slot < end_ts
+					THEN EXTRACT(epoch FROM (end_ts - lag(d.ts) OVER slot)) / EXTRACT(epoch FROM (d.ts - lag(d.ts) OVER slot))
+
+				ELSE
+					1
+				END AS portion
 		FROM d
 		INNER JOIN unnest(d.data_i) WITH ORDINALITY AS p(val, idx) ON TRUE
-		WINDOW slot AS (PARTITION BY p.idx ORDER BY d.ts)
+		WHERE d.data_i IS NOT NULL
+		WINDOW slot AS (PARTITION BY p.idx ORDER BY d.ts RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
 	)
 	-- calculate instantaneous statistics
 	, di AS (
 		SELECT
 			w.idx
-			, to_char(sum(w.wval), 'FM999999999999999999990.999999999')::numeric AS val
-			, count(w.wval) AS cnt
+			, to_char(avg(w.val * w.portion), 'FM999999999999999999990.999999999')::numeric AS val
+			, count(w.val) FILTER (WHERE portion > 0) AS cnt
 			, min(val) AS val_min
 			, max(val) AS val_max
 		FROM wi w
-		WHERE w.wval IS NOT NULL
 		GROUP BY w.idx
 	)
 	-- join data_i and stat_i property values back into arrays
@@ -315,41 +269,59 @@ $$
 	-- calculate clock accumulation for data_a values per property
 	, wa AS (
 		SELECT
-			p.idx AS idx
+			  p.idx AS idx
 			, p.val AS val
-			, (lead(p.val) OVER slot - p.val) * d.portion AS cdiff
-			, CASE
-				WHEN lead(d.ts) OVER slot < end_ts THEN (lead(p.val) OVER slot - p.val)
-				ELSE 0
-				END AS rdiff
+			, d.ts
+			, d.rtype
+			, sum(CASE rtype WHEN 2 THEN 1 ELSE 0 END) OVER slice AS slice
+			, CASE rtype
+				WHEN 2 THEN 0
+				ELSE p.val - lag(p.val) OVER slice
+				END AS diff
 			, first_value(p.val) OVER slot AS rstart
+			, last_value(p.val) OVER slot AS rend
 			, CASE
-				WHEN row_number() OVER slot = row_number() OVER reading THEN last_value(p.val) OVER reading
-				ELSE NULL
-				END AS rend
+				WHEN d.ts < start_ts
+					THEN 0
+
+				WHEN lag(d.ts) OVER slot + tolerance_clock < start_ts
+					THEN 0
+
+				WHEN lag(d.ts) OVER slot < start_ts
+					THEN  EXTRACT(epoch FROM (d.ts - start_ts)) / EXTRACT(epoch FROM (d.ts - lag(d.ts) OVER slot))
+
+				WHEN d.ts > end_ts + tolerance_clock
+					THEN 0
+
+				WHEN d.ts > end_ts AND lag(d.ts) OVER slot < end_ts
+					THEN EXTRACT(epoch FROM (end_ts - lag(d.ts) OVER slot)) / EXTRACT(epoch FROM (d.ts - lag(d.ts) OVER slot))
+
+				ELSE
+					1
+				END AS portion
 		FROM d
 		INNER JOIN unnest(d.data_a) WITH ORDINALITY AS p(val, idx) ON TRUE
+		WHERE d.data_a IS NOT NULL
 		WINDOW slot AS (PARTITION BY p.idx ORDER BY d.ts RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
-				, reading AS (PARTITION BY p.idx, CASE WHEN d.ts < end_ts THEN 0 ELSE 1 END ORDER BY d.ts RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
+			, slice AS (PARTITION BY p.idx ORDER BY d.ts)
 	)
 	-- calculate accumulating statistics
 	, da AS (
 		SELECT
 			w.idx
-			, to_char(sum(w.cdiff), 'FM999999999999999999990.999999999')::numeric AS val
-			, to_char(sum(w.rdiff), 'FM999999999999999999990.999999999')::numeric AS diff
+			, to_char(sum(w.diff * w.portion) FILTER (WHERE w.portion > 0), 'FM999999999999999999990.999999999')::numeric AS cdiff
+			, to_char(sum(w.diff), 'FM999999999999999999990.999999999')::numeric AS rdiff
 			, min(w.rstart) AS rstart
 			, min(w.rend) AS rend
 		FROM wa w
-		WHERE w.wval IS NOT NULL
 		GROUP BY w.idx
 	)
 	-- join data_i and meta_i property values back into arrays
 	, da_ary AS (
 		SELECT
-			  array_agg(d.val ORDER BY d.idx) AS data_a
+			  array_agg(d.cdiff ORDER BY d.idx) AS data_a
 			, array_agg(
-				ARRAY[d.diff, d.rstart, d.rend] ORDER BY d.idx
+				ARRAY[d.rdiff, d.rstart, d.rend] ORDER BY d.idx
 			) AS read_a
 		FROM da d
 	)
