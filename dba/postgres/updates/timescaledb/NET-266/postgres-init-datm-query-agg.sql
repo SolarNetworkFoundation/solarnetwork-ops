@@ -201,11 +201,9 @@ CREATE OR REPLACE FUNCTION solardatm.rollup_datm_for_time_span(
 		data_i		NUMERIC[],					-- array of instantaneous property average values
 		stat_i		NUMERIC[][],				-- array of instantaneous property [count,min,max] statistic tuples
 		data_a		NUMERIC[],					-- array of accumulating property clock difference values
-		read_a		NUMERIC[][]					-- array of accumulating property reading [start,finish,diff] tuples
-		--data_s		TEXT[],
-		--data_t		TEXT[],
-		--inclusion	SMALLINT,
-		--portion		DOUBLE PRECISION
+		read_a		NUMERIC[][],				-- array of accumulating property reading [start,finish,diff] tuples
+		data_s		TEXT[],						-- array of "last seen" status property values
+		data_t		TEXT[]						-- array of all tags seen over period
 	) LANGUAGE SQL STABLE ROWS 500 AS
 $$
 	-- grab raw data + reset records, constrained by stream/date range
@@ -325,6 +323,30 @@ $$
 			) AS read_a
 		FROM da d
 	)
+	-- calculate status statistics
+	, ds AS (
+		SELECT
+			  p.idx
+			, solarcommon.first(p.val ORDER BY d.ts DESC) AS val
+		FROM d
+		INNER JOIN unnest(d.data_s) WITH ORDINALITY AS p(val, idx) ON TRUE
+		WHERE d.data_s IS NOT NULL
+		GROUP BY p.idx
+	)
+	-- join data_s property values back into arrays
+	, ds_ary AS (
+		SELECT
+			  array_agg(d.val ORDER BY d.idx) AS data_s
+		FROM ds d
+	)
+	-- join data_t property values into mega array
+	, dt_ary AS (
+		SELECT
+			  array_agg(p.val ORDER BY d.ts) AS data_t
+		FROM d
+		INNER JOIN unnest(d.data_t) AS p(val) ON TRUE
+		WHERE d.data_t IS NOT NULL
+	)
 	SELECT
 		sid AS stream_id
 		, start_ts AS ts_start
@@ -332,5 +354,7 @@ $$
 		, di_ary.stat_i
 		, da_ary.data_a
 		, da_ary.read_a
-	FROM di_ary, da_ary
+		, ds_ary.data_s
+		, dt_ary.data_t
+	FROM di_ary, da_ary, ds_ary, dt_ary
 $$;
