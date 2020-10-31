@@ -51,6 +51,17 @@ $$
 		)
 		UNION ALL
 		(
+		-- earliest on/after start within range; in case nothing before start
+		SELECT d.stream_id, d.ts
+		FROM solardatm.da_datm d
+		WHERE d.stream_id = sid
+			AND d.ts >= start_ts
+			AND d.ts < end_ts
+		ORDER BY d.stream_id, d.ts
+		LIMIT 1
+		)
+		UNION ALL
+		(
 		-- earliest on/after end
 		SELECT d.stream_id, d.ts
 		FROM solardatm.da_datm d
@@ -58,6 +69,17 @@ $$
 			AND d.ts >= end_ts
 			AND d.ts < end_ts + tolerance
 		ORDER BY d.stream_id, d.ts
+		LIMIT 1
+		)
+		UNION ALL
+		(
+		-- latest on/before end, in case nothing after end
+		SELECT d.stream_id, d.ts
+		FROM solardatm.da_datm d
+		WHERE d.stream_id = sid
+			AND d.ts <= end_ts
+			AND d.ts > start_ts
+		ORDER BY d.stream_id, d.ts DESC
 		LIMIT 1
 		)
 	)
