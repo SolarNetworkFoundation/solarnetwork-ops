@@ -13,7 +13,7 @@ needed:
 
 ```
 ezjail-admin console postgres96
-pkg install py-pip
+pkg install py37-pip
 su - pgsql
 python3 -m pip install awscli boto --user
 ```
