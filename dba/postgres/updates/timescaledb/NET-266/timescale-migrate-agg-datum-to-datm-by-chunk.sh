@@ -143,7 +143,26 @@ migrate_monthly () {
 	echo `date` 'Finished monthly datum migration'
 }
 
+migrate_stale () {
+	echo `date` "Migrating stale agg datum ... "
+	time psql -At -h $HOST -p $PORT -U $USER -d $DB -c '\pset pager off' -c \
+		"INSERT INTO solardatm.agg_stale_datm (stream_id, ts_start, agg_kind, created)
+		SELECT m.stream_id, s.ts_start, CASE s.agg_kind WHEN 'm' THEN 'M' ELSE s.agg_kind END AS agg_kind, s.created
+		FROM solaragg.agg_stale_datum s
+		INNER JOIN solardatm.da_datm_meta m ON m.node_id = s.node_id AND m.source_id = s.source_id
+		ON CONFLICT (agg_kind, ts_start, stream_id) DO NOTHING" 2>&1 || exit 1
+
+	echo `date` "Migrating stale agg loc datum ... "
+	time psql -At -h $HOST -p $PORT -U $USER -d $DB -c '\pset pager off' -c \
+		"INSERT INTO solardatm.agg_stale_datm (stream_id, ts_start, agg_kind, created)
+		SELECT m.stream_id, s.ts_start, CASE s.agg_kind WHEN 'm' THEN 'M' ELSE s.agg_kind END AS agg_kind, s.created
+		FROM solaragg.agg_stale_loc_datum s
+		INNER JOIN solardatm.da_loc_datm_meta m ON m.loc_id = s.loc_id AND m.source_id = s.source_id
+		ON CONFLICT (agg_kind, ts_start, stream_id) DO NOTHING" 2>&1 || exit 1
+}
+
 
 migrate_hourly
 migrate_daily
 migrate_monthly
+migrate_stale

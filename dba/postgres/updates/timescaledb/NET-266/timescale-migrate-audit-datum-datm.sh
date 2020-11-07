@@ -111,6 +111,18 @@ migrate_aud_monthly () {
 	echo `date` 'Finished monthly audit datum migration'
 }
 
+
+migrate_aud_stale () {
+	echo `date` "Migrating stale aud datum ... "
+	time psql -At -h $HOST -p $PORT -U $USER -d $DB -c '\pset pager off' -c \
+		"INSERT INTO solardatm.aud_stale_datm_daily (stream_id, ts_start, aud_kind, created)
+		SELECT m.stream_id, s.ts_start, CASE s.aud_kind WHEN 'm' THEN 'M' ELSE s.aud_kind END AS aud_kind, s.created
+		FROM solaragg.aud_datum_daily_stale s
+		INNER JOIN solardatm.da_datm_meta m ON m.node_id = s.node_id AND m.source_id = s.source_id
+		ON CONFLICT (aud_kind, ts_start, stream_id) DO NOTHING" 2>&1 || exit 1
+}
+
 migrate_aud_hourly
 migrate_aud_daily
 migrate_aud_monthly
+migrate_aud_stale
