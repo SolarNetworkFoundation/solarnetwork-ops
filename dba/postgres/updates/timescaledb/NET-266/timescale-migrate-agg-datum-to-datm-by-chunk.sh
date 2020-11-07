@@ -22,7 +22,7 @@ create_hypertable () {
 	local agg="$1"
 	local days="$2"
 
-	echo `date` "Creating agg_datm_hourly hypertable"
+	echo `date` "Creating agg_datm_$agg hypertable"
 
 	psql -q -h $HOST -p $PORT -U $USER -d $DB \
 		-c \
