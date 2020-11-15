@@ -115,7 +115,7 @@ migrate_aud_monthly () {
 migrate_aud_stale () {
 	echo `date` "Migrating stale aud datum ... "
 	time psql -At -h $HOST -p $PORT -U $USER -d $DB -c '\pset pager off' -c \
-		"INSERT INTO solardatm.aud_stale_datm_daily (stream_id, ts_start, aud_kind, created)
+		"INSERT INTO solardatm.aud_stale_datm (stream_id, ts_start, aud_kind, created)
 		SELECT m.stream_id, s.ts_start, CASE s.aud_kind WHEN 'm' THEN 'M' ELSE s.aud_kind END AS aud_kind, s.created
 		FROM solaragg.aud_datum_daily_stale s
 		INNER JOIN solardatm.da_datm_meta m ON m.node_id = s.node_id AND m.source_id = s.source_id
