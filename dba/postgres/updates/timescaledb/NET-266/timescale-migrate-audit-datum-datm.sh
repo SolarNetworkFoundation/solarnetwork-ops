@@ -76,7 +76,7 @@ migrate_aud_hourly () {
 
 	# now bump down chunk interval smaller as data volume increased
 	psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
-		"SELECT public.set_chunk_time_interval('solardatm.aud_datm_hourly', INTERVAL '720 days')"
+		"SELECT public.set_chunk_time_interval('solardatm.aud_datm_io', INTERVAL '720 days')"
 
 	# load remaining data into smaller chunks
 	migrate_aud_datum_range 'hourly' '2019-01-05' '2022-01-01' '1w'

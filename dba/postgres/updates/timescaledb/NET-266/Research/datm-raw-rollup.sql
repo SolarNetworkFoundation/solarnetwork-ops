@@ -31,10 +31,6 @@ CREATE OR REPLACE FUNCTION solardatm.rollup_datm_for_time_span(
 		stat_i		NUMERIC[][],				-- array of instantaneous property [count,min,max] statistic tuples
 		data_a		NUMERIC[],					-- array of accumulating property clock difference values
 		read_a		NUMERIC[][]					-- array of accumulating property reading [start,finish,diff] tuples
-		--data_s		TEXT[],
-		--data_t		TEXT[],
-		--inclusion	SMALLINT,
-		--portion		DOUBLE PRECISION
 	) LANGUAGE SQL STABLE ROWS 500 AS
 $$
 	-- grab raw data, constrained by stream/date range
