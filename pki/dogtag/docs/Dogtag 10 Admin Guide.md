@@ -247,3 +247,73 @@ button.
 The **pkidbuser** and **CA-ca.solarnetwork.net-8443** users need the renewed certificate for this user, in the PKI Console visit the
 **Configuration > Users and Groups** UI pane for the **pkidbuser** user. Click the 
 **Certificates** button, then **Import** and paste in the renewed certificate.
+
+# List users
+
+As the `caadmin` OS user:
+
+```
+pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
+
+-----------------
+4 entries matched
+-----------------
+  User ID: CA-ca.solarnetwork.net-8443
+  Full name: CA-ca.solarnetwork.net-8443
+
+  User ID: caadmin
+  Full name: caadmin
+
+  User ID: pkidbuser
+  Full name: pkidbuser
+
+  User ID: suagent
+  Full name: SolarUser Agent
+```
+
+# List user certificates
+
+```
+pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-cert-find suagent
+
+  Cert ID: 2;65545;CN=SolarNetwork Root CA,OU=SolarNetwork Certification Authority,O=SolarNetwork;UID=suagent,E=suagent@solarnetwork.net,CN=suagent,OU=SolarUser,O=SolarNetwork
+  Version: 2
+  Serial Number: 0x10009
+  Issuer: CN=SolarNetwork Root CA,OU=SolarNetwork Certification Authority,O=SolarNetwork
+  Subject: UID=suagent,E=suagent@solarnetwork.net,CN=suagent,OU=SolarUser,O=SolarNetwork
+```
+
+# Renew user certificate
+
+```
+# request cert renew
+pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-cert-request-submit \
+    --profile caManualRenewal --serial 0x10009 --renewal
+
+-----------------------------
+Submitted certificate request
+-----------------------------
+  Request ID: 10075
+  Type: renewal
+  Request Status: complete
+  Operation Result: success
+  Certificate ID: 0x10040
+
+# NOTE if Status is pending, then approve else skip this step
+# pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-cert-request-approve 10075
+
+# export
+pki -n 'PKI Administrator for solarnetwork.net' ca-cert-export 0x10040 --output-file pki-suagent-20201118.crt
+
+# add to user
+pki -n 'PKI Administrator for solarnetwork.net' ca-user-cert-add suagent --input pki-suagent-20201118.crt
+
+# import cert to nssdb
+pki -n 'PKI Administrator for solarnetwork.net' client-cert-import suagent --serial 0x10040
+
+# export cert + key to p12
+pki -n 'PKI Administrator for solarnetwork.net' pkcs12-cert-import suagent \
+    --no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC' \
+    --pkcs12-file pki-suagent-20201118.p12 \
+    --pkcs12-password Secret.123
+```
