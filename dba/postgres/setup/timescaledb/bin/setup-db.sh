@@ -98,7 +98,7 @@ if [ -n "$CREATE_USER" ]; then
 	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtc "CREATE USER $PG_DB_OWNER WITH LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION"
 	fi
-	
+
 	echo
 	if [ ! -e "$USER_ROLE_SCRIPT" ]; then
 		echo "$USER_ROLE_SCRIPT DDL not found.";
@@ -121,7 +121,7 @@ if [ -n "$PG_DB_TABLESPACE" -a -n "$PG_DB_TABLESPACE_PATH" ]; then
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE TABLESPACE $PG_DB_TABLESPACE OWNER $PG_DB_OWNER LOCATION '$PG_DB_TABLESPACE_PATH' $PG_DB_TABLESPACE_OPTS'"
-	else		
+	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -Atc "CREATE TABLESPACE $PG_DB_TABLESPACE OWNER $PG_DB_OWNER LOCATION '$PG_DB_TABLESPACE_PATH'"
 	fi
 fi
@@ -133,7 +133,7 @@ if [ -n "$PG_DB_TABLESPACE_OPTS" ]; then
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'ALTER TABLESPACE $PG_DB_TABLESPACE SET ($PG_DB_TABLESPACE_OPTS)'"
-	else		
+	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -Atc "ALTER TABLESPACE $PG_DB_TABLESPACE SET ($PG_DB_TABLESPACE_OPTS)"
 	fi
 fi
@@ -144,32 +144,16 @@ if [ -n "$VERBOSE" ]; then
 fi
 if [ -n "$DRY_RUN" ]; then
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE DATABASE $PG_DB WITH ENCODING='UTF8' OWNER=$PG_DB_OWNER TEMPLATE=$PG_TEMPLATE_DB LC_COLLATE='C' LC_CTYPE='C' ${PG_DB_TABLESPACE:+TABLESPACE=$PG_DB_TABLESPACE}'"
-	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS plv8 WITH SCHEMA pg_catalog'"
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public'"
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public'"
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS "'"uuid-ossp"'" WITH SCHEMA public'"
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'CREATE EXTENSION IF NOT EXISTS timescaledb WITH SCHEMA public'"
 else
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c "CREATE DATABASE $PG_DB WITH ENCODING='UTF8' OWNER=$PG_DB_OWNER TEMPLATE=$PG_TEMPLATE_DB LC_COLLATE='C' LC_CTYPE='C' ${PG_DB_TABLESPACE:+TABLESPACE=$PG_DB_TABLESPACE}" || exit 5
-	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS plv8 WITH SCHEMA pg_catalog" || exit 6
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS citext WITH SCHEMA public" || exit 7
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public" || exit 8
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS "'"uuid-ossp"'" WITH SCHEMA public" || exit 8
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS timescaledb WITH SCHEMA public" || exit 9
-fi
-
-echo
-if [ -n "$VERBOSE" ]; then
-	echo "Creating plv8 scripts..."
-fi
-if [ -n "$DRY_RUN" ]; then
-	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -f postgres-init-plv8.sql"
-else		
-	# for some reason, plv8 often chokes on the inline comments, so strip them out
-	cd init
-	sed -e '/^\/\*/d' -e '/^ \*/d' postgres-init-plv8.sql \
-		| psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB || exit 9
-	cd ..
 fi
 
 if [ -n "$INDEX_TABLESPACE" -a -n "$INDEX_TABLESPACE_PATH" ]; then
@@ -179,7 +163,7 @@ if [ -n "$INDEX_TABLESPACE" -a -n "$INDEX_TABLESPACE_PATH" ]; then
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE TABLESPACE $INDEX_TABLESPACE OWNER $PG_DB_OWNER LOCATION '$INDEX_TABLESPACE_PATH' $INDEX_TABLESPACE_OPTS'"
-	else		
+	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -Atc "CREATE TABLESPACE $INDEX_TABLESPACE OWNER $PG_DB_OWNER LOCATION '$INDEX_TABLESPACE_PATH'"
 	fi
 fi
@@ -191,7 +175,7 @@ if [ -n "$INDEX_TABLESPACE_OPTS" ]; then
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'ALTER TABLESPACE $INDEX_TABLESPACE SET ($INDEX_TABLESPACE_OPTS)'"
-	else		
+	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -Atc "ALTER TABLESPACE $INDEX_TABLESPACE SET ($INDEX_TABLESPACE_OPTS)"
 	fi
 fi
@@ -202,7 +186,7 @@ if [ -n "$VERBOSE" ]; then
 fi
 if [ -n "$DRY_RUN" ]; then
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -f tsdb-init.sql"
-else		
+else
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -Atf tsdb-init.sql || exit 10
 fi
 
@@ -211,9 +195,9 @@ if [ -n "$VERBOSE" ]; then
 	echo "Setting ownership of database objects..."
 fi
 if [ -n "$DRY_RUN" ]; then
-	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solaragg', 'solarcommon', 'solarbill', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res'"
-else		
-	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solaragg', 'solarcommon', 'solarbill', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res" || exit 11
+	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solarcommon', 'solarbill', 'solardatm', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res'"
+else
+	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solarcommon', 'solarbill', 'solardatm', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res" || exit 11
 fi
 
 echo
@@ -222,27 +206,19 @@ if [ -n "$VERBOSE" ]; then
 fi
 if [ -n "$DRY_RUN" ]; then
 	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c '...'"
-else		
+else
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAt <<-EOF
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatum',	'da_datum',				'ts',		'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatum',	'da_loc_datum',			'ts',		'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_datum_hourly',		'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_datum_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_datum_monthly',	'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'da_datm',				'ts',		'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_loc_datum_hourly',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_loc_datum_daily',	'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'agg_loc_datum_monthly','ts_start',	'10 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'agg_datm_hourly',		'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'agg_datm_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'agg_datm_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_datum_hourly',		'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_datum_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_datum_monthly',	'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_io',			'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_loc_datum_hourly',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solaragg',	'aud_acc_datum_daily',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_acc_datm_daily',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 	EOF
 fi
 
@@ -253,9 +229,9 @@ if [ -n "$INDEX_TABLESPACE" ]; then
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT * FROM public.set_index_tablespace(ARRAY[...], '$INDEX_TABLESPACE')'"
-	else		
+	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -At <<-EOF
-			SELECT stmt || ';' FROM (SELECT unnest(ARRAY['solaragg', 'solardatum', 'solarnet', 'solaruser']) AS schem) AS s,
+			SELECT stmt || ';' FROM (SELECT unnest(ARRAY['solardatm', 'solarnet', 'solaruser']) AS schem) AS s,
 			LATERAL (SELECT * FROM public.set_index_tablespace(s.schem, '$INDEX_TABLESPACE')) AS res;
 		EOF
 	fi
