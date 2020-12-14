@@ -17,6 +17,7 @@
 \i init/postgres-init-core.sql
 \i init/postgres-init-instructor.sql
 \i init/postgres-init-datm-schema.sql
+\i tsdb-init-datm-schema.sql
 \i init/postgres-init-datm-core.sql
 \i init/postgres-init-datm-agg-query.sql
 \i init/postgres-init-datm-agg.sql
