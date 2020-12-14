@@ -24,10 +24,7 @@ create_hypertable () {
 
 	echo `date` "Creating agg_datm_$agg hypertable"
 
-	psql -q -h $HOST -p $PORT -U $USER -d $DB \
-		-c \
-		"ALTER INDEX solardatm.agg_datm_$agg_pkey SET TABLESPACE solarindex" \
-		-c \
+	psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 		"SELECT * FROM public.create_hypertable(
 		'solardatm.agg_datm_$agg'::regclass,
 		'ts_start'::name,
@@ -103,10 +100,10 @@ migrate_hourly () {
 		"SELECT public.set_chunk_time_interval('solardatm.agg_datm_hourly', INTERVAL '180 days')"
 
 	# load remaining data into smaller chunks
-	migrate_agg_datum_range 'hourly' '2019-01-05' '2022-01-01' '1d'
+	migrate_agg_datum_range 'hourly' '2019-01-05' '2222-01-01' '1d'
 
 	# migrate location datum
-	migrate_agg_loc_datum_range 'hourly' '2000-01-01' '2022-01-01' '1w'
+	migrate_agg_loc_datum_range 'hourly' '2000-01-01' '2222-01-01' '1w'
 
 	echo `date` 'Finished hourly datum migration'
 }
@@ -126,7 +123,7 @@ migrate_daily () {
 	migrate_agg_datum_range 'daily' '2019-01-01' '2022-01-01' '1w'
 
 	# migrate location datum
-	migrate_agg_loc_datum_range 'daily' '2000-01-01' '2022-01-01' '1m'
+	migrate_agg_loc_datum_range 'daily' '2000-01-01' '2222-01-01' '1m'
 
 	echo `date` 'Finished daily datum migration'
 }
@@ -138,7 +135,7 @@ migrate_monthly () {
 
 	migrate_agg_datum_range 'monthly' '2000-01-01' '2022-01-01' '10y'
 
-	migrate_agg_loc_datum_range 'monthly' '2000-01-01' '2022-01-01' '1y'
+	migrate_agg_loc_datum_range 'monthly' '2000-01-01' '2222-01-01' '1y'
 
 	echo `date` 'Finished monthly datum migration'
 }

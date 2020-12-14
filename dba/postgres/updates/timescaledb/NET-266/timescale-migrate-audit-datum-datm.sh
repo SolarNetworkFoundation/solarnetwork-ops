@@ -24,10 +24,7 @@ create_aud_hypertable () {
 
 	echo `date` "Creating aud_datm_$agg hypertable"
 
-	psql -q -h $HOST -p $PORT -U $USER -d $DB \
-		-c \
-		"ALTER INDEX solardatm.aud_datm_${agg}_pkey SET TABLESPACE solarindex" \
-		-c \
+	psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 		"SELECT * FROM public.create_hypertable(
 		'solardatm.aud_datm_$agg'::regclass,
 		'ts_start'::name,
@@ -67,10 +64,10 @@ migrate_aud_datum_range () {
 	done
 }
 
-migrate_aud_hourly () {
+migrate_aud_io () {
 	create_aud_hypertable 'hourly' '3650'
 
-	echo `date` "Starting hourly audit datum migration"
+	echo `date` "Starting io audit datum migration"
 
 	migrate_aud_datum_range 'hourly' '2000-01-01' '2019-01-05' '1w'
 
@@ -79,9 +76,9 @@ migrate_aud_hourly () {
 		"SELECT public.set_chunk_time_interval('solardatm.aud_datm_io', INTERVAL '720 days')"
 
 	# load remaining data into smaller chunks
-	migrate_aud_datum_range 'hourly' '2019-01-05' '2022-01-01' '1w'
+	migrate_aud_datum_range 'io' '2019-01-05' '2222-01-01' '1w'
 
-	echo `date` 'Finished hourly audit datum migration'
+	echo `date` 'Finished io audit datum migration'
 }
 
 migrate_aud_daily () {
@@ -96,7 +93,7 @@ migrate_aud_daily () {
 		"SELECT public.set_chunk_time_interval('solardatm.aud_datm_daily', INTERVAL '1825 days')"
 
 	# load remaining data into smaller chunks
-	migrate_aud_datum_range 'daily' '2019-01-01' '2022-01-01' '1y'
+	migrate_aud_datum_range 'daily' '2019-01-01' '2222-01-01' '1y'
 
 	echo `date` 'Finished daily audit datum migration'
 }
@@ -106,7 +103,7 @@ migrate_aud_monthly () {
 
 	echo `date` "Starting monthly audit datum migration"
 
-	migrate_aud_datum_range 'monthly' '2000-01-01' '2022-01-01' '10y'
+	migrate_aud_datum_range 'monthly' '2000-01-01' '2222-01-01' '10y'
 
 	echo `date` 'Finished monthly audit datum migration'
 }
@@ -122,7 +119,7 @@ migrate_aud_stale () {
 		ON CONFLICT (aud_kind, ts_start, stream_id) DO NOTHING" 2>&1 || exit 1
 }
 
-migrate_aud_hourly
+migrate_aud_io
 migrate_aud_daily
 migrate_aud_monthly
 migrate_aud_stale

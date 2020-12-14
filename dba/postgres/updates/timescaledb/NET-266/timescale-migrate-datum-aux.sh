@@ -1,4 +1,6 @@
 #!/bin/sh
+#
+# NOTE: requires datum to have been migrated FIRST
 
 HOST="tsdb"
 PORT="5432"

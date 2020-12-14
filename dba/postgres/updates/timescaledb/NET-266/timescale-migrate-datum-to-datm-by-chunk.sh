@@ -61,12 +61,7 @@ migrate_loc_datum_range () {
 echo `date` "Creating da_datm hypertable"
 
 # initial hypertable chunk size 1 year; drop extra index first for faster insert
-psql -q -h $HOST -p $PORT -U $USER -d $DB \
-	-c \
-	"DROP INDEX IF EXISTS solardatm.da_datm_unq_reverse" \
-	-c \
-	"ALTER INDEX solardatm.da_datm_pkey SET TABLESPACE solarindex" \
-	-c \
+psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 	"SELECT * FROM public.create_hypertable(
 	'solardatm.da_datm'::regclass,
 	'ts'::name,
@@ -83,7 +78,7 @@ psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 	"SELECT public.set_chunk_time_interval('solardatm.da_datm', INTERVAL '60 days')"
 
 # load remaining data into 60-day chunks
-migrate_datum_range '2015-11-01 13:00:00+13' '2021-01-01 00:00:00+13'
+migrate_datum_range '2015-11-01 13:00:00+13' '2222-01-01 00:00:00+13'
 
 # migrate location datum
 migrate_loc_datum_range '2008-01-02 01:00:00+13' '2022-01-01 00:00:00+13'

@@ -24,10 +24,7 @@ create_aud_hypertable () {
 
 	echo `date` "Creating aud_acc_datm_$agg hypertable"
 
-	psql -q -h $HOST -p $PORT -U $USER -d $DB \
-		-c \
-		"ALTER INDEX solardatm.aud_acc_datm_${agg}_pkey SET TABLESPACE solarindex" \
-		-c \
+	psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 		"SELECT * FROM public.create_hypertable(
 		'solardatm.aud_acc_datm_$agg'::regclass,
 		'ts_start'::name,
