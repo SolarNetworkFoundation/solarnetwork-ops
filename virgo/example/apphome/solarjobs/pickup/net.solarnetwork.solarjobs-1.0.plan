@@ -17,7 +17,7 @@
 
 	<!-- Datum -->
 	<artifact type="bundle" name="net.solarnetwork.central.datum.biz.dao" version="1.7"/>
-	<artifact type="bundle" name="net.solarnetwork.central.datum.dao.mybatis" version="3.1"/>
+	<artifact type="bundle" name="net.solarnetwork.central.datum.dao.jdbc" version="1.0"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.export.biz.dao" version="1.1"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.export.dao.mybatis" version="1.1"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.export.dest.s3" version="1.0"/>
