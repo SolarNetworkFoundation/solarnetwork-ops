@@ -39,15 +39,15 @@ if [ ! -f ../../../setup/timescaledb/tsdb-init-utilities.sql ]; then
 	echo 'The ../../../setup/timescaledb/tsdb-init-utilities.sql DDL is not found.'
 	exit 1;
 fi
-if [ ! -f ../../../setup/timescaledb/init/postgres-init-datm-schema.sql ]; then
-	echo 'The ../../../setup/timescaledb/init/postgres-init-datm-schema.sql DDL is not found.'
+if [ ! -f ../init/postgres-init-datm-schema.sql ]; then
+	echo 'The ../init/postgres-init-datm-schema.sql DDL is not found.'
 	exit 1;
 fi
 
 echo `date` "Creating datm schema..."
 psql $PSQL_CONN_ARGS -U $USER -d $PG_DB -P pager=off \
 	-f ../../../setup/timescaledb/tsdb-init-utilities.sql \
-	-f ../../../setup/timescaledb/init/postgres-init-datm-schema.sql
+	-f ../init/postgres-init-datm-schema.sql
 
 # ---------
 
