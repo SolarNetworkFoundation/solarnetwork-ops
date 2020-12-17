@@ -20,11 +20,12 @@ The second stage is meant to be done when SolarNetwork is offline.
 Arguments:
 
  -2                  - stage 2 mode; if not provided then stage 1 is assumed
- -d <app name>       - the database name
- -h <host>           - the host name
- -p <port>           - the port
- -U <user>           - the user
- -E <date>           - the stage cutoff date, in YYYY-MM-dd HH:mm:ss+ZZ format.
+ -d <db name>        - the database name; defaults to 'solarnetwork'
+ -h <host>           - the host name; defaults to 'tsdb'
+ -p <port>           - the port; defaults to '5432'
+ -U <user>           - the user; defaults to 'solarnet'
+ -E <date>           - the stage cutoff date, in YYYY-MM-dd HH:mm:ss+ZZ format;
+                       defaults to '2020-11-15 00:00:00+13'
 EOF
 }
 
