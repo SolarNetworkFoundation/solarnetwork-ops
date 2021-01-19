@@ -54,14 +54,20 @@ migrate_datum_range () {
 			AND lower(ranges[1]::tstzrange) < '$end_date'::timestamptz
 			ORDER BY lower(ranges[1]::tstzrange)"); do
 		echo `date` "Migrating chunk $chunk..."
-		time psql -q -h $HOST -p $PORT -U $USER -d $DB -c '\pset pager off' -c \
-			"WITH ranges AS (
-				SELECT d.node_id, d.source_id, min(d.ts) AS ts_min, max(d.ts) AS ts_max
-				FROM $chunk d
-				GROUP BY d.node_id, d.source_id
-			)
-			SELECT * FROM ranges, solardatm.migrate_datum(ranges.node_id, ranges.source_id,
-				ranges.ts_min, ranges.ts_max + interval '1 ms') AS migrated" 2>&1
+		psql -Aqt -h $HOST -p $PORT -U $USER -d $DB -F $'\t' \
+			-c '\pset pager off' \
+			-c \
+			"SELECT d.node_id, d.source_id, min(d.ts) AS ts_min, max(d.ts) AS ts_max
+			FROM $chunk d
+			GROUP BY d.node_id, d.source_id"  2>&1 \
+			| while IFS=$'\t' read n s min max; do
+				printf '%s\t%3d\t%-64s\t%-26s\t%-26s: ' "$(date)" "$n" "$s" "$min" "$max"
+				psql -Aqt -h $HOST -p $PORT -U $USER -d $DB -F $'\t' \
+					-c '\pset pager off' \
+					-c \
+					"SELECT * FROM solardatm.migrate_datum($n, '$s',
+					'$min'::timestamptz, '$max'::timestamptz + interval '1 ms') AS migrated" 2>&1
+			done
 	done
 }
 
@@ -74,14 +80,20 @@ migrate_loc_datum_range () {
 			AND lower(ranges[1]::tstzrange) < '$end_date'::timestamptz
 			ORDER BY lower(ranges[1]::tstzrange)"); do
 		echo `date` "Migrating chunk $chunk..."
-		time psql -q -h $HOST -p $PORT -U $USER -d $DB -c '\pset pager off' -c \
-			"WITH ranges AS (
-				SELECT d.loc_id, d.source_id, min(d.ts) AS ts_min, max(d.ts) AS ts_max
-				FROM $chunk d
-				GROUP BY d.loc_id, d.source_id
-			)
-			SELECT * FROM ranges, solardatm.migrate_loc_datum(ranges.loc_id, ranges.source_id,
-				ranges.ts_min, ranges.ts_max + interval '1 ms') AS migrated" 2>&1
+		psql -Aqt -h $HOST -p $PORT -U $USER -d $DB -F $'\t' \
+			-c '\pset pager off' \
+			-c \
+			"SELECT d.loc_id, d.source_id, min(d.ts) AS ts_min, max(d.ts) AS ts_max
+			FROM $chunk d
+			GROUP BY d.loc_id, d.source_id"  2>&1 \
+			| while IFS=$'\t' read n s min max; do
+				printf '%s\t%8d\t%-64s\t%-26s\t%-26s: ' "$(date)" "$n" "$s" "$min" "$max"
+				psql -Aqt -h $HOST -p $PORT -U $USER -d $DB -F $'\t' \
+					-c '\pset pager off' \
+					-c \
+					"SELECT * FROM solardatm.migrate_loc_datum($n, '$s',
+					'$min'::timestamptz, '$max'::timestamptz + interval '1 ms') AS migrated" 2>&1
+			done
 	done
 }
 
@@ -98,15 +110,16 @@ if [ "$STAGE2" != 'true' ]; then
 
 	echo `date` "Starting Stage 1 datum migration to ${STAGE1_DATE}..."
 
-	# load oldest data into 1-year chunks
-	migrate_datum_range '2009-12-01 13:00:00+13' '2015-11-01 13:00:00+13'
-
-	# now bump down chunk interval to 60 days as data volume increased
-	psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
-		"SELECT public.set_chunk_time_interval('solardatm.da_datm', INTERVAL '60 days')"
-
-	# load remaining data into 60-day chunks
-	migrate_datum_range '2015-11-01 13:00:00+13' "$STAGE1_DATE"
+#	# load oldest data into 1-year chunks
+#	migrate_datum_range '2009-12-01 13:00:00+13' '2015-11-01 13:00:00+13'
+#
+#	# now bump down chunk interval to 60 days as data volume increased
+#	psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
+#		"SELECT public.set_chunk_time_interval('solardatm.da_datm', INTERVAL '60 days')"
+#
+#	# load remaining data into 60-day chunks
+#	migrate_datum_range '2015-11-01 13:00:00+13' "$STAGE1_DATE"
+	migrate_datum_range '2016-04-29 12:00:00+12' "$STAGE1_DATE"
 
 	# migrate location datum
 	migrate_loc_datum_range '2008-01-02 01:00:00+13' "$STAGE1_DATE"
