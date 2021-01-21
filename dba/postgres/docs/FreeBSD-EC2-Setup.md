@@ -76,7 +76,7 @@ https://freebsd.repo.solarnetwork.org.nz.
 
 Created a 50 GB `io1` volume to hold the database WAL (transaction log). That leaves plenty of
 room for the current level of tranaction bursts, of upwards of 1000 16MB log files. With `lz4`
-encryption enabled, this should hold plenty of log segments. Attached to instance as `/dev/sdf`.
+compression enabled, this should hold plenty of log segments. Attached to instance as `/dev/sdf`.
 
 Created a 100 GB `io1` volume to hold the database indexes (via the `solarindex` tablespace).
 Attached to instance as `/dev/sdg`.
@@ -251,6 +251,17 @@ zpool create -O canmount=off -m none wal /dev/nvd1
 zpool create -O canmount=off -m none idx /dev/nvd2
 zpool create -O canmount=off -m none dat /dev/nvd3
 ```
+
+### Attaching volumes while running
+
+If expanding the number of volumes on a running instance later, after attaching the volume to the
+instance you must run the following for FreeBSD to "see" the new volume:
+
+```sh
+devctl rescan pci0
+```
+
+Afterwards, `nvmecontrol devlist` will show the new volume.
 
 ## Install Postgres
 

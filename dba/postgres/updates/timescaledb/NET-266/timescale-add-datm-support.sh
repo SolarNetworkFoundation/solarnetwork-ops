@@ -14,11 +14,12 @@ PG_DB="solarnetwork"
 PSQL_CONN_ARGS=""
 VERBOSE=""
 
-while getopts ":d:h:i:p:U:v" opt; do
+while getopts ":d:h:i:np:U:v" opt; do
 	case $opt in
 		d) PG_DB="${OPTARG}";;
 		h) HOST="${OPTARG}";;
 		i) INDEX_TABLESPACE="${OPTARG}";;
+		n) DRY_RUN='TRUE';;
 		p) PORT="${OPTARG}";;
 		U) USER="${OPTARG}";;
 		v) VERBOSE='TRUE';;
@@ -29,7 +30,7 @@ while getopts ":d:h:i:p:U:v" opt; do
 done
 shift $(($OPTIND - 1))
 
-PSQL_CONN_ARGS="-h $HOST -p $PORT"
+PSQL_CONN_ARGS="-h $HOST $PSQL_CONN_ARGS"
 
 START_DIR="$PWD"
 
@@ -39,20 +40,32 @@ if [ ! -f ../../../setup/timescaledb/tsdb-init-utilities.sql ]; then
 	echo 'The ../../../setup/timescaledb/tsdb-init-utilities.sql DDL is not found.'
 	exit 1;
 fi
-if [ ! -f ../../../setup/timescaledb/init/postgres-init-datm-schema.sql ]; then
-	echo 'The ../../../setup/timescaledb/init/postgres-init-datm-schema.sql DDL is not found.'
+if [ ! -f ../init/postgres-init-datm-schema.sql ]; then
+	echo 'The ../init/postgres-init-datm-schema.sql DDL is not found.'
 	exit 1;
 fi
 
-echo `date` "Creating datm schema..."
-psql $PSQL_CONN_ARGS -U $USER -d $PG_DB -P pager=off \
-	-f ../../../setup/timescaledb/tsdb-init-utilities.sql \
-	-f ../../../setup/timescaledb/init/postgres-init-datm-schema.sql
+if [ -n "$VERBOSE" ]; then
+	echo `date` "Creating datm schema..."
+fi
+if [ -n "$DRY_RUN" ]; then
+	echo "psql $PSQL_CONN_ARGS -U $USER -d $PG_DB -f ../../../setup/timescaledb/tsdb-init-utilities.sql -f ../init/postgres-init-datm-schema.sql"
+else
+	psql $PSQL_CONN_ARGS -U $USER -d $PG_DB -P pager=off \
+		-f ../../../setup/timescaledb/tsdb-init-utilities.sql \
+		-f ../init/postgres-init-datm-schema.sql
+fi
 
 # ---------
 
-echo `date` "Adding datm support..."
-psql $PSQL_CONN_ARGS -U $USER -d $PG_DB -P pager=off -f NET-266-add-datm.sql
+if [ -n "$VERBOSE" ]; then
+	echo `date` "Adding datm support..."
+fi
+if [ -n "$DRY_RUN" ]; then
+	echo "psql $PSQL_CONN_ARGS -U $USER -d $PG_DB -P pager=off -f NET-266-add-datm.sql"
+else
+	psql $PSQL_CONN_ARGS -U $USER -d $PG_DB -P pager=off -f NET-266-add-datm.sql
+fi
 
 # ---------
 
