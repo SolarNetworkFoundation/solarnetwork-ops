@@ -76,7 +76,7 @@ https://freebsd.repo.solarnetwork.org.nz.
 
 Created a 50 GB `io1` volume to hold the database WAL (transaction log). That leaves plenty of
 room for the current level of tranaction bursts, of upwards of 1000 16MB log files. With `lz4`
-encryption enabled, this should hold plenty of log segments. Attached to instance as `/dev/sdf`.
+compression enabled, this should hold plenty of log segments. Attached to instance as `/dev/sdf`.
 
 Created a 100 GB `io1` volume to hold the database indexes (via the `solarindex` tablespace).
 Attached to instance as `/dev/sdg`.
