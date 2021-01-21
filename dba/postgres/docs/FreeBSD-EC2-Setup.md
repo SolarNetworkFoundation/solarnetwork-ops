@@ -252,6 +252,17 @@ zpool create -O canmount=off -m none idx /dev/nvd2
 zpool create -O canmount=off -m none dat /dev/nvd3
 ```
 
+### Attaching volumes while running
+
+If expanding the number of volumes on a running instance later, after attaching the volume to the
+instance you must run the following for FreeBSD to "see" the new volume:
+
+```sh
+devctl rescan pci0
+```
+
+Afterwards, `nvmecontrol devlist` will show the new volume.
+
 ## Install Postgres
 
 ```sh
