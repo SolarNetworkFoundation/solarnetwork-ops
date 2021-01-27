@@ -180,7 +180,7 @@ if ! grep -q 'com.sun.org.apache.bcel.internal' "$VIRGO_HOME/$APP_NAME/configura
 	fi
 	if [ ! -e defs/sys-packages-add.txt ]; then
 		echo "Missing defs/sys-packages-add.txt file!"
-		exit 1	
+		exit 1
 	fi
 	sed -i '' '/org.osgi.framework.system.packages/r defs/sys-packages-add.txt' "$VIRGO_HOME/$APP_NAME/configuration/java-server.profile"
 fi
