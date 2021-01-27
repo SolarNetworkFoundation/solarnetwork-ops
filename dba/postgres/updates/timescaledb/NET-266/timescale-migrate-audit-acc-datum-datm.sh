@@ -72,7 +72,7 @@ migrate_aud_acc_daily () {
 	# load remaining data into smaller chunks
 	migrate_aud_acc_datum_range 'daily' '2019-01-01' '2022-01-01' '1y'
 
-	echo `date` 'Finished daily audit cc adatum migration'
+	echo `date` 'Finished daily audit acc datum migration'
 }
 
 migrate_aud_acc_daily
