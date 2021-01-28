@@ -17,7 +17,7 @@ git checkout 0.10.1     # or some other release
 
 # perform build
 export PATH=/Applications/Postgres.app/Contents/Versions/9.6/bin:$PATH
-OPENSSL_ROOT_DIR=/usr/local/opt/openssl ./bootstrap
+OPENSSL_ROOT_DIR=/usr/local/opt/openssl ./bootstrap -DREGRESS_CHECKS=OFF
 cd build && make
 make install
 ```

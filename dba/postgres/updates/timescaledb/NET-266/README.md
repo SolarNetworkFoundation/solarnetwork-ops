@@ -61,7 +61,7 @@ TODO
 Execute the stage 2 migration scripts:
 
 ```sh
-timescale-migrate-datum-to-datm-by-chunk.sh -h localhost -2
+timescale-migrate-datum-to-datm-by-chunk.sh -h 127.0.0.1 -2
 ```
 
 ## Stage 3
@@ -71,17 +71,17 @@ timescale-migrate-datum-to-datm-by-chunk.sh -h localhost -2
 Execute the stage 3 migration scripts:
 
 ```sh
-timescale-migrate-datum-to-datm-by-chunk.sh -h localhost -3
+timescale-migrate-datum-to-datm-by-chunk.sh -h 127.0.0.1 -3
 ```
 
 Execute the remaining migration scripts:
 
 ```sh
-timescale-migrate-datum-meta.sh -h localhost
-timescale-migrate-agg-datum-to-datm-by-chunk.sh -h localhost
-timescale-migrate-audit-acc-datum-datm.sh -h localhost
-timescale-migrate-audit-datum-datm.sh -h localhost
-timescale-migrate-audit-datum-aux.sh -h localhost
+timescale-migrate-datum-meta.sh -h 127.0.0.1
+timescale-migrate-agg-datum-to-datm-by-chunk.sh -h 127.0.0.1
+timescale-migrate-audit-acc-datum-datm.sh -h 127.0.0.1
+timescale-migrate-audit-datum-datm.sh -h 127.0.0.1
+timescale-migrate-audit-datum-aux.sh -h 127.0.0.1
 ```
 
 Execute the final SQL DDL changes:
