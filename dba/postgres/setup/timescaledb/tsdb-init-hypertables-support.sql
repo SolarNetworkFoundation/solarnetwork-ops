@@ -329,7 +329,7 @@ BEGIN
 	INNER JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
 	WHERE n.nspname = schem_name
 		AND c.relname = pkey_name
-		AND c.relhaspkey = TRUE
+		AND EXISTS (SELECT 1 FROM pg_catalog.pg_index WHERE indrelid = c.oid AND indisprimary)
 		AND a.attnum > 0
 		AND NOT a.attisdropped;
 
