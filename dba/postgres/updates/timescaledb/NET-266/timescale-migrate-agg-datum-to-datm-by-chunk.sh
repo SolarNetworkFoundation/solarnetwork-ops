@@ -4,9 +4,12 @@ HOST="tsdb"
 PORT="5432"
 USER="solarnet"
 DB="solarnetwork"
+STAGE="1"
+STAGE1_DATE="2021-01-16"
 
-while getopts ":d:h:p:U:" opt; do
+while getopts ":2d:h:p:U:" opt; do
 	case $opt in
+		2) STAGE='2';;
 		d) solarnetwork="${OPTARG}";;
 		h) HOST="${OPTARG}";;
 		p) PORT="${OPTARG}";;
@@ -88,10 +91,10 @@ migrate_agg_loc_datum_range () {
 	done
 }
 
-migrate_hourly () {
+migrate_hourly_1 () {
 	create_hypertable 'hourly' '730'
 
-	echo `date` "Starting hourly datum migration"
+	echo `date` "Starting hourly datum migration stage 1 to $STAGE1_DATE"
 
 	migrate_agg_datum_range 'hourly' '2000-01-01' '2019-01-05' '1w'
 
@@ -99,13 +102,22 @@ migrate_hourly () {
 	psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 		"SELECT public.set_chunk_time_interval('solardatm.agg_datm_hourly', INTERVAL '180 days')"
 
+	# load remaining stage data into smaller chunks
+	migrate_agg_datum_range 'hourly' '2019-01-05' "$STAGE1_DATE" '1d'
+
+	echo `date` "Finished hourly datum migration stage 1 to $STAGE1_DATE"
+}
+
+migrate_hourly_2 () {
+	echo `date` "Starting hourly datum migration stage 2 from $STAGE1_DATE"
+
 	# load remaining data into smaller chunks
-	migrate_agg_datum_range 'hourly' '2019-01-05' '2222-01-01' '1d'
+	migrate_agg_datum_range 'hourly' "$STAGE1_DATE" '2222-01-01' '1d'
 
 	# migrate location datum
 	migrate_agg_loc_datum_range 'hourly' '2000-01-01' '2222-01-01' '1w'
 
-	echo `date` 'Finished hourly datum migration'
+	echo `date` 'Finished hourly datum migration stage 2'
 }
 
 migrate_daily () {
@@ -159,7 +171,11 @@ migrate_stale () {
 }
 
 
-migrate_hourly
-migrate_daily
-migrate_monthly
-migrate_stale
+if [ "$STAGE" = '1' ]; then
+	migrate_hourly_1
+else
+	migrate_hourly_2
+	migrate_daily
+	migrate_monthly
+	migrate_stale
+fi
