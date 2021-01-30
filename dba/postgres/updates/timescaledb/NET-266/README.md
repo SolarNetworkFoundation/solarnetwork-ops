@@ -52,6 +52,7 @@ Execute the stage 1 migration scripts:
 ```sh
 timescale-add-datm-support.sh -v -h 127.0.0.1
 timescale-migrate-datum-to-datm-by-chunk.sh -h 127.0.0.1
+timescale-migrate-agg-datum-to-datm-by-chunk.sh -h 127.0.0.1
 ```
 
 ## Stage 2
@@ -68,17 +69,32 @@ timescale-migrate-datum-to-datm-by-chunk.sh -h 127.0.0.1 -2
 
 **Now all SolarNetwork applications must be shut down.**
 
+ * Stopped all EC2 app services (solarjobs, solarquery, solaruser)
+ * Stopped SolarIn (`sudo systemctl stop virgo@solarin`)
+ * Stopped SolarIn proxy (`service nginx stop`)
+ * Stopped primary/replica DB for snapshots (`service postgresql stop`)
+ * Disable Postgres from starting (in `rc.conf` change `postgresql_enable="NO"`)
+ * Stopped primary/replica EC2 instances
+ * Created EC2 snapshots of DB volumes  (`SolarDB_0` `dat`, `idx`, `wal`, and `tmp`)
+ * Started primary/replica EC2 instances
+ * Started primary/replica DB (`service postgresql onestart`)
+
 Execute the stage 3 migration scripts:
 
 ```sh
 timescale-migrate-datum-to-datm-by-chunk.sh -h 127.0.0.1 -3
 ```
 
+Execute stage 2 agg migration script:
+
+```
+timescale-migrate-agg-datum-to-datm-by-chunk.sh -h 127.0.0.1 -2
+```
+
 Execute the remaining migration scripts:
 
 ```sh
 timescale-migrate-datum-meta.sh -h 127.0.0.1
-timescale-migrate-agg-datum-to-datm-by-chunk.sh -h 127.0.0.1
 timescale-migrate-audit-acc-datum-datm.sh -h 127.0.0.1
 timescale-migrate-audit-datum-datm.sh -h 127.0.0.1
 timescale-migrate-audit-datum-aux.sh -h 127.0.0.1
@@ -92,6 +108,7 @@ psql -h localhost -d solarnetwork -f NET-266-billing.sql -f NET-266-add-hypertab
 
 ## Final cleanup
 
-The `solardatum` and `solaragg` schemas can be dropped, and the `plv8` extension removed.
+The `solardatum` and `solaragg` schemas can be dropped, and the `plv8` extension removed. The
+`public.plv8_modules` table can be dropped.
 
 TODO
