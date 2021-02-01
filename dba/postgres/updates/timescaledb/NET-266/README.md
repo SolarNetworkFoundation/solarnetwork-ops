@@ -95,15 +95,15 @@ Execute the remaining migration scripts:
 
 ```sh
 timescale-migrate-datum-meta.sh -h 127.0.0.1
-timescale-migrate-audit-acc-datum-datm.sh -h 127.0.0.1
 timescale-migrate-audit-datum-datm.sh -h 127.0.0.1
-timescale-migrate-audit-datum-aux.sh -h 127.0.0.1
+timescale-migrate-audit-acc-datum-datm.sh -h 127.0.0.1
+timescale-migrate-datum-aux.sh -h 127.0.0.1
 ```
 
 Execute the final SQL DDL changes:
 
 ```sh
-psql -h localhost -d solarnetwork -f NET-266-billing.sql -f NET-266-add-hypertable-reorder-policy.sql
+psql -h 127.0.0.1 -d solarnetwork -f NET-266-billing.sql
 ```
 
 ## Final cleanup
@@ -111,4 +111,41 @@ psql -h localhost -d solarnetwork -f NET-266-billing.sql -f NET-266-add-hypertab
 The `solardatum` and `solaragg` schemas can be dropped, and the `plv8` extension removed. The
 `public.plv8_modules` table can be dropped.
 
-TODO
+```sql
+DROP SCHEMA solaragg CASCADE;
+DROP SCHEMA solardatum CASCADE;
+DROP TABLESPACE IF EXISTS solartmp;
+DROP EXTENSION IF EXISTS plv8 CASCADE;
+DROP TABLE public.plv8_modules;
+```
+
+Remove plv8 configuration from `postresql.conf`:
+
+```
+# comment, or remove
+#plv8.start_proc = 'plv8_startup'
+```
+
+Drop temporary zpool (on primary and replica):
+
+```sh
+zpool destroy tmp
+```
+
+Re-enable postgres startup in `/etc/rc.conf`:
+
+```
+postgresql_enable="YES"
+```
+
+Re-enable datum import permission:
+
+```sh
+psql -h 127.0.0.1 -d solarnetwork -f NET-266-temp-roles-enable.sql
+```
+
+Apply reorder policy:
+
+```sh
+psql -h 127.0.0.1 -d solarnetwork -f NET-266-add-hypertable-reorder-policy.sql
+```

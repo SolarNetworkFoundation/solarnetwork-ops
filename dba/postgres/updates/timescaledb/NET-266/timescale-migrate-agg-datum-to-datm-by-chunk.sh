@@ -112,10 +112,10 @@ migrate_hourly_2 () {
 	echo `date` "Starting hourly datum migration stage 2 from $STAGE1_DATE"
 
 	# load remaining data into smaller chunks
-	migrate_agg_datum_range 'hourly' "$STAGE1_DATE" '2222-01-01' '1d'
+	migrate_agg_datum_range 'hourly' "$STAGE1_DATE" '2022-01-01' '1d'
 
 	# migrate location datum
-	migrate_agg_loc_datum_range 'hourly' '2000-01-01' '2222-01-01' '1w'
+	migrate_agg_loc_datum_range 'hourly' '2000-01-01' '2022-01-01' '1w'
 
 	echo `date` 'Finished hourly datum migration stage 2'
 }
@@ -132,10 +132,10 @@ migrate_daily () {
 		"SELECT public.set_chunk_time_interval('solardatm.agg_datm_daily', INTERVAL '720 days')"
 
 	# load remaining data into smaller chunks
-	migrate_agg_datum_range 'daily' '2019-01-01' '2022-01-01' '1w'
+	migrate_agg_datum_range 'daily' '2018-01-01' '2022-01-01' '1w'
 
 	# migrate location datum
-	migrate_agg_loc_datum_range 'daily' '2000-01-01' '2222-01-01' '1m'
+	migrate_agg_loc_datum_range 'daily' '2000-01-01' '2022-01-01' '1m'
 
 	echo `date` 'Finished daily datum migration'
 }
@@ -147,7 +147,7 @@ migrate_monthly () {
 
 	migrate_agg_datum_range 'monthly' '2000-01-01' '2022-01-01' '10y'
 
-	migrate_agg_loc_datum_range 'monthly' '2000-01-01' '2222-01-01' '1y'
+	migrate_agg_loc_datum_range 'monthly' '2000-01-01' '2022-01-01' '1y'
 
 	echo `date` 'Finished monthly datum migration'
 }
@@ -169,7 +169,6 @@ migrate_stale () {
 		INNER JOIN solardatm.da_loc_datm_meta m ON m.loc_id = s.loc_id AND m.source_id = s.source_id
 		ON CONFLICT (agg_kind, ts_start, stream_id) DO NOTHING" 2>&1 || exit 1
 }
-
 
 if [ "$STAGE" = '1' ]; then
 	migrate_hourly_1

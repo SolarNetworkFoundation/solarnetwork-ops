@@ -38,6 +38,11 @@ migrate_aud_datum_range () {
 	local end_date="$3"
 	local interval="$4"
 
+	local agg_legacy="$agg"
+	if [ "$agg" = "io" ]; then
+		agg_legacy="hourly"
+	fi
+
 	local s="$start_date"
 	local e=""
 
@@ -56,7 +61,7 @@ migrate_aud_datum_range () {
 		time psql -At -h $HOST -p $PORT -U $USER -d $DB -c '\pset pager off' -c \
 			"INSERT INTO solardatm.aud_datm_$agg (stream_id,ts_start,$cols)
 			SELECT stream_id,ts_start,$cols
-			FROM solaragg.aud_datum_$agg a
+			FROM solaragg.aud_datum_$agg_legacy a
 			INNER JOIN solardatm.da_datm_meta m ON m.node_id = a.node_id AND m.source_id = a.source_id
 			WHERE a.ts_start >= '$s'::timestamptz AND a.ts_start < '$e'::timestamptz
 			ON CONFLICT (stream_id, ts_start) DO NOTHING" 2>&1 || exit 1
@@ -65,18 +70,18 @@ migrate_aud_datum_range () {
 }
 
 migrate_aud_io () {
-	create_aud_hypertable 'hourly' '3650'
+	create_aud_hypertable 'io' '3650'
 
 	echo `date` "Starting io audit datum migration"
 
-	migrate_aud_datum_range 'hourly' '2000-01-01' '2019-01-05' '1w'
+	migrate_aud_datum_range 'io' '2000-01-01' '2019-01-05' '1w'
 
 	# now bump down chunk interval smaller as data volume increased
 	psql -q -h $HOST -p $PORT -U $USER -d $DB -c \
 		"SELECT public.set_chunk_time_interval('solardatm.aud_datm_io', INTERVAL '720 days')"
 
 	# load remaining data into smaller chunks
-	migrate_aud_datum_range 'io' '2019-01-05' '2222-01-01' '1w'
+	migrate_aud_datum_range 'io' '2019-01-05' '2022-01-01' '1w'
 
 	echo `date` 'Finished io audit datum migration'
 }
@@ -93,7 +98,7 @@ migrate_aud_daily () {
 		"SELECT public.set_chunk_time_interval('solardatm.aud_datm_daily', INTERVAL '1825 days')"
 
 	# load remaining data into smaller chunks
-	migrate_aud_datum_range 'daily' '2019-01-01' '2222-01-01' '1y'
+	migrate_aud_datum_range 'daily' '2019-01-01' '2022-01-01' '1y'
 
 	echo `date` 'Finished daily audit datum migration'
 }
@@ -103,7 +108,7 @@ migrate_aud_monthly () {
 
 	echo `date` "Starting monthly audit datum migration"
 
-	migrate_aud_datum_range 'monthly' '2000-01-01' '2222-01-01' '10y'
+	migrate_aud_datum_range 'monthly' '2000-01-01' '2022-01-01' '10y'
 
 	echo `date` 'Finished monthly audit datum migration'
 }
