@@ -6,6 +6,7 @@ topic #
 
 user solarinstr
 topic write node/+/instr
+topic write instr/OCPP_v16
 
 user admin
 topic #
