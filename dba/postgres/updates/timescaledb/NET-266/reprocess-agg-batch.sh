@@ -66,7 +66,7 @@ reprocess_agg () {
 				'${MAX_DATE}'::timestamptz, ${BATCH_SIZE})")
 		fi
 		printf '%4d\n' "$n"
-		[ $n -le 0 ] && break
+		[ ${n:-0} -le 0 ] && break
 	done
 }
 
