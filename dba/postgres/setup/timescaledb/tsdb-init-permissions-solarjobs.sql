@@ -15,3 +15,7 @@ GRANT ALL     ON TABLE solaruser.user_node_event_task TO solarjobs;
 GRANT ALL     ON TABLE solaruser.user_node_event_task_result TO solarjobs;
 
 GRANT EXECUTE ON FUNCTION solardatm.store_datum(timestamp with time zone, bigint, text, timestamp with time zone, text, boolean) TO solarjobs;
+
+-- Allow long exports to run without timeout: NOTE this must be set on users granted this role,
+-- it is shown here as a reminder.
+ALTER ROLE solarjobs SET idle_in_transaction_session_timeout TO 0;
