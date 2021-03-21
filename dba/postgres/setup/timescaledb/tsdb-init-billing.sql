@@ -455,22 +455,24 @@ $$
 	)
 	, stored AS (
 		SELECT
-			acc.node_id
+			meta.node_id
 			, SUM(acc.datum_count + acc.datum_hourly_count + acc.datum_daily_count + acc.datum_monthly_count) AS datum_count
 		FROM nodes nodes
-		INNER JOIN solaragg.aud_acc_datum_daily acc ON acc.node_id = ANY(nodes.nodes)
+		INNER JOIN solardatm.da_datm_meta meta ON meta.node_id = ANY(nodes.nodes)
+		INNER JOIN solardatm.aud_acc_datm_daily acc ON acc.stream_id = meta.stream_id
 			AND acc.ts_start >= nodes.sdate AND acc.ts_start < nodes.edate
-		GROUP BY acc.node_id
+		GROUP BY meta.node_id
 	)
 	, datum AS (
 		SELECT
-			a.node_id
+			meta.node_id
 			, SUM(a.prop_count)::bigint AS prop_count
 			, SUM(a.datum_q_count)::bigint AS datum_q_count
 		FROM nodes nodes
-		INNER JOIN solaragg.aud_datum_monthly a ON a.node_id = ANY(nodes.nodes)
+		INNER JOIN solardatm.da_datm_meta meta ON meta.node_id = ANY(nodes.nodes)
+		INNER JOIN solardatm.aud_datm_monthly a ON a.stream_id = meta.stream_id
 			AND a.ts_start >= nodes.sdate AND a.ts_start < nodes.edate
-		GROUP BY a.node_id
+		GROUP BY meta.node_id
 	)
 	, n AS (
 		SELECT UNNEST(nodes) AS node_id FROM nodes

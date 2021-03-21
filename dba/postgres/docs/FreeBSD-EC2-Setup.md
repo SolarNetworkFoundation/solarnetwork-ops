@@ -76,7 +76,7 @@ https://freebsd.repo.solarnetwork.org.nz.
 
 Created a 50 GB `io1` volume to hold the database WAL (transaction log). That leaves plenty of
 room for the current level of tranaction bursts, of upwards of 1000 16MB log files. With `lz4`
-encryption enabled, this should hold plenty of log segments. Attached to instance as `/dev/sdf`.
+compression enabled, this should hold plenty of log segments. Attached to instance as `/dev/sdf`.
 
 Created a 100 GB `io1` volume to hold the database indexes (via the `solarindex` tablespace).
 Attached to instance as `/dev/sdg`.
@@ -252,6 +252,17 @@ zpool create -O canmount=off -m none idx /dev/nvd2
 zpool create -O canmount=off -m none dat /dev/nvd3
 ```
 
+### Attaching volumes while running
+
+If expanding the number of volumes on a running instance later, after attaching the volume to the
+instance you must run the following for FreeBSD to "see" the new volume:
+
+```sh
+devctl rescan pci0
+```
+
+Afterwards, `nvmecontrol devlist` will show the new volume.
+
 ## Install Postgres
 
 ```sh
@@ -342,10 +353,14 @@ AWS_ACCESS_KEY_ID
 AWS_REGION
 AWS_SECRET_ACCESS_KEY
 PGPORT
+TMPDIR
 WALE_S3_PREFIX
+WALE_S3_STORAGE_CLASS
 ```
 
 Each file contains the associated value. The `WALE_S3_PREFIX` is `s3://snf-internal/backups/postgres/96`.
+The `WALE_S3_STORAGE_CLASS` is `STANDARD_IA`. The `TMPDIR` is set so the root filesystem does not
+fill up and run out of space; currently this is set to `/sndb/9.6/tmp`.
 
 
 ## Configure Postgres
@@ -548,14 +563,14 @@ Then edit crontab  via `crontab -e -u postgres` with:
 # Update statistics weekly
 0 4 * * Mon /usr/local/bin/vacuumdb -p 5432 --all --analyze-only
 
-# create base backup every Saturday
-0 3 * * Sat /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e backup-push /sndb/9.6/home
+# create base backup 1st and 15th of every month
+0 3 1,15 * * /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e backup-push /sndb/9.6/home
 
 # cleanup old backups every Sunday (keep last 9)
-0 3 * * Sun /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e delete --confirm retain 9
+0 3 5,20 * * /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e delete --confirm retain 3
 
 # Run Hypertable reindex maintenance task weekly
-0 4 * * Sun /var/db/postgres/bin/index-chunk-maintenance.sh -c '-p 5432 -d solarnetwork' -n
+#0 4 * * Sun /var/db/postgres/bin/index-chunk-maintenance.sh -c '-p 5432 -d solarnetwork' -n
 ```
 
 # Postfix MTA

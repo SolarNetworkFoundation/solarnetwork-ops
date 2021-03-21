@@ -30,7 +30,7 @@ BEGIN
 		FROM pg_catalog.pg_proc o
 		JOIN pg_catalog.pg_namespace n ON n.oid = o.pronamespace
 		WHERE n.nspname = schem_name
-			AND NOT o.proisagg
+			AND o.prokind = 'f'
 		ORDER BY o.proname)
 		UNION ALL
 		(SELECT 'a' AS objtype, o.proname || '(' || pg_catalog.pg_get_function_identity_arguments(o.oid) || ')' AS objname,
@@ -38,7 +38,7 @@ BEGIN
 		FROM pg_catalog.pg_proc o
 		JOIN pg_catalog.pg_namespace n ON n.oid = o.pronamespace
 		WHERE n.nspname = schem_name
-			AND o.proisagg
+			AND o.prokind = 'a'
 		ORDER BY o.proname)
 	LOOP
 		EXECUTE stmt;

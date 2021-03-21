@@ -298,11 +298,10 @@ SELECT * FROM _timescaledb_solarnetwork.perform_chunk_reindex_maintenance(
 /**
  * Change a normal table into a hypertable, following specific conventions.
  *
- * The conventions required by this function are:
- * 
- *  * The table must have a primary key named `{table_name}_pkey`
- *  * A new unique index named `{table_name}_pkey` will be created, in `index_tblespace` if provided
- * 
+ * If the table has a primary key named `{table_name}_pkey` then the primary key constraint will be
+ * dropped and a new unique index named `{table_name}_pkey` will be created, in `index_tblespace`
+ * if provided.
+ *
  * @param schem_name the table schema name
  * @param table_name the table name
  * @param ts_col_name the timestamp column name to use with the hypertable
@@ -330,21 +329,24 @@ BEGIN
 	INNER JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
 	WHERE n.nspname = schem_name
 		AND c.relname = pkey_name
+		AND EXISTS (SELECT 1 FROM pg_catalog.pg_index WHERE indrelid = c.oid AND indisprimary)
 		AND a.attnum > 0
 		AND NOT a.attisdropped;
-	
-	EXECUTE format('ALTER TABLE %I.%I DROP CONSTRAINT %I', schem_name, table_name, pkey_name);
 
-	stmt := format('CREATE UNIQUE INDEX %I ON %I.%I (%s)', pkey_name, schem_name, table_name, pkey_cols);
-	IF NOT index_tblspace IS NULL THEN
-		stmt := stmt || format(' TABLESPACE %I', index_tblspace);
+	IF pkey_cols IS NOT NULL THEN
+		EXECUTE format('ALTER TABLE %I.%I DROP CONSTRAINT %I', schem_name, table_name, pkey_name);
+
+		stmt := format('CREATE UNIQUE INDEX %I ON %I.%I (%s)', pkey_name, schem_name, table_name, pkey_cols);
+		IF NOT index_tblspace IS NULL THEN
+			stmt := stmt || format(' TABLESPACE %I', index_tblspace);
+		END IF;
+
+		EXECUTE stmt;
 	END IF;
-	
-	EXECUTE stmt;
-	
+
 	stmt := format('SELECT public.create_hypertable(%s::regclass, %s::name, chunk_time_interval => interval %s, create_default_indexes => FALSE)',
 		quote_literal(schem_name || '.' || table_name), quote_literal(ts_col_name), quote_literal(chunk_interval));
-	
+
 	RAISE NOTICE '%', stmt;
 	EXECUTE stmt;
 END

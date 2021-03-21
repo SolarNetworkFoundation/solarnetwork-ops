@@ -212,38 +212,134 @@ pki-server subsystem-cert-find ca |grep Nickname |awk 'BEGIN { FS = ": " }; {pri
   certutil -L -d /var/lib/pki/pki-tomcat/alias -n "$nick" |egrep "Serial|Before|After"; done
 ```
 
-## Review system certificate
+## Submit system certificate renewal requests 
 
-**TODO**; the following are old Dogtag instructions:
+As the `caadmin` user, for each expiring system certificate run:
 
+```
+[caadmin@ca ~]$ pki ca-cert-request-submit --profile caManualRenewal --serial 0x10000 --renewal
+```
 
-	certutil -D -d /etc/pki/rootca/alias -n 'Server-Cert cert-rootca'
-	certutil -A -d /etc/pki/rootca/alias -n 'Server-Cert cert-rootca' -t 'cu,cu,cu' -a -i ca.solarnetwork.net.crt
+A typical result looks like this:
 
-	certutil -D -d /etc/pki/rootca/alias -n 'ocspSigningCert cert-rootca CA'
-	certutil -A -d /etc/pki/rootca/alias -n 'ocspSigningCert cert-rootca CA' -t 'u,u,u' -a -i SolarNetwork-Root-OCSP-Signing-Certificate.crt
+```
+-----------------------------
+Submitted certificate request
+-----------------------------
+  Request ID: 10139
+  Type: renewal
+  Request Status: pending
+  Operation Result: success
+```
 
-	certutil -D -d /etc/pki/rootca/alias -n 'subsystemCert cert-rootca CA'
-	certutil -A -d /etc/pki/rootca/alias -n 'subsystemCert cert-rootca CA' -t 'u,u,u' -a -i SolarNetwork-Root-CA-Subsystem-Certificate.crt
+Note the **Request ID** values. Then approve each request:
 
-	certutil -D -d /etc/pki/rootca/alias -n 'auditSigningCert cert-rootca CA'
-	certutil -A -d /etc/pki/rootca/alias -n 'auditSigningCert cert-rootca CA' -t 'u,u,Pu' -a -i SolarNetwork-Root-CA-Audit-Signing-Certificate.crt
+## Approve system certificate renewal requests
 
-## Or, renew via PKI console
+```
+[caadmin@ca ~]$ pki ca-cert-request-review 10137 --action approve
+```
 
-Go to **System Keys and Certificates > Local Certificates** (via left-hand tree > tab).
-For each cert, click **Add/Renew**, **Next**, **Install a certificate**, **Next**.
+A typical response looks like this:
 
-For **OCSP** or **Server** can choose that option from the menu, otherwise choose **Other**. Then **Next**.
+```
+----------------------------------
+Approved certificate request 10137
+----------------------------------
+  Request ID: 10137
+  Type: renewal
+  Request Status: complete
+  Operation Result: success
+  Certificate ID: 0x1007e
+```
 
-Copy/paste in the certificate, then **Next**. If selected **Other**, enter in the exact nickname that matches
-the older certificate, e.g. `subsystemCert cert-rootca CA`. Then **Next** to complete.
-Finally, delete the expired/expiring certificate with the smaller serial number by
-selecting that certificate in the **Local Certificates** list and clicking the **Delete**
-button.
+Note the **Certificate ID** values. Then download each certificate to a file:
 
-## Note on SolarNetwork Root CA Subsystem Certificate
+## Download renewed system certificates
 
-The **pkidbuser** and **CA-ca.solarnetwork.net-8443** users need the renewed certificate for this user, in the PKI Console visit the
-**Configuration > Users and Groups** UI pane for the **pkidbuser** user. Click the 
-**Certificates** button, then **Import** and paste in the renewed certificate.
+```
+[caadmin@ca ~]$ pki ca-cert-show 0x1007e --encoded --output ocspSigningCert-2020-0x1007e.crt
+```
+
+## Install renewed system certificates
+
+Finally, as the `root` user, install the certificates.
+
+```
+[root ~caadmin]$ systemctl stop pki-tomcatd@pki-tomcat.service
+[root ~caadmin]$ pki-server subsystem-cert-update ca ocsp_signing --cert ocspSigningCert-2020-0x1007e.crt
+[root ~caadmin]$ pki-server subsystem-cert-update ca sslserver --cert Server-Cert-2020-0x1007f.crt
+[root ~caadmin]$ pki-server subsystem-cert-update ca subsystem --cert subsystemCert-2020-0x10081.crt
+[root ~caadmin]$ pki-server subsystem-cert-update ca audit_signing --cert auditSigningCert-2020-0x10080.crt
+[root ~caadmin]$ systemctl start pki-tomcatd@pki-tomcat.service
+```
+
+# List users
+
+As the `caadmin` OS user:
+
+```
+pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
+
+-----------------
+4 entries matched
+-----------------
+  User ID: CA-ca.solarnetwork.net-8443
+  Full name: CA-ca.solarnetwork.net-8443
+
+  User ID: caadmin
+  Full name: caadmin
+
+  User ID: pkidbuser
+  Full name: pkidbuser
+
+  User ID: suagent
+  Full name: SolarUser Agent
+```
+
+# List user certificates
+
+```
+pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-cert-find suagent
+
+  Cert ID: 2;65545;CN=SolarNetwork Root CA,OU=SolarNetwork Certification Authority,O=SolarNetwork;UID=suagent,E=suagent@solarnetwork.net,CN=suagent,OU=SolarUser,O=SolarNetwork
+  Version: 2
+  Serial Number: 0x10009
+  Issuer: CN=SolarNetwork Root CA,OU=SolarNetwork Certification Authority,O=SolarNetwork
+  Subject: UID=suagent,E=suagent@solarnetwork.net,CN=suagent,OU=SolarUser,O=SolarNetwork
+```
+
+# Renew user certificate
+
+```
+# request cert renew
+pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-cert-request-submit \
+    --profile caManualRenewal --serial 0x10009 --renewal
+
+-----------------------------
+Submitted certificate request
+-----------------------------
+  Request ID: 10075
+  Type: renewal
+  Request Status: complete
+  Operation Result: success
+  Certificate ID: 0x10040
+
+# NOTE if Status is pending, then approve else skip this step
+# pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-cert-request-approve 10075
+
+# export
+pki -n 'PKI Administrator for solarnetwork.net' ca-cert-export 0x10040 --output-file pki-suagent-20201118.crt
+
+# add to user
+pki -n 'PKI Administrator for solarnetwork.net' ca-user-cert-add suagent --input pki-suagent-20201118.crt
+
+# import cert to nssdb
+pki -n 'PKI Administrator for solarnetwork.net' client-cert-import suagent --serial 0x10040
+
+# export cert + key to p12
+pki -n 'PKI Administrator for solarnetwork.net' pkcs12-cert-import suagent \
+    --no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC' \
+    --pkcs12-file pki-suagent-20201118.p12 \
+    --pkcs12-password Secret.123
+```
