@@ -49,48 +49,6 @@ Advanced > Certificates**.
       certificate** link.
   11. At the bottom, click on the **Import Certificate** button.
 
-## Renewing the suagent certificate
-
-The certificate serial number can be obtained by printing out the certificate
-details from the **configuration/dogtag-client.jks** keystore:
-
-	keytool -list -v -keystore dogtag-client.jks -alias suagent
-
-**Note** that the serial number will show in **hex** but must be entered in
-**decimal** in Dogtag.
-
-After renewing the **suagent** certificate, it must be installed for SolarNetwork
-to use.
-
-  1. Export the certificate in PEM format.
-  2. The private key is stored in **configuration/dogtag-client.jks** in SolarNetwork.
-     The password for this file can be found in
-     **repository/local/net.solarnetwork.central.user.pki.dogtag.properties**.
-     Import it with the `keytool -importcert` comment, noting the `-alias` should be the
-     same as the existing entry. For example:
-
-     	 keytool -importcert -keystore dogtag-client.jks -alias suagent -file suagent.crt
-
-  3. Now the certificate must be imported into Dogtag. Connect to VNC as described
-     earlier. Launch `pkiconsole` and log in as the `caadmin` user:
-
-     	pkiconsole https://ca.solarnetwork.net:8443/ca
-
-     Note that the **caadmin** OS user password is _different_ from the **caadmin**
-     PKI user's password (`pki_admin_password`)!
-  4. Select **Configuration > Users and Groups** and then select the **suagent** user.
-  5. Click the **Certificates** button.
-  6. Click the **Import** button.
-  7. Import the new certificate. It will be added along with the old certificate.
-  8. Restart SolarNetwork for the change to take effect.
-
-## Renewing the caadmin certificate
-
-The process is similar to that listed above for the **suagent** certificate, except
-the certificate is not stored in any Java keychain. Once the certificate has been 
-renewed, log into the PKI Console and import the the renewed certificate under the
-**Configuration > Users and Groups** UI pane for the **caadmin** user.
-
 # 389 LDAP Server
 
 From VNC as the `caadmin` user, can access admin UI like
@@ -296,6 +254,9 @@ pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
   User ID: suagent
   Full name: SolarUser Agent
 ```
+
+> :warning: **Note** that the `-n` argument might be `caadmin` depending on the state of the NSS DB.
+> Also note that the `-d` default is `~/.dogtag/nssdb` so that argument can be omitted.
 
 # List user certificates
 
