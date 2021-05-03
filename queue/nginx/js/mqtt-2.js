@@ -50,35 +50,38 @@ function discoverClientId(s) {
             // upper 4 bits of byte 0 is packet type
             var packetType = data.charCodeAt(0) >> 4;
 
-            /*
-            s.log('MQTT packet type = ' + packetType
-                + ', data = ' + data.slice(0, 32).toString('hex')
-                +', len = ' +data.slice(0,32).length
-                + ', s = ' +data.slice(0,32));
-            */
-            
-            if ( packetType === 1 ) { // CONNECT
+            if ( packetType === 1 ) {                  // CONNECT
                 var lenPos = decodeRemainingLength(data, 1);
 
                 // Support v3 & v4, which have different protocol names (MQIsdp vs MQTT)
                 var protoNameLength = variableLengthStringLength(data, lenPos[1]);
 
                 var versPos = lenPos[1]
-                    + 2                 // variable length string length bytes
-                    + protoNameLength   // proto name variable length string
+                    + 2                                // variable length string length bytes
+                    + protoNameLength;                 // proto name variable length string
 
                 var vers = data.charCodeAt(versPos);
 
-                var clientIdPos = versPos
-                    + 4;                // version byte, conn flags byte, timer bytes
+                var clientIdPos = versPos + 4;         // version byte, conn flags byte, timer bytes
 
-                if ( vers > 4 ) {
-                	// decode properties length
-                	var propsLenPos = decodeRemainingLength(data, clientIdPos);
-                	clientIdPos = propsLenPos[1];
+                if ( vers > 4 ) {                      // v5 decode properties length and skip
+                    var propsLenPos = decodeRemainingLength(data, clientIdPos);
+                    clientIdPos = propsLenPos[1] + propsLenPos[0];
                 }
 
+                // set global var for future call to getClientId()
                 clientId = extractVariableLengthString(data, clientIdPos);
+
+                /*
+                s.log('MQTT packet type = ' + packetType
+                    + ', data = ' + data.slice(0, 32).toString('hex')
+                    +', len = ' +data.slice(0,32).length
+                    +', versPos = ' + versPos
+                    +', vers = ' +vers
+                    +', clientIdPos = ' +clientIdPos
+                    +', clientIdLen = ' +clientId.length
+                    );
+                */
 
                 // If client authentication then check certificate CN matches ClientId
                 var certificateClientId = parseDnAttribute(s.variables.ssl_client_s_dn, 'UID');
