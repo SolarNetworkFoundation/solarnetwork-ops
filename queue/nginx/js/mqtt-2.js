@@ -63,10 +63,20 @@ function discoverClientId(s) {
                 // Support v3 & v4, which have different protocol names (MQIsdp vs MQTT)
                 var protoNameLength = variableLengthStringLength(data, lenPos[1]);
 
-                var clientIdPos = lenPos[1]
+                var versPos = lenPos[1]
                     + 2                 // variable length string length bytes
                     + protoNameLength   // proto name variable length string
+
+                var vers = data.charCodeAt(versPos);
+
+                var clientIdPos = versPos
                     + 4;                // version byte, conn flags byte, timer bytes
+
+                if ( vers > 4 ) {
+                	// decode properties length
+                	var propsLenPos = decodeRemainingLength(data, clientIdPos);
+                	clientIdPos = propsLenPos[1];
+                }
 
                 clientId = extractVariableLengthString(data, clientIdPos);
 
