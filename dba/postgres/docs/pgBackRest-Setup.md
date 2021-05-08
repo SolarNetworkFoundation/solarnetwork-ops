@@ -7,6 +7,7 @@ Created `~postgres/pgbackrest.d/env` directory with files:
 ```
 PGBACKREST_ARCHIVE_ASYNC
 PGBACKREST_COMPRESS_TYPE
+PGBACKREST_DB_TIMEOUT
 PGBACKREST_LOG_PATH
 PGBACKREST_PG1_PATH
 PGBACKREST_PG1_PORT
@@ -32,6 +33,10 @@ snf-internal
 s3.us-west-2.amazonaws.com
 us-west-2
 ```
+
+The `PGBACKREST_DB_TIMEOUT` has been configured as `2000` (about 33min) because Postgres is 
+configured with a 30m checkpoint timeout and this needs to be at least that long or else timeout
+errors can occur.
 
 The `SPOOL_PATH` is set so the root filesystem does not fill up and run out of space; currently this
 is set to `/sndb/home/tmp`.
