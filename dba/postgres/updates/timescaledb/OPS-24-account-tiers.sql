@@ -1,3 +1,7 @@
+DROP FUNCTION IF EXISTS solarbill.billing_tiers(effective_date date);
+DROP FUNCTION IF EXISTS solarbill.billing_tier_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date);
+DROP FUNCTION IF EXISTS solarbill.billing_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date);
+
 -- table to store billing invoice usage records
 CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_node_usage (
 	inv_id			BIGINT NOT NULL,
@@ -71,7 +75,6 @@ BEGIN
 END
 $$;
 
-
 /**
  * Calculate the metered usage amounts for an account over a billing period, by node.
  *
@@ -127,127 +130,109 @@ $$
 	FULL OUTER JOIN datum a ON a.node_id = s.node_id
 $$;
 
-CREATE OR REPLACE FUNCTION solarbill.billing_tier_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
+/**
+ * Calculate the usage associated with billing tiers for a given user on a given month, by node.
+ *
+ * This calls the `solarbill.billing_usage_tiers()` function to determine the pricing tiers to use
+ * at the given `effective_date`.
+ *
+ * @param userid the ID of the user to calculate the billing information for
+ * @param ts_min the start date to calculate the costs for (inclusive)
+ * @param ts_max the end date to calculate the costs for (exclusive)
+ * @param effective_date optional pricing date, to calculate the tiers effective at that time
+ */
+CREATE OR REPLACE FUNCTION solarbill.billing_node_tier_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
 	RETURNS TABLE(
-		node_id BIGINT,
-		min	BIGINT,
-		prop_in BIGINT,
-		tier_prop_in BIGINT,
-		cost_prop_in NUMERIC,
-		prop_in_cost NUMERIC,
-		datum_stored BIGINT,
-		tier_datum_stored BIGINT,
-		cost_datum_stored NUMERIC,
-		datum_stored_cost NUMERIC,
-		datum_out BIGINT,
-		tier_datum_out BIGINT,
-		cost_datum_out NUMERIC,
-		datum_out_cost NUMERIC,
-		total_cost NUMERIC
+		node_id		BIGINT,
+		meter_key 	TEXT,
+		tier_min 	BIGINT,
+		tier_count 	BIGINT
 	) LANGUAGE sql STABLE AS
 $$
 	WITH tiers AS (
-		SELECT * FROM solarbill.billing_tiers(effective_date)
+		SELECT * FROM solarbill.billing_usage_tiers(effective_date)
 	)
 	, usage AS (
 		SELECT
 			  node_id
-			, SUM(prop_in)::BIGINT AS prop_in
-			, SUM(datum_stored)::BIGINT AS datum_stored
-			, SUM(datum_out)::BIGINT AS datum_out
+			, prop_in
+			, datum_stored
+			, datum_out
 		FROM solarbill.billing_usage(userid, ts_min, ts_max)
-		GROUP BY node_id
-	)
-	, costs AS (
-		SELECT
-			  n.node_id
-			, tiers.min
-			, n.prop_in
-			, LEAST(GREATEST(n.prop_in - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(n.prop_in - tiers.min, 0))) AS tier_prop_in
-			, tiers.cost_prop_in
-
-			, n.datum_stored
-			, LEAST(GREATEST(n.datum_stored - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(n.datum_stored - tiers.min, 0))) AS tier_datum_stored
-			, tiers.cost_datum_stored
-
-			, n.datum_out
-			, LEAST(GREATEST(n.datum_out - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(n.datum_out - tiers.min, 0))) AS tier_datum_out
-			, tiers.cost_datum_out
-		FROM usage n
-		CROSS JOIN tiers
-		WINDOW win AS (PARTITION BY n.node_id ORDER BY tiers.min)
+		WHERE prop_in > 0 OR datum_stored > 0 OR datum_out > 0
 	)
 	SELECT
-		  node_id
-		, min
-		, prop_in
-		, tier_prop_in
-		, cost_prop_in
-		, (tier_prop_in * cost_prop_in) AS prop_in_cost
-
-		, datum_stored
-		, tier_datum_stored
-		, cost_datum_stored
-		, (tier_datum_stored * cost_datum_stored) AS datum_stored_cost
-
-		, datum_out
-		, tier_datum_out
-		, cost_datum_out
-		, (tier_datum_out * cost_datum_out) AS datum_out_cost
-
-		, ROUND((tier_prop_in * cost_prop_in) + (tier_datum_stored * cost_datum_stored) + (tier_datum_out * cost_datum_out), 2) AS total_cost
-	FROM costs
-	WHERE (tier_prop_in > 0 OR tier_datum_stored > 0 OR tier_datum_out > 0)
+		  n.node_id
+		, tiers.meter_key
+		, tiers.min AS tier_min
+		, LEAST(GREATEST(CASE meter_key
+			WHEN 'datum-props-in' THEN n.prop_in
+			WHEN 'datum-days-stored' THEN n.datum_stored
+			WHEN 'datum-out' THEN n.datum_out
+			ELSE NULL END - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(CASE meter_key
+			WHEN 'datum-props-in' THEN n.prop_in
+			WHEN 'datum-days-stored' THEN n.datum_stored
+			WHEN 'datum-out' THEN n.datum_out
+			ELSE NULL END - tiers.min, 0))) AS tier_count
+	FROM usage n
+	CROSS JOIN tiers
+	WINDOW win AS (PARTITION BY tiers.meter_key ORDER BY tiers.min)
 $$;
 
-CREATE OR REPLACE FUNCTION solarbill.billing_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
+/**
+ * Calculate the usage associated with billing tiers for a given user on a given month, by node.
+ *
+ * This calls the `solarbill.billing_node_tier_details()` function to determine the pricing tiers to use
+ * at the given `effective_date`.
+ *
+ * @param userid the ID of the user to calculate the billing information for
+ * @param ts_min the start date to calculate the costs for (inclusive)
+ * @param ts_max the end date to calculate the costs for (exclusive)
+ * @param effective_date optional pricing date, to calculate the costs effective at that time
+ */
+CREATE OR REPLACE FUNCTION solarbill.billing_node_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
 	RETURNS TABLE(
 		node_id 				BIGINT,
 		prop_in 				BIGINT,
-		prop_in_cost 			NUMERIC,
 		prop_in_tiers 			NUMERIC[],
-		prop_in_tiers_cost 		NUMERIC[],
 		datum_stored 			BIGINT,
-		datum_stored_cost 		NUMERIC,
 		datum_stored_tiers 		NUMERIC[],
-		datum_stored_tiers_cost NUMERIC[],
 		datum_out 				BIGINT,
-		datum_out_cost 			NUMERIC,
-		datum_out_tiers 		NUMERIC[],
-		datum_out_tiers_cost 	NUMERIC[],
-		total_cost 				NUMERIC,
-		total_tiers_cost 		NUMERIC[]
+		datum_out_tiers 		NUMERIC[]
 	) LANGUAGE sql STABLE AS
 $$
+	WITH tiers AS (
+		SELECT * FROM solarbill.billing_node_tier_details(userid, ts_min, ts_max, effective_date)
+	)
+	, counts AS (
+		SELECT
+			  node_id
+			, meter_key
+			, SUM(tier_count)::BIGINT AS total_count
+			, ARRAY_AGG(tier_count::NUMERIC) AS tier_counts
+		FROM tiers
+		WHERE tier_count > 0
+		GROUP BY node_id, meter_key
+	)
 	SELECT
 		  node_id
-		, SUM(tier_prop_in)::bigint AS prop_in
-		, SUM(tier_prop_in * cost_prop_in) AS prop_in_cost
-		, ARRAY_AGG(tier_prop_in::NUMERIC) AS prop_in_tiers
-		, ARRAY_AGG(tier_prop_in * cost_prop_in) AS prop_in_tiers_cost
+		, SUM(CASE meter_key WHEN 'datum-props-in' THEN total_count ELSE NULL END)::BIGINT AS prop_in
+		, solarcommon.first(CASE meter_key WHEN 'datum-props-in' THEN tier_counts ELSE NULL END) AS prop_in_tiers
 
-		, SUM(tier_datum_stored)::bigint AS datum_stored
-		, SUM(tier_datum_stored * cost_datum_stored) AS datum_stored_cost
-		, ARRAY_AGG(tier_datum_stored::NUMERIC) AS datum_stored_tiers
-		, ARRAY_AGG(tier_datum_stored * cost_datum_stored) AS datum_stored_tiers_cost
+		, SUM(CASE meter_key WHEN 'datum-days-stored' THEN total_count ELSE NULL END)::BIGINT AS datum_stored
+		, solarcommon.first(CASE meter_key WHEN 'datum-days-stored' THEN tier_counts ELSE NULL END) AS datum_stored_tiers
 
-		, SUM(tier_datum_out)::bigint AS datum_out
-		, SUM(tier_datum_out * cost_datum_out) AS datum_out_cost
-		, ARRAY_AGG(tier_datum_out::NUMERIC) AS datum_out_tiers
-		, ARRAY_AGG(tier_datum_out * cost_datum_out) AS datum_out_tiers_cost
-
-		, ROUND(SUM(tier_prop_in * cost_prop_in) + SUM(tier_datum_stored * cost_datum_stored) + SUM(tier_datum_out * cost_datum_out), 2) AS total_cost
-		, ARRAY_AGG((tier_prop_in * cost_prop_in) + (tier_datum_stored * cost_datum_stored) + (tier_datum_out * cost_datum_out)) AS total_tiers_cost
-	FROM solarbill.billing_tier_details(userid, ts_min, ts_max, effective_date) costs
+		, SUM(CASE meter_key WHEN 'datum-out' THEN total_count ELSE NULL END)::BIGINT AS datum_out
+		, solarcommon.first(CASE meter_key WHEN 'datum-out' THEN tier_counts ELSE NULL END) AS datum_out_tiers
+	FROM counts
 	GROUP BY node_id
-	HAVING (SUM(tier_prop_in) > 0 OR SUM(tier_datum_stored) > 0 OR SUM(tier_datum_out) > 0)
 $$;
 
 
 /**
  * Calculate the costs associated with billing tiers fora given user on a given month.
  *
- * This calls the `solarbill.billing_tiers()` function to determine the pricing tiers to use
+ * This calls the `solarbill.billing_usage_tiers()` function to determine the pricing tiers to use
  * at the given `effective_date`.
  *
  * @param userid the ID of the user to calculate the billing information for
