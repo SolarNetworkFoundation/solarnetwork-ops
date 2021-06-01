@@ -176,7 +176,7 @@ $$
 			ELSE NULL END - tiers.min, 0))) AS tier_count
 	FROM usage n
 	CROSS JOIN tiers
-	WINDOW win AS (PARTITION BY tiers.meter_key ORDER BY tiers.min)
+	WINDOW win AS (PARTITION BY n.node_id, tiers.meter_key ORDER BY tiers.min)
 $$;
 
 /**
