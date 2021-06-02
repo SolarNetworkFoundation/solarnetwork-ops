@@ -37,7 +37,7 @@ BEGIN
 			, ('datum-out', 			0::BIGINT, 	0.000002::NUMERIC)
 			, ('datum-days-stored', 	0::BIGINT, 	0.000000006::NUMERIC)
 		) AS t(min, meter_key, cost);
-	ELSIF ts < '2021-07-01'::DATE THEN
+	ELSIF ts < '2021-06-01'::DATE THEN
 		RETURN QUERY SELECT *, '2020-06-01'::DATE FROM ( VALUES
 			  ('datum-props-in', 		0::BIGINT, 			0.000009::NUMERIC)
 			, ('datum-props-in', 		50000::BIGINT, 		0.000006::NUMERIC)
@@ -55,21 +55,21 @@ BEGIN
 			, ('datum-days-stored', 	1000000::BIGINT, 	0.000000006::NUMERIC)
 		) AS t(min, meter_key, cost);
 	ELSE
-		RETURN QUERY SELECT *, '2021-07-01'::DATE FROM ( VALUES
-			  ('datum-props-in', 		0::BIGINT, 				0.000006::NUMERIC)
+		RETURN QUERY SELECT *, '2021-06-01'::DATE FROM ( VALUES
+			  ('datum-props-in', 		0::BIGINT, 				0.000005::NUMERIC)
 			, ('datum-props-in', 		500000::BIGINT, 		0.000004::NUMERIC)
-			, ('datum-props-in', 		10000000::BIGINT, 		0.000001::NUMERIC)
+			, ('datum-props-in', 		10000000::BIGINT, 		0.0000008::NUMERIC)
 			, ('datum-props-in', 		500000000::BIGINT, 		0.0000002::NUMERIC)
 
-			, ('datum-out',				0::BIGINT, 				0.000001::NUMERIC)
+			, ('datum-out',				0::BIGINT, 				0.0000005::NUMERIC)
 			, ('datum-out',				1000000::BIGINT, 		0.0000002::NUMERIC)
 			, ('datum-out',				100000000::BIGINT, 		0.00000003::NUMERIC)
-			, ('datum-out',				10000000000::BIGINT, 	0.000000006::NUMERIC)
+			, ('datum-out',				10000000000::BIGINT, 	0.000000008::NUMERIC)
 
-			, ('datum-days-stored', 	0::BIGINT, 				0.0000001::NUMERIC)
+			, ('datum-days-stored', 	0::BIGINT, 				0.00000005::NUMERIC)
 			, ('datum-days-stored', 	10000000::BIGINT, 		0.00000001::NUMERIC)
-			, ('datum-days-stored', 	1000000000::BIGINT, 	0.000000003::NUMERIC)
-			, ('datum-days-stored', 	100000000000::BIGINT,	0.0000000005::NUMERIC)
+			, ('datum-days-stored', 	1000000000::BIGINT, 	0.000000004::NUMERIC)
+			, ('datum-days-stored', 	100000000000::BIGINT,	0.000000001::NUMERIC)
 		) AS t(min, meter_key, cost);
 	END IF;
 END
