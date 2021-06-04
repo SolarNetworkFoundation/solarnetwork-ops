@@ -275,7 +275,7 @@ $item.localizedInvoiceItemUsageRecords:itemUsageRow()$
 	<td colspan=""2"" class=""space""></td>
 </tr>
 >>"
-2021-06-01 00:00:00+12,snf.billing,en,datum-props-in.item,Posted Metrics
+2021-06-01 00:00:00+12,snf.billing,en,datum-props-in.item,Posted Properties
 2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemUsageRow.st,"itemUsageRow(usage) ::= <<
 <tr>
 	<th>$item.localizedDescription$</th>
@@ -489,3 +489,4 @@ $if(!invoice.draft)$
 $footer()$
 $endif$
 >>"
+2021-06-01 00:00:00+12,snf.billing,en,datum-props-in.unit,Properties
