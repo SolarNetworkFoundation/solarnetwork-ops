@@ -13,6 +13,7 @@
 	<artifact type="bundle" name="net.solarnetwork.central.scheduler.standard" version="1.0"/>
 
 	<!-- Support -->
+	<artifact type="bundle" name="net.solarnetwork.central.datum.aop" version="1.11"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.biz.dao" version="1.7"/>
 	<artifact type="bundle" name="net.solarnetwork.central.datum.dao.jdbc" version="1.0"/>
 	<artifact type="bundle" name="net.solarnetwork.central.instructor" version="1.9"/>
