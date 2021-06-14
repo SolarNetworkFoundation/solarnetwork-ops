@@ -4,9 +4,9 @@ logging:
 
 spring:
   datasource:
-    url: "jdbc:postgresql://solardb-a.solarnetwork.net:5432/solarnetwork?sslmode=require&sslcompression=false&sslrootcert=/var/lib/fluxhook/solarnetwork-ca.crt&sslcert=/var/lib/fluxhook/solarauth.crt&sslkey=/var/lib/fluxhook/solarauth.key"
+    url: "jdbc:postgresql://solardb-ro.solarnetwork:5432/solarnetwork"
     username: solarauth
-    password: 
+    password: "SECRET"
     tomcat:
       initialSize: 1
       maxActive: 15
@@ -15,3 +15,19 @@ spring:
 
 auth:
   nodeIpMask: 10.0.0.0/16
+
+app.datasource.audit:
+  driverClassName: org.postgresql.Driver
+  url: "jdbc:postgresql://solardb-rw.solarnetwork:5432/solarnetwork"
+  username: solarquest
+  password: "SECRET"
+  tomcat:
+    initialSize: 1
+    maxActive: 2
+    minIdle: 1
+    maxIdle: 1
+    testOnBorrow: true
+    validationQuery: SELECT CURRENT_DATE
+
+app.audit.jdbc:
+  flushDelay: 60000

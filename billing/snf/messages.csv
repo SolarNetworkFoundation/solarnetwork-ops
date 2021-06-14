@@ -1,26 +1,23 @@
+vers,bundle,locale,msg_key,msg_val
+2008-01-01 00:00:00+13,snf.billing,en,datum-props-in.item,Posted Datum Metrics
+2008-01-01 00:00:00+13,snf.billing,en,datum-props-in.unit,Metrics
+2008-01-01 00:00:00+13,snf.billing,en,datum-out.item,Queried Datum
+2008-01-01 00:00:00+13,snf.billing,en,datum-out.unit,Datum
+2008-01-01 00:00:00+13,snf.billing,en,datum-days-stored.item,Stored Datum
+2008-01-01 00:00:00+13,snf.billing,en,datum-days-stored.unit,Datum days
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,body.st,"body() ::= ""$overviewTable()$<br /><br /><br />$itemTable()$$footer()$"""
-2008-01-01 00:00:00+13,/snf/text/html/invoice,en,footer.st,"footer() ::= <<
-<footer>
-	$messages.([""bankDetails-"", invoice.currencyCode])$
-	<p>Please put <kbd>$invoice.invoiceNumber$</kbd> in the reference field.</p>
-</footer>
->>"
-2008-01-01 00:00:00+13,/snf/text/html/invoice,en,head.st,"head() ::= <<
-<meta charset=""UTF-8"">
-<title>$messages.invoice-title$ $invoice.invoiceNumber$</title>
-<style type=""text/css"">
-$style()$
-</style>
->>"
+2008-01-01 00:00:00+13,snf.billing,en,invoice-title,SolarNetwork invoice
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,invoice.st,"invoice(invoice,address,messages) ::= ""<html><head>$head()$</head><body>$body()$</body></html>"""
-2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemDetailsCREDIT.st,"itemDetailsCREDIT() ::= <<
-<td></td>
-<td class=""secondary"">$if(item.metadata.localizedAvailableCredit)$$messages.accountRemainingCredit$: $item.metadata.localizedAvailableCredit$$endif$</td>
->>"
-2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemDetailsUSAGE.st,"itemDetailsUSAGE() ::= <<
-<td class=""right"">$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedAmount$'}'; separator=""<br>""$</td>
-<td class=""units"">$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedUnitType$'}'; separator=""<br>""$</td>
->>"
+2008-01-01 00:00:00+13,snf.billing,en,invoiceDate,Date
+2008-01-01 00:00:00+13,snf.billing,en,invoiceNumber,Invoice
+2008-01-01 00:00:00+13,snf.billing,en,invoiceNumberPrefix,INV-
+2008-01-01 00:00:00+13,snf.billing,en,invoiceAmount,Total
+2008-01-01 00:00:00+13,snf.billing,en,companyName,SolarNetwork Foundation
+2008-01-01 00:00:00+13,snf.billing,en,companyAddress,4 Norfolk Street
+2008-01-01 00:00:00+13,snf.billing,en,companyCity,Ponsonby
+2008-01-01 00:00:00+13,snf.billing,en,companyCityProvincePostalCode,Auckland 1021
+2008-01-01 00:00:00+13,snf.billing,en,companyCountry,New Zealand
+2008-01-01 00:00:00+13,snf.billing,en,companyUrl,https://solarnetwork.org.nz
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemRow.st,"itemRow(item) ::= <<
 <tr>
 	<th>$item.metadata.nodeId$</th>
@@ -29,6 +26,32 @@ $style()$
 	<td colspan=""2"">$item.localizedAmount$</td>
 </tr>
 >>"
+2008-01-01 00:00:00+13,snf.billing,en,invoice.mail.subject,SolarNetwork invoice {0} ({1})
+2008-01-01 00:00:00+13,snf.global,en,url-snf-logo-svg-data,"data:image/svg+xml,%3Csvg baseProfile='basic' xmlns='http://www.w3.org/2000/svg' width='386' height='56' viewBox='0 0 386 56'%3E%3Cpath d='M48.156 18.345c9.073 0 16.777 6.625 16.777 18.217 0 11.45-7.704 18.074-16.777 18.074-9.072 0-16.777-6.625-16.777-18.074-.002-11.592 7.703-18.217 16.776-18.217z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M48.156 17.345c9.073 0 16.777 6.625 16.777 18.217 0 11.45-7.704 18.074-16.777 18.074-9.072 0-16.777-6.625-16.777-18.074-.002-11.592 7.703-18.217 16.776-18.217z' /%3E%3Cpath d='M3.237 47.508C6.19 49.955 9.287 51.9 14.254 51.9c5.4 0 8.208-3.168 8.208-6.842 0-4.32-4.464-6.19-8.424-7.63C8.78 35.553 3.02 33.465 3.02 27.56c0-5.04 3.96-9.216 11.162-9.216 3.672 0 7.345 1.512 9.865 3.6l-1.73 2.233c-2.303-1.728-4.75-3.096-8.28-3.096-5.328 0-7.776 3.097-7.776 6.266 0 3.96 4.033 5.472 8.138 6.984 5.4 2.018 11.305 3.816 11.305 10.586 0 5.184-4.176 9.72-11.665 9.72-5.113 0-9.577-2.16-12.673-4.75l1.872-2.378z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M3.237 46.508C6.19 48.955 9.287 50.9 14.254 50.9c5.4 0 8.208-3.168 8.208-6.842 0-4.32-4.464-6.19-8.424-7.63C8.78 34.553 3.02 32.465 3.02 26.56c0-5.04 3.96-9.216 11.162-9.216 3.672 0 7.345 1.512 9.865 3.6l-1.73 2.233c-2.303-1.728-4.75-3.096-8.28-3.096-5.328 0-7.776 3.097-7.776 6.266 0 3.96 4.033 5.472 8.138 6.984 5.4 2.018 11.305 3.816 11.305 10.586 0 5.184-4.176 9.72-11.665 9.72-5.113 0-9.577-2.16-12.673-4.75l1.872-2.378z' /%3E%3Cpath d='M73.86 2h3.17v47.596c0 1.512.647 2.232 1.51 2.232.29 0 .577 0 1.297-.145l.576 2.592c-.648.217-1.296.36-2.304.36-2.81 0-4.25-1.728-4.25-5.472V2z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M73.86 1h3.17v47.596c0 1.512.647 2.232 1.51 2.232.29 0 .577 0 1.297-.145l.576 2.592c-.648.217-1.296.36-2.304.36-2.81 0-4.25-1.728-4.25-5.472V1z' /%3E%3Cg%3E%3Cpath d='M109.878 32.098c.144-5.255-1.368-10.944-8.137-10.944-4.68 0-8.712 2.304-11.016 4.032l-1.44-2.376c2.448-1.728 7.2-4.464 12.817-4.464 8.21 0 10.946 5.905 10.946 13.32v22.106h-2.664l-.36-4.463h-.144c-3.528 2.806-7.705 5.327-12.24 5.327-5.474 0-10.082-2.953-10.082-9.506 0-7.632 6.985-11.304 22.322-13.032zM98.14 51.9c3.96 0 7.49-1.945 11.738-5.617V34.547c-14.186 1.656-19.01 4.97-19.01 10.44 0 4.968 3.313 6.913 7.273 6.913z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M109.878 31.098c.144-5.255-1.368-10.944-8.137-10.944-4.68 0-8.712 2.304-11.016 4.032l-1.44-2.376c2.448-1.728 7.2-4.464 12.817-4.464 8.21 0 10.946 5.905 10.946 13.32v22.106h-2.664l-.36-4.463h-.144c-3.528 2.806-7.705 5.327-12.24 5.327-5.474 0-10.082-2.953-10.082-9.506 0-7.632 6.985-11.304 22.322-13.032zM98.14 50.9c3.96 0 7.49-1.945 11.738-5.617V33.547c-14.186 1.656-19.01 4.97-19.01 10.44 0 4.968 3.313 6.913 7.273 6.913z' /%3E%3C/g%3E%3Cg%3E%3Cpath d='M124.938 19.21h2.736l.288 6.408h.216c2.304-4.25 5.688-7.273 9.793-7.273 1.297 0 2.305.144 3.457.72l-.72 2.88c-1.152-.432-1.8-.576-3.168-.576-3.097 0-6.77 2.375-9.434 8.856V53.77h-3.168V19.21z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M124.938 18.21h2.736l.288 6.408h.216c2.304-4.25 5.688-7.273 9.793-7.273 1.297 0 2.305.144 3.457.72l-.72 2.88c-1.152-.432-1.8-.576-3.168-.576-3.097 0-6.77 2.375-9.434 8.856V52.77h-3.168V18.21z' /%3E%3C/g%3E%3Cg fill='%23666'%3E%3Cpath d='M148.748 18.21h2.736l.288 5.328h.216c3.528-3.528 7.13-6.193 11.88-6.193 7.13 0 10.442 4.32 10.442 13.25V52.77h-3.168V31.025c0-7.343-2.304-10.8-7.92-10.8-4.105 0-7.058 2.16-11.306 6.48V52.77h-3.168V18.21zM199.206 17.345c8.21 0 13.25 5.833 13.25 15.985 0 .865 0 1.73-.144 2.592h-24.915c.144 8.713 5.257 14.98 13.033 14.98 3.745 0 6.697-1.226 9.29-3.097l1.295 2.447c-2.736 1.656-5.833 3.385-10.873 3.385-8.856 0-15.985-6.77-15.985-18.074s7.344-18.218 15.05-18.218zm10.225 16.13c0-8.856-3.96-13.393-10.152-13.393-5.905 0-11.16 5.112-11.88 13.393h22.033zM222.755 20.946h-5.4v-2.448l5.473-.288.432-10.01h2.736v10.01h10.01v2.736h-10.01v22.54c0 4.39 1.08 7.343 5.833 7.343 1.295 0 3.096-.505 4.32-1.08l.863 2.59c-2.016.722-4.176 1.298-5.616 1.298-6.697 0-8.64-4.248-8.64-10.44V20.945zM242.058 18.21h3.457l6.192 22.393c.864 3.168 1.656 6.12 2.376 9.217h.288c.793-3.096 1.657-6.05 2.522-9.217l6.265-22.394h3.816l6.265 22.393c.864 3.168 1.728 6.12 2.592 9.217h.288c.792-3.096 1.656-6.05 2.448-9.217l6.12-22.394h3.24l-9.936 34.56h-4.176l-6.048-21.456c-1.008-3.312-1.656-6.48-2.665-9.865h-.287c-.792 3.383-1.656 6.696-2.736 10.008L256.1 52.77h-3.816l-10.226-34.56zM308.522 17.345c8.353 0 15.553 6.625 15.553 18.217 0 11.45-7.2 18.074-15.553 18.074-8.28 0-15.48-6.625-15.48-18.074 0-11.592 7.2-18.217 15.48-18.217zm0 33.483c6.985 0 12.24-6.193 12.24-15.266 0-9.145-5.255-15.41-12.24-15.41-6.984 0-12.17 6.265-12.17 15.41.002 9.073 5.186 15.266 12.17 15.266zM334.268 18.21h2.736l.287 6.408h.218c2.305-4.25 5.69-7.273 9.793-7.273 1.298 0 2.306.144 3.458.72l-.72 2.88c-1.153-.432-1.802-.576-3.17-.576-3.095 0-6.77 2.375-9.433 8.856V52.77h-3.168V18.21zM358.078 1h3.168v38.162h.143l17.065-20.953h3.672l-11.232 13.68L384 52.77h-3.53l-11.448-18.503-7.775 9.072v9.43h-3.168V1z' /%3E%3C/g%3E%3C/svg%3E"
+2008-01-01 00:00:00+13,/snf/text/html/invoice,en,head.st,"head() ::= <<
+<meta charset=""UTF-8"">
+<title>$messages.invoice-title$ $invoice.invoiceNumber$</title>
+<style type=""text/css"">
+$style()$
+</style>
+>>"
+2008-01-01 00:00:00+13,snf.billing,en,accountOwnerName,Account
+2008-01-01 00:00:00+13,snf.billing,en,bankDetails-NZD,"<p><b>NZD bank details</b>: SolarNetwork Foundation, <kbd>38-9018-0514203-00</kbd>, SWIFT code <kbd>KIWINZ22</kbd>.</p>"
+2008-01-01 00:00:00+13,snf.billing,en,bankDetails-USD,"<p><b>USD bank details</b>: KB2050621USD1SOLARNETWORK, <kbd>GB70CITI18500810683213</kbd>, SWIFT code <kbd>CITIGB2L</kbd>.</p>"
+2008-01-01 00:00:00+13,snf.billing,en,invoiceItemKey,Service
+2008-01-01 00:00:00+13,/snf/text/html/invoice,en,footer.st,"footer() ::= <<
+<footer>
+	$messages.([""bankDetails-"", invoice.currencyCode])$
+	<p>Please put <kbd>$invoice.invoiceNumber$</kbd> in the reference field.</p>
+</footer>
+>>"
+2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemDetailsUSAGE.st,"itemDetailsUSAGE() ::= <<
+<td class=""right"">$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedAmount$'}'; separator=""<br>""$</td>
+<td class=""units"">$item.localizedInvoiceItemUsageRecords:'{'u | $u.localizedUnitType$'}'; separator=""<br>""$</td>
+>>"
+2008-01-01 00:00:00+13,snf.billing,en,invoiceItemDescription,Description
+2008-01-01 00:00:00+13,snf.billing,en,invoiceItemNode,Node
+2008-01-01 00:00:00+13,snf.billing,en,invoiceItemAmount,Amount
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemTable.st,"itemTable() ::= <<
 <table class=""items"">
 	<thead>
@@ -63,13 +86,6 @@ $style()$
 		</tr>
 	</tfoot>
 </table>
->>"
-2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemTaxGroupRow.st,"itemTaxGroupRow(aggItem) ::= <<
-<tr>
-	<td colspan=""4""></td>
-	<td class=""head right"">$aggItem.localizedDescription$</td>
-	<td class=""right"">$aggItem.localizedAmount$</td>
-</tr>
 >>"
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,overviewTable.st,"overviewTable() ::= <<
 <table class=""overall"">
@@ -133,6 +149,13 @@ $style()$
 	</tr>
 </table>
 >>"
+2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemTaxGroupRow.st,"itemTaxGroupRow(aggItem) ::= <<
+<tr>
+	<td colspan=""4""></td>
+	<td class=""head right"">$aggItem.localizedDescription$</td>
+	<td class=""right"">$aggItem.localizedAmount$</td>
+</tr>
+>>"
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,style.st,"style() ::= <<
 	body '{'
 		font-family: sans-serif;
@@ -171,34 +194,299 @@ $style()$
 		size: a4;
 	'}'
 >>"
-2008-01-01 00:00:00+13,snf.billing,en,account-credit-add.item,Account credit grant
-2008-01-01 00:00:00+13,snf.billing,en,account-credit.item,Account credit
-2008-01-01 00:00:00+13,snf.billing,en,accountOwnerName,Account
-2008-01-01 00:00:00+13,snf.billing,en,accountRemainingCredit,Remaining credit
-2008-01-01 00:00:00+13,snf.billing,en,bankDetails-NZD,"<p><b>NZD bank details</b>: SolarNetwork Foundation, <kbd>38-9018-0514203-00</kbd>, SWIFT code <kbd>KIWINZ22</kbd>.</p>"
-2008-01-01 00:00:00+13,snf.billing,en,bankDetails-USD,"<p><b>USD bank details</b>: KB2050621USD1SOLARNETWORK, <kbd>GB70CITI18500810683213</kbd>, SWIFT code <kbd>CITIGB2L</kbd>.</p>"
-2008-01-01 00:00:00+13,snf.billing,en,companyAddress,4 Norfolk Street
-2008-01-01 00:00:00+13,snf.billing,en,companyCity,Ponsonby
-2008-01-01 00:00:00+13,snf.billing,en,companyCityProvincePostalCode,Auckland 1021
-2008-01-01 00:00:00+13,snf.billing,en,companyCountry,New Zealand
-2008-01-01 00:00:00+13,snf.billing,en,companyName,SolarNetwork Foundation
-2008-01-01 00:00:00+13,snf.billing,en,companyUrl,https://solarnetwork.org.nz
-2008-01-01 00:00:00+13,snf.billing,en,datum-days-stored.item,Stored Datum
-2008-01-01 00:00:00+13,snf.billing,en,datum-days-stored.unit,Datum days
-2008-01-01 00:00:00+13,snf.billing,en,datum-out.item,Queried Datum
-2008-01-01 00:00:00+13,snf.billing,en,datum-out.unit,Datum
-2008-01-01 00:00:00+13,snf.billing,en,datum-props-in.item,Posted Datum Metrics
-2008-01-01 00:00:00+13,snf.billing,en,datum-props-in.unit,Metrics
-2008-01-01 00:00:00+13,snf.billing,en,invoice-title,SolarNetwork invoice
-2008-01-01 00:00:00+13,snf.billing,en,invoice.filename,SolarNetwork invoice {0} - {1}{2}
-2008-01-01 00:00:00+13,snf.billing,en,invoice.mail.subject,SolarNetwork invoice {0} ({1})
-2008-01-01 00:00:00+13,snf.billing,en,invoiceAmount,Total
 2008-01-01 00:00:00+13,snf.billing,en,invoiceBalance,Due
-2008-01-01 00:00:00+13,snf.billing,en,invoiceDate,Date
-2008-01-01 00:00:00+13,snf.billing,en,invoiceItemAmount,Amount
-2008-01-01 00:00:00+13,snf.billing,en,invoiceItemDescription,Description
-2008-01-01 00:00:00+13,snf.billing,en,invoiceItemKey,Service
-2008-01-01 00:00:00+13,snf.billing,en,invoiceItemNode,Node
-2008-01-01 00:00:00+13,snf.billing,en,invoiceNumber,Invoice
-2008-01-01 00:00:00+13,snf.billing,en,invoiceNumberPrefix,INV-
-2008-01-01 00:00:00+13,snf.global,en,url-snf-logo-svg-data,"data:image/svg+xml,%3Csvg baseProfile='basic' xmlns='http://www.w3.org/2000/svg' width='386' height='56' viewBox='0 0 386 56'%3E%3Cpath d='M48.156 18.345c9.073 0 16.777 6.625 16.777 18.217 0 11.45-7.704 18.074-16.777 18.074-9.072 0-16.777-6.625-16.777-18.074-.002-11.592 7.703-18.217 16.776-18.217z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M48.156 17.345c9.073 0 16.777 6.625 16.777 18.217 0 11.45-7.704 18.074-16.777 18.074-9.072 0-16.777-6.625-16.777-18.074-.002-11.592 7.703-18.217 16.776-18.217z' /%3E%3Cpath d='M3.237 47.508C6.19 49.955 9.287 51.9 14.254 51.9c5.4 0 8.208-3.168 8.208-6.842 0-4.32-4.464-6.19-8.424-7.63C8.78 35.553 3.02 33.465 3.02 27.56c0-5.04 3.96-9.216 11.162-9.216 3.672 0 7.345 1.512 9.865 3.6l-1.73 2.233c-2.303-1.728-4.75-3.096-8.28-3.096-5.328 0-7.776 3.097-7.776 6.266 0 3.96 4.033 5.472 8.138 6.984 5.4 2.018 11.305 3.816 11.305 10.586 0 5.184-4.176 9.72-11.665 9.72-5.113 0-9.577-2.16-12.673-4.75l1.872-2.378z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M3.237 46.508C6.19 48.955 9.287 50.9 14.254 50.9c5.4 0 8.208-3.168 8.208-6.842 0-4.32-4.464-6.19-8.424-7.63C8.78 34.553 3.02 32.465 3.02 26.56c0-5.04 3.96-9.216 11.162-9.216 3.672 0 7.345 1.512 9.865 3.6l-1.73 2.233c-2.303-1.728-4.75-3.096-8.28-3.096-5.328 0-7.776 3.097-7.776 6.266 0 3.96 4.033 5.472 8.138 6.984 5.4 2.018 11.305 3.816 11.305 10.586 0 5.184-4.176 9.72-11.665 9.72-5.113 0-9.577-2.16-12.673-4.75l1.872-2.378z' /%3E%3Cpath d='M73.86 2h3.17v47.596c0 1.512.647 2.232 1.51 2.232.29 0 .577 0 1.297-.145l.576 2.592c-.648.217-1.296.36-2.304.36-2.81 0-4.25-1.728-4.25-5.472V2z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M73.86 1h3.17v47.596c0 1.512.647 2.232 1.51 2.232.29 0 .577 0 1.297-.145l.576 2.592c-.648.217-1.296.36-2.304.36-2.81 0-4.25-1.728-4.25-5.472V1z' /%3E%3Cg%3E%3Cpath d='M109.878 32.098c.144-5.255-1.368-10.944-8.137-10.944-4.68 0-8.712 2.304-11.016 4.032l-1.44-2.376c2.448-1.728 7.2-4.464 12.817-4.464 8.21 0 10.946 5.905 10.946 13.32v22.106h-2.664l-.36-4.463h-.144c-3.528 2.806-7.705 5.327-12.24 5.327-5.474 0-10.082-2.953-10.082-9.506 0-7.632 6.985-11.304 22.322-13.032zM98.14 51.9c3.96 0 7.49-1.945 11.738-5.617V34.547c-14.186 1.656-19.01 4.97-19.01 10.44 0 4.968 3.313 6.913 7.273 6.913z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M109.878 31.098c.144-5.255-1.368-10.944-8.137-10.944-4.68 0-8.712 2.304-11.016 4.032l-1.44-2.376c2.448-1.728 7.2-4.464 12.817-4.464 8.21 0 10.946 5.905 10.946 13.32v22.106h-2.664l-.36-4.463h-.144c-3.528 2.806-7.705 5.327-12.24 5.327-5.474 0-10.082-2.953-10.082-9.506 0-7.632 6.985-11.304 22.322-13.032zM98.14 50.9c3.96 0 7.49-1.945 11.738-5.617V33.547c-14.186 1.656-19.01 4.97-19.01 10.44 0 4.968 3.313 6.913 7.273 6.913z' /%3E%3C/g%3E%3Cg%3E%3Cpath d='M124.938 19.21h2.736l.288 6.408h.216c2.304-4.25 5.688-7.273 9.793-7.273 1.297 0 2.305.144 3.457.72l-.72 2.88c-1.152-.432-1.8-.576-3.168-.576-3.097 0-6.77 2.375-9.434 8.856V53.77h-3.168V19.21z' fill='%23ADADAD' /%3E%3Cpath fill='%23F7C819' d='M124.938 18.21h2.736l.288 6.408h.216c2.304-4.25 5.688-7.273 9.793-7.273 1.297 0 2.305.144 3.457.72l-.72 2.88c-1.152-.432-1.8-.576-3.168-.576-3.097 0-6.77 2.375-9.434 8.856V52.77h-3.168V18.21z' /%3E%3C/g%3E%3Cg fill='%23666'%3E%3Cpath d='M148.748 18.21h2.736l.288 5.328h.216c3.528-3.528 7.13-6.193 11.88-6.193 7.13 0 10.442 4.32 10.442 13.25V52.77h-3.168V31.025c0-7.343-2.304-10.8-7.92-10.8-4.105 0-7.058 2.16-11.306 6.48V52.77h-3.168V18.21zM199.206 17.345c8.21 0 13.25 5.833 13.25 15.985 0 .865 0 1.73-.144 2.592h-24.915c.144 8.713 5.257 14.98 13.033 14.98 3.745 0 6.697-1.226 9.29-3.097l1.295 2.447c-2.736 1.656-5.833 3.385-10.873 3.385-8.856 0-15.985-6.77-15.985-18.074s7.344-18.218 15.05-18.218zm10.225 16.13c0-8.856-3.96-13.393-10.152-13.393-5.905 0-11.16 5.112-11.88 13.393h22.033zM222.755 20.946h-5.4v-2.448l5.473-.288.432-10.01h2.736v10.01h10.01v2.736h-10.01v22.54c0 4.39 1.08 7.343 5.833 7.343 1.295 0 3.096-.505 4.32-1.08l.863 2.59c-2.016.722-4.176 1.298-5.616 1.298-6.697 0-8.64-4.248-8.64-10.44V20.945zM242.058 18.21h3.457l6.192 22.393c.864 3.168 1.656 6.12 2.376 9.217h.288c.793-3.096 1.657-6.05 2.522-9.217l6.265-22.394h3.816l6.265 22.393c.864 3.168 1.728 6.12 2.592 9.217h.288c.792-3.096 1.656-6.05 2.448-9.217l6.12-22.394h3.24l-9.936 34.56h-4.176l-6.048-21.456c-1.008-3.312-1.656-6.48-2.665-9.865h-.287c-.792 3.383-1.656 6.696-2.736 10.008L256.1 52.77h-3.816l-10.226-34.56zM308.522 17.345c8.353 0 15.553 6.625 15.553 18.217 0 11.45-7.2 18.074-15.553 18.074-8.28 0-15.48-6.625-15.48-18.074 0-11.592 7.2-18.217 15.48-18.217zm0 33.483c6.985 0 12.24-6.193 12.24-15.266 0-9.145-5.255-15.41-12.24-15.41-6.984 0-12.17 6.265-12.17 15.41.002 9.073 5.186 15.266 12.17 15.266zM334.268 18.21h2.736l.287 6.408h.218c2.305-4.25 5.69-7.273 9.793-7.273 1.298 0 2.306.144 3.458.72l-.72 2.88c-1.153-.432-1.802-.576-3.17-.576-3.095 0-6.77 2.375-9.433 8.856V52.77h-3.168V18.21zM358.078 1h3.168v38.162h.143l17.065-20.953h3.672l-11.232 13.68L384 52.77h-3.53l-11.448-18.503-7.775 9.072v9.43h-3.168V1z' /%3E%3C/g%3E%3C/svg%3E"
+2008-01-01 00:00:00+13,snf.billing,en,invoice.filename,SolarNetwork invoice {0} - {1}{2}
+2008-01-01 00:00:00+13,snf.billing,en,account-credit.item,Account credit
+2008-01-01 00:00:00+13,snf.billing,en,accountRemainingCredit,Remaining credit
+2008-01-01 00:00:00+13,snf.billing,en,account-credit-add.item,Account credit grant
+2008-01-01 00:00:00+13,/snf/text/html/invoice,en,itemDetailsCREDIT.st,"itemDetailsCREDIT() ::= <<
+<td></td>
+<td class=""secondary"">$if(item.metadata.localizedAvailableCredit)$$messages.accountRemainingCredit$: $item.metadata.localizedAvailableCredit$$endif$</td>
+>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,fromSection.st,"fromSection() ::= <<
+<div class=""from"">
+	<img class=""logo"" src=""$messages.url-snf-logo-svg-data$"">
+	<div class=""addr"">
+		<p>$messages.companyName$</p>
+		<p>$messages.companyAddress$</p>
+		<p>$messages.companyCityProvincePostalCode$</p>
+		<p>$messages.companyCountry$</p>
+		<p>$messages.companyUrl$</p>
+		<p>$messages.companyTaxId$</p>
+	</div>
+</div>
+>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemRow.st,"itemRow(item) ::= <<$([""itemDetails"",item.itemType])()$>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemDetailsCREDIT.st,"itemDetailsCREDIT() ::= <<
+<tr>
+	<th>$messages.accountRemainingCredit$</th>
+	<td colspan=""2""></td>
+	<td>$item.metadata.localizedAvailableCredit$</td>
+</tr>
+<tr>
+	<td colspan=""4"" class=""space""></td>
+</tr>
+>>"
+2021-06-01 00:00:00+12,snf.billing,en,companyTaxId,GST &#x2116; 121-961-830
+2021-06-01 00:00:00+12,snf.billing,en,invoiceItemTier,Tier
+2021-06-01 00:00:00+12,snf.billing,en,usageAmount,Usage
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,costSection.st,"costSection() ::= <<
+<h1>$messages.costDetailsTitle$</h1>
+<p>$messages.costDetailsIntro$</p>
+<table class=""details"">
+	<tbody>
+$invoice.localizedNonTaxInvoiceItems:itemRow()$
+	</tbody>
+</table>
+<table class=""details totals"">
+	<tbody>
+		<tr>
+			<td>$messages.invoiceAmount$</td>
+			<td>$invoice.localizedNonTaxAmount$</td>
+		</tr>
+$invoice.localizedTaxInvoiceItemsGroupedByDescription:itemTaxGroupRow()$
+		<tr>
+			<td>$messages.invoiceBalance$</td>
+			<td>$invoice.localizedBalance$</td>
+		</tr>
+	</tbody>
+</table>
+>>"
+2021-06-01 00:00:00+12,snf.billing,en,costDetailsIntro,The following section shows your metered rates summarised per subscription tier:
+2021-06-01 00:00:00+12,snf.billing,en,nodeUsageTitle,Node details
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,nodeUsageSection.st,"nodeUsageSection() ::= <<
+<h1>$messages.nodeUsageTitle$</h1>
+<p>$messages.nodeUsageIntro$</p><table class=""items"">
+	<thead>
+		<tr>
+			<th>$messages.invoiceItemNode$</th>$invoice.firstLocalizedInvoiceUsageRecord.localizedUsageRecords:nodeUsageRecordName()$
+		</tr>
+		<tr>
+			<th colspan=""4"" class=""hr""></th>
+		</tr>
+	</thead>
+	<tbody>
+$invoice.localizedInvoiceUsageRecords:nodeUsageRow()$	</tbody>
+</table>
+>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemDetailsUSAGE.st,"itemDetailsUSAGE() ::= <<
+$item.localizedInvoiceItemUsageRecords:itemUsageRow()$
+<tr>
+	<td colspan=""2"" class=""space""></td>
+</tr>
+>>"
+2021-06-01 00:00:00+12,snf.billing,en,datum-props-in.item,Posted Properties
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemUsageRow.st,"itemUsageRow(usage) ::= <<
+<tr>
+	<th>$item.localizedDescription$</th>
+	<td>
+		<table>
+			<thead>
+				<tr>
+					<th>$messages.invoiceItemTier$</th>
+					<th>$messages.usageAmount$</th>
+					<th>$messages.invoiceItemAmount$</th>
+				</tr>
+				<tr>
+					<th colspan=""3"" class=""hr""></th>
+				</tr>
+			</thead>
+			<tbody>
+				$usage.localizedUsageTiers:itemUsageTierRow()$
+				<tr>
+					<td colspan=""3"" class=""hr""></td>
+				</tr>
+				<tr>
+					<th></th>
+					<th>$usage.localizedAmount$</th>
+					<th>$usage.localizedCost$</th>
+				</tr>
+			</tbody>
+		</table>
+	</td>
+</tr>
+>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemUsageTierRow.st,"itemUsageTierRow(tier) ::= <<
+<tr>
+	<td>$tier.localizedDescription$</td>
+	<td>$tier.localizedQuantity$</td>
+	<td>$tier.localizedCost$</td>
+</tr>
+>>"
+2021-06-01 00:00:00+12,snf.billing,en,costDetailsTitle,Usage details
+2021-06-01 00:00:00+12,snf.billing,en,nodeUsageIntro,The following section shows your metered usage summarised per node:
+2021-06-01 00:00:00+12,snf.billing,en,invoiceDateRange,Period
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,nodeUsageRecord.st,"nodeUsageRecord(rec) ::= <<
+<td>$rec.localizedAmount$</td>
+>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,infoSection.st,"infoSection() ::= <<
+<div class=""info"">
+	<table>
+		<tbody>
+			<tr>
+				<td>$messages.invoiceDate$</td>
+				<td>$invoice.localizedDate$</td>
+			</tr>
+			<tr>
+				<td>$messages.invoiceNumber$ &#x2116;</td>
+				$if(invoice.draft)$
+				<td class=""draft"">$messages.draftInvoice$</td>
+				$else$
+				<td>$invoice.invoiceNumber$ $invoice.isDraft$</td>
+				$endif$
+			</tr>
+			<tr>
+				<td>$messages.invoiceDateRange$</td>
+				<td>$invoice.localizedInvoiceDateRange$</td>
+			</tr>
+			<tr>
+				<td>$messages.accountOwnerName$</td>
+				<td class=""addr"">
+					<p>$address.name$</p>
+					$if(address.street)$<p>$address.street:'{'e | $e$'}'; separator="", ""$</p>$endif$
+					$if(address.locality)$<p>$address.locality$</p>$endif$
+					$if(address.stateOrProvince||address.postalCode)$<p>$[address.stateOrProvince, address.postalCode]:'{'e | $e$'}'; separator="" ""$</p>$endif$
+					$if(address.country)$<p>$address.country$</p>$endif$
+				</td>
+			</tr>
+			<tr>
+				<td colspan=""2"" class=""space""></td>
+			</tr>
+			<tr>
+				<td>$messages.invoiceBalance$</td>
+				<td class=""head"">$invoice.localizedBalance$</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,nodeUsageRecordName.st,"nodeUsageRecordName(rec) ::= <<
+<th>
+	$messages.([rec.unitType,"".item""])$
+	<span class=""unit"">$messages.([rec.unitType,"".unit""])$</span>
+</th>
+>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,nodeUsageRow.st,"nodeUsageRow(usage) ::= <<
+<tr>
+	<td>$usage.usageKey$</td>$usage.localizedUsageRecords:nodeUsageRecord()$
+</tr>
+>>"
+2021-06-01 00:00:00+12,snf.billing,en_US,costDetailsIntro,The following section shows your metered rates summarized per subscription tier:
+2021-06-01 00:00:00+12,snf.billing,en_US,nodeUsageIntro,The following section shows your metered usage summarized per node:
+2021-06-01 00:00:00+12,snf.billing,en,draftInvoice,DRAFT
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemTaxGroupRow.st,"itemTaxGroupRow(aggItem) ::= <<
+<tr>
+	<td>$aggItem.localizedDescription$</td>
+	<td>$aggItem.localizedAmount$</td>
+</tr>
+>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,style.st,"style() ::= <<
+	body '{'
+		font-family: sans-serif;
+		background-color: #FFF;
+		margin: 2rem; '}'
+	footer '{' border-top: 2px solid #F7C819; color: #666; margin-top: 2rem; '}'
+	body > p '{' font-size: 0.8rem; margin: 0.2rem 0 1rem 0; '}'
+	footer > p '{' margin-top: 4px; margin-bottom: 4px; font-size: 0.8rem; '}'
+	footer > p + p '{' border-top: 1px solid #CCC; padding-top: 2px; '}'
+	h1 '{' font-size: 1.5rem; font-weight: 200; margin: 1rem 0 0 0; clear: both; '}'
+	kbd '{' font-size: 1.1rem; font-weight: bold; '}'
+	body > table '{' clear: both; '}'
+	table '{' width: 100%; border-collapse: collapse; '}'
+	table + table '{' margin-top: 3rem; '}'
+	th.hr '{' border-top: 2px solid black; '}'
+	td.hr '{' border-bottom: 1px solid #CCC; '}'
+	td.space '{' height: 1rem; '}'
+	th '{' text-align: left; width: 225px; '}'
+	.addr p '{' margin: 0; '}'
+	.addr p + p '{' margin-top: 0.2rem; '}'
+	.draft '{' color: #c00; '}'
+	.head '{' font-weight: bold; '}'
+	.left '{' text-align: left; '}'
+	.right '{' text-align: right; '}'
+	.secondary '{' color: #666; '}'
+
+	.from '{'
+		float: left;
+		width: 50%; '}'
+	.from .logo '{' height: 2rem; margin: 0 0 1rem 0; '}'
+	.from .addr '{' 
+		color: #666;
+		font-size: 0.8rem; '}'
+	.info '{'
+		float: right;
+		width: 50%;
+		margin-top: 3rem; 
+		margin-bottom: 1rem; '}'
+	.info td,
+	.info th '{' vertical-align: top; padding: 0.2rem; '}'
+	.info td:first-child '{'
+		font-weight: 700;
+		text-align: right;
+		padding-right: 1rem; '}'
+
+	.details > tbody > tr > th '{'
+		font-weight: 200;
+		font-size: 1.1rem; '}'
+	.details tbody td,
+	.details tbody th '{' 
+		padding-top: 2px;
+		padding-bottom: 2px;
+		vertical-align: text-bottom;
+		font-size:0.8rem; '}'
+	.details th + th,
+	.details td + td,
+	.details td + td '{'
+		padding-left: 0.5rem;
+		text-align: right; '}'
+		
+	.totals '{'
+		float: right;
+		width: auto;
+		margin-top: 1rem;
+		margin-bottom: 1rem; '}'
+	.totals tbody tr > * '{' font-size: 1rem; '}'
+	.totals tbody tr > *:first-child '{' padding-right: 1rem; '}'
+	.totals tbody tr:last-child > * '{'
+		font-weight: 700; '}'
+		
+	.items thead th '{' vertical-align: top; '}'
+	.items tbody td,
+	.items tbody th,
+	.items tfoot td,
+	.items tfoot th '{'
+		padding-top: 2px;
+		padding-bottom: 2px;
+		vertical-align: text-bottom;
+		font-size:0.8rem; '}'
+	.items th + th,
+	.items td + td '{'
+		padding-left: 0.5rem;
+		text-align: right; '}'
+	.items tbody td + td,
+	.items tfoot td + td '{'
+		font-size: 0.8rem;
+		padding-left: 0.5rem;
+		text-align: right; '}'
+	.items th '{' width: auto; '}'
+	.items th .unit '{'
+		display: block;
+		font-size: 0.8rem;
+		color: #666;
+		font-weight: 400;
+		text-transform: lowercase; '}'
+	
+	@page '{'
+		size: a4;
+	'}'
+>>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,body.st,"body() ::= <<
+$fromSection()$
+$infoSection()$
+$costSection()$
+$nodeUsageSection()$
+$if(!invoice.draft)$
+$footer()$
+$endif$
+>>"
+2021-06-01 00:00:00+12,snf.billing,en,datum-props-in.unit,Properties

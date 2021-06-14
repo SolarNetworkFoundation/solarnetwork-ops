@@ -1,5 +1,5 @@
 --- vernemq.conf.192.orig	2019-09-10 13:07:59.000000000 +0000
-+++ vernemq.conf	2019-11-24 22:11:11.001643494 +0000
++++ vernemq.conf	2021-05-03 02:14:17.241894834 +0000
 @@ -152,7 +152,7 @@
  ## 
  ## Acceptable values:
@@ -19,7 +19,17 @@
  
  ## 'listener.tcp.allowed_protocol_versions' configures which
  ## protocol versions are allowed for an MQTT listener. The allowed
-@@ -279,7 +280,7 @@
+@@ -254,7 +255,8 @@
+ ## 
+ ## Acceptable values:
+ ##   - text
+-## listener.tcp.allowed_protocol_versions = 3,4
++listener.tcp.allowed_protocol_versions = 3,4,5
++listener.ws.allowed_protocol_versions = 3,4,5
+ 
+ ## listener.vmq.clustering is the IP address and TCP port that
+ ## the broker will bind to accept connections from other cluster
+@@ -279,7 +281,7 @@
  ## 
  ## Acceptable values:
  ##   - an IP/port pair, e.g. 127.0.0.1:10011
@@ -28,7 +38,7 @@
  
  ## The cafile is used to define the path to a file containing
  ## the PEM encoded CA certificates that are trusted. Set the cafile
-@@ -602,7 +603,7 @@
+@@ -602,7 +604,7 @@
  ## 
  ## Acceptable values:
  ##   - on or off
@@ -37,7 +47,7 @@
  
  ## The VerneMQ bridge plugin.
  ## 
-@@ -641,7 +642,7 @@
+@@ -641,7 +643,7 @@
  ## 
  ## Acceptable values:
  ##   - an integer
@@ -46,7 +56,7 @@
  
  ## Set the path to a password file.
  ## 
-@@ -658,7 +659,7 @@
+@@ -658,7 +660,7 @@
  ## 
  ## Acceptable values:
  ##   - an integer
@@ -55,7 +65,7 @@
  
  ## Configure the vmq_diversity plugin script dir. The script dir
  ## is searched for Lua scripts which are automatically loaded when the
-@@ -1051,6 +1052,14 @@
+@@ -1051,6 +1053,23 @@
  ## Acceptable values:
  ##   - text
  ## vmq_webhooks.webhook1.endpoint = http://localhost/myendpoints
@@ -67,10 +77,19 @@
 +
 +vmq_webhooks.solarflux3.hook = auth_on_publish
 +vmq_webhooks.solarflux3.endpoint = http://localhost:8280/hook
++
++vmq_webhooks.solarflux4.hook = auth_on_register_m5
++vmq_webhooks.solarflux4.endpoint = http://localhost:8280/hook
++
++vmq_webhooks.solarflux5.hook = auth_on_subscribe_m5
++vmq_webhooks.solarflux5.endpoint = http://localhost:8280/hook
++
++vmq_webhooks.solarflux6.hook = auth_on_publish_m5
++vmq_webhooks.solarflux6.endpoint = http://localhost:8280/hook
  
  ## Specify the address and port of the bridge to connect to. Several
  ## bridges can configured by using different bridge names (e.g. br0). If the
-@@ -1334,7 +1343,7 @@
+@@ -1334,7 +1353,7 @@
  ## 
  ## Acceptable values:
  ##   - text
@@ -79,7 +98,7 @@
  
  ## Cookie for distributed node communication.  All nodes in the
  ## same cluster should use the same cookie or they will not be able to
-@@ -1345,7 +1354,7 @@
+@@ -1345,7 +1364,7 @@
  ## 
  ## Acceptable values:
  ##   - text
@@ -88,10 +107,23 @@
  
  ## Sets the number of threads in async thread pool, valid range
  ## is 0-1024. If thread support is available, the default is 64.
-@@ -1420,3 +1429,6 @@
+@@ -1418,5 +1437,18 @@
+ ## 
+ ## Acceptable values:
  ##   - an integer
- leveldb.maximum_memory.percent = 70
- 
+-leveldb.maximum_memory.percent = 70
++#leveldb.maximum_memory.percent = 20
++
++# See discussion at https://github.com/vernemq/vernemq/issues/591
++# Setting to 200/30/60 MB
++leveldb.maximum_memory = 104857600
++leveldb.write_buffer_size_min = 31457280
++leveldb.write_buffer_size_max = 62914560
++
++
 +erlang.distribution.port_range.minimum = 6000
 +erlang.distribution.port_range.maximum = 7999
 +
++topic_alias_max_client = 255
++topic_alias_max_broker = 255
+ 
