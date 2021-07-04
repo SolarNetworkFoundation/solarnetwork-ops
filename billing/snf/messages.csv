@@ -266,7 +266,8 @@ $invoice.localizedTaxInvoiceItemsGroupedByDescription:itemTaxGroupRow()$
 		</tr>
 	</thead>
 	<tbody>
-$invoice.localizedInvoiceUsageRecords:nodeUsageRow()$	</tbody>
+$invoice.localizedInvoiceUsageRecords:nodeUsageRow()$
+	</tbody>
 </table>
 >>"
 2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemDetailsUSAGE.st,"itemDetailsUSAGE() ::= <<
