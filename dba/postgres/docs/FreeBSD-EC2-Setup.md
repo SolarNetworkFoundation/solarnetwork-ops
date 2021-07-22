@@ -582,6 +582,7 @@ Installed Postfix instead:
 pkg install postfix
 sysrc postfix_enable="YES"
 sysrc sendmail_enable="NONE"
+mkdir -p /usr/local/etc/mail
 install -m 0644 /usr/local/share/postfix/mailer.conf.postfix /usr/local/etc/mail/mailer.conf
 ```
 
