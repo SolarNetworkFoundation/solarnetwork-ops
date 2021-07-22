@@ -2,3 +2,4 @@
 .vagrant
 *.deb
 *.swp
+*.tgz
