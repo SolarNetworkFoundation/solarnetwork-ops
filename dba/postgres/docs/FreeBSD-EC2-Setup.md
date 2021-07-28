@@ -607,7 +607,7 @@ Created `/usr/local/etc/postfix/sasl_passwd` file like
 Then added this to `/usr/local/etc/postfix/main.cf`:
 
 ```
-alias_maps = hash:/etc/aliases
+alias_maps = hash:/etc/mail/aliases
 relayhost = [email-smtp.us-west-2.amazonaws.com]:587
 smtp_tls_note_starttls_offer = yes
 smtp_tls_security_level = encrypt
@@ -618,8 +618,15 @@ smtp_use_tls = yes
 smtp_tls_CAfile = /usr/local/share/certs/ca-root-nss.crt
 ```
 
-In `/etc/aliases` set:
+In `/etc/mail/aliases` set:
 
 ```
 root:	operations@solarnetwork.net
 ```
+
+Then run
+
+```sh
+newaliases
+```
+
