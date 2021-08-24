@@ -120,7 +120,7 @@ BEGIN
 		WHEN 'UPDATE' THEN
 			diff := CASE NEW.item_key WHEN 'account-credit-add' THEN 0 ELSE NEW.amount - OLD.amount END;
 		ELSE
-			diff := CASE NEW.item_key WHEN 'account-credit-add' THEN 0 ELSE -OLD.amount END;
+			diff := CASE OLD.item_key WHEN 'account-credit-add' THEN 0 ELSE -OLD.amount END;
 	END CASE;
 	IF (diff < 0::NUMERIC(19,2)) OR (diff > 0::NUMERIC(19,2)) THEN
 		INSERT INTO solarbill.bill_account_balance (acct_id, charge_total, payment_total)
