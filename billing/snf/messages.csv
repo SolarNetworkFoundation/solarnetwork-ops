@@ -217,16 +217,7 @@ $style()$
 </div>
 >>"
 2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemRow.st,"itemRow(item) ::= <<$([""itemDetails"",item.itemType])()$>>"
-2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemDetailsCREDIT.st,"itemDetailsCREDIT() ::= <<
-<tr>
-	<th>$messages.accountRemainingCredit$</th>
-	<td colspan=""2""></td>
-	<td>$item.metadata.localizedAvailableCredit$</td>
-</tr>
-<tr>
-	<td colspan=""4"" class=""space""></td>
-</tr>
->>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemDetailsCREDIT.st,"itemDetailsCREDIT() ::= """""
 2021-06-01 00:00:00+12,snf.billing,en,companyTaxId,GST &#x2116; 121-961-830
 2021-06-01 00:00:00+12,snf.billing,en,invoiceItemTier,Tier
 2021-06-01 00:00:00+12,snf.billing,en,usageAmount,Usage
@@ -245,10 +236,22 @@ $invoice.localizedNonTaxInvoiceItems:itemRow()$
 			<td>$invoice.localizedNonTaxAmount$</td>
 		</tr>
 $invoice.localizedTaxInvoiceItemsGroupedByDescription:itemTaxGroupRow()$
+$if(invoice.hasCreditAmount)$
+		<tr>
+			<td>$messages.invoiceCredit$</td>
+			<td>$invoice.localizedCreditAmount$</td>
+		</tr>
+$endif$
 		<tr>
 			<td>$messages.invoiceBalance$</td>
 			<td>$invoice.localizedBalance$</td>
 		</tr>
+$if(invoice.hasRemainingCreditAmount)$
+		<tr>
+			<td>$messages.accountRemainingCredit$</td>
+			<td>$invoice.localizedRemainingCreditAmount$</td>
+		</tr>
+$endif$
 	</tbody>
 </table>
 >>"
