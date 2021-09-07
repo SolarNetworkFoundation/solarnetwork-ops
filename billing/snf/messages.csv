@@ -195,6 +195,7 @@ $style()$
 	'}'
 >>"
 2008-01-01 00:00:00+13,snf.billing,en,invoiceBalance,Due
+2008-01-01 00:00:00+13,snf.billing,en,invoiceCredit,Credit
 2008-01-01 00:00:00+13,snf.billing,en,invoice.filename,SolarNetwork invoice {0} - {1}{2}
 2008-01-01 00:00:00+13,snf.billing,en,account-credit.item,Account credit
 2008-01-01 00:00:00+13,snf.billing,en,accountRemainingCredit,Remaining credit
@@ -236,7 +237,7 @@ $invoice.localizedNonTaxInvoiceItems:itemRow()$
 			<td>$invoice.localizedNonTaxAmount$</td>
 		</tr>
 $invoice.localizedTaxInvoiceItemsGroupedByDescription:itemTaxGroupRow()$
-$if(invoice.hasCreditAmount)$
+$if(invoice.creditAmount)$
 		<tr>
 			<td>$messages.invoiceCredit$</td>
 			<td>$invoice.localizedCreditAmount$</td>
@@ -246,7 +247,7 @@ $endif$
 			<td>$messages.invoiceBalance$</td>
 			<td>$invoice.localizedBalance$</td>
 		</tr>
-$if(invoice.hasRemainingCreditAmount)$
+$if(invoice.remainingCreditAmount)$
 		<tr>
 			<td>$messages.accountRemainingCredit$</td>
 			<td>$invoice.localizedRemainingCreditAmount$</td>
