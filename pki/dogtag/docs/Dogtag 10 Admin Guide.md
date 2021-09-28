@@ -270,6 +270,18 @@ pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-cert-
   Subject: UID=suagent,E=suagent@solarnetwork.net,CN=suagent,OU=SolarUser,O=SolarNetwork
 ```
 
+# Show certificate details
+```
+pki ca-cert-show 0x100c7
+
+  Serial Number: 0x100c7
+  Subject DN: UID=suagent,E=suagent@solarnetwork.net,CN=suagent,OU=SolarUser,O=SolarNetwork
+  Issuer DN: CN=SolarNetwork Root CA,OU=SolarNetwork Certification Authority,O=SolarNetwork
+  Status: VALID
+  Not Valid Before: Wed Apr 28 21:23:57 UTC 2021
+  Not Valid After: Mon Oct 25 21:23:57 UTC 2021
+```
+
 # Renew user certificate
 
 ```
@@ -303,4 +315,42 @@ pki -n 'PKI Administrator for solarnetwork.net' pkcs12-cert-import suagent \
     --no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC' \
     --pkcs12-file pki-suagent-20201118.p12 \
     --pkcs12-password Secret.123
+```
+
+# Create java keystore for client apps
+
+Convert the `.p12` keystore into a `.jks` for the apps to use:
+
+```
+# convet keystore format to JKS
+keytool -importkeystore -srckeystore \
+	~/Documents/SNF/Sysadmin/CA/Certs/pki-2020/pki-suagent-202109-0x100dd.p12 \
+	-srcstoretype pkcs12 \
+	-srcstorepass 'PASSWORD' \
+	-srckeypass 'PASSWORD' \
+	-destkeystore dogtag-client-202109.jks \
+	-deststoretype jks \
+	-deststorepass 'PASSWORD' \
+	-destkeypass 'PASSWORD' \
+	-noprompt \
+	-srcalias suagent \
+	-destalias suagent
+
+# import CA cert
+keytool -importcert -keystore dogtag-client-202109.jks \
+	-alias ca \
+	-file ~/Documents/SNF/Sysadmin/CA/Certs/pki-2020/ca-root-2020.crt
+```
+
+Afterwards the `ca` and `suagent` certificates should be present:
+
+```
+keytool -list -keystore dogtag-client-202109.jks                                                                                  
+
+Your keystore contains 2 entries
+
+ca, 28/09/2021, trustedCertEntry, 
+Certificate fingerprint (SHA-256): F6:1F:E9:CA:03:08:3F:C2:87:00:C0:0E:B7:07:11:3B:7E:44:85:77:65:DD:24:AC:8B:71:7B:6B:83:58:96:8A
+suagent, 28/09/2021, PrivateKeyEntry, 
+Certificate fingerprint (SHA-256): FD:2B:7E:8C:14:51:42:B9:34:78:3B:59:AC:4C:B3:E4:D5:67:3F:F6:DC:30:AF:90:7C:BB:E8:B7:22:D2:CE:29
 ```
