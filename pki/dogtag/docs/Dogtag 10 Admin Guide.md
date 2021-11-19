@@ -287,7 +287,7 @@ pki ca-cert-show 0x100c7
 ```
 # request cert renew
 pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-cert-request-submit \
-    --profile caManualRenewal --serial 0x10009 --renewal
+    --profile caManualRenewal --renewal --serial 0x10009
 
 -----------------------------
 Submitted certificate request
