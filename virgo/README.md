@@ -131,3 +131,85 @@ aws --profile snf ecr get-login-password --region us-west-2 | \
 
 docker push 151824139716.dkr.ecr.us-west-2.amazonaws.com/sn-apps:solarquery-20200504A
 ```
+
+# Shell helper functions
+
+To help automate these deployment steps, I've been using the following `zsh` shell functions, which
+have been added to `~/.zshrc` to make available. The paths would need to be adjusted to another
+developer's workstation. Using these functions the process of deploying a new build goes like this,
+using SolarUser as the example here:
+
+```sh
+# create a new build, then open ksdiff to show diff with previous build
+sn-virgo-ecs-newbuild solaruser
+
+# After manually inspecting the changes in ksdiff, and everthing is OK, create new Docker image
+# using the current date + build letter suffix as the tag:
+sn-virgo-ecs-dockerize solaruser 20210928_A
+
+# Finally push the Docker image up to the container repository:
+sn-virgo-ecs-push solaruser 20210928_A
+```
+
+The functions are as follows:
+
+```sh
+# Use a separate Ivy cache/repo dir for SN prod builds, to keep development publications out
+SN_PROD_IVY_DIR="/Users/matt/var/ivy2-sn-prod"
+
+##################################
+# SolarNetwork ECS app build
+##################################
+
+# pass app name, e.g. `sn-virgo-ecs-build solarjobs`
+function sn-virgo-ecs-build () {
+	if [ -z "$1" ]; then
+		echo "Pass app name to build, e.g. solarjobs"
+	else
+		cd ~/Documents/SNF/Sysadmin/solarnetwork-ops/virgo
+		ANT_OPTS="-Divy.default.ivy.user.dir=${SN_PROD_IVY_DIR}" ./bin/setup-virgo.sh -rv \
+			-h ~/var/virgo-aws \
+			-i example/ivy-$1.xml \
+			-I ../../solarnetwork-osgi-lib/ivysettings-local-first.xml \
+			-e prod-aws \
+			-a "$1"
+		popd
+		
+		# show a visual diff of the changes; using ksdiff here provided by Kaleidoscope macOS app
+		ksdiff ~/var/virgo-aws/$1.prev ~/var/virgo-aws/$1
+	fi
+}
+
+# pass app name, e.g. `sn-virgo-ecs-newbuild solarjobs`
+function sn-virgo-ecs-newbuild () {
+	if [ -z "$1" ]; then
+		echo "Pass app name to build, e.g. solarjobs"
+	else
+		rsync -av --delete ~/var/virgo-aws/$1/ ~/var/virgo-aws/$1.prev/
+		sn-virgo-ecs-build "$@"
+	fi
+}
+
+# pass app name and tag, e.g. `sn-virgo-ecs-dockerize solarjobs 20200525_A`
+function sn-virgo-ecs-dockerize () {
+	if [ -z "$1" -o -z "$2" ]; then
+		echo "Pass app name and tag name to build, e.g. solarjobs 20200525_A"
+	else
+		docker build -t "$1-prod" ~/var/virgo-aws/$1 \
+			&& docker tag "$1-prod:latest" "151824139716.dkr.ecr.us-west-2.amazonaws.com/sn-apps:$1-$2" \
+			&& echo "Push app with: docker push 151824139716.dkr.ecr.us-west-2.amazonaws.com/sn-apps:$1-$2" \
+			&& echo "Or with: sn-virgo-ecs-push $1 $2"
+	fi
+}
+
+# pass app name and tag, e.g. `sn-virgo-ecs-push solarjobs 20200525_A`
+function sn-virgo-ecs-push () {
+	if [ -z "$1" -o -z "$2" ]; then
+		echo "Pass app name and tag name to build, e.g. solarjobs 20200525_A"
+	else
+		aws --profile snf ecr get-login-password --region us-west-2 \
+			|docker login --username AWS --password-stdin 151824139716.dkr.ecr.us-west-2.amazonaws.com
+		docker push "151824139716.dkr.ecr.us-west-2.amazonaws.com/sn-apps:$1-$2"
+	fi
+}
+```

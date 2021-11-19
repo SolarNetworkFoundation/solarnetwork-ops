@@ -582,6 +582,7 @@ Installed Postfix instead:
 pkg install postfix
 sysrc postfix_enable="YES"
 sysrc sendmail_enable="NONE"
+mkdir -p /usr/local/etc/mail
 install -m 0644 /usr/local/share/postfix/mailer.conf.postfix /usr/local/etc/mail/mailer.conf
 ```
 
@@ -606,7 +607,7 @@ Created `/usr/local/etc/postfix/sasl_passwd` file like
 Then added this to `/usr/local/etc/postfix/main.cf`:
 
 ```
-alias_maps = hash:/etc/aliases
+alias_maps = hash:/etc/mail/aliases
 relayhost = [email-smtp.us-west-2.amazonaws.com]:587
 smtp_tls_note_starttls_offer = yes
 smtp_tls_security_level = encrypt
@@ -617,8 +618,15 @@ smtp_use_tls = yes
 smtp_tls_CAfile = /usr/local/share/certs/ca-root-nss.crt
 ```
 
-In `/etc/aliases` set:
+In `/etc/mail/aliases` set:
 
 ```
 root:	operations@solarnetwork.net
 ```
+
+Then run
+
+```sh
+newaliases
+```
+

@@ -195,6 +195,7 @@ $style()$
 	'}'
 >>"
 2008-01-01 00:00:00+13,snf.billing,en,invoiceBalance,Due
+2008-01-01 00:00:00+13,snf.billing,en,invoiceCredit,Credit
 2008-01-01 00:00:00+13,snf.billing,en,invoice.filename,SolarNetwork invoice {0} - {1}{2}
 2008-01-01 00:00:00+13,snf.billing,en,account-credit.item,Account credit
 2008-01-01 00:00:00+13,snf.billing,en,accountRemainingCredit,Remaining credit
@@ -217,16 +218,7 @@ $style()$
 </div>
 >>"
 2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemRow.st,"itemRow(item) ::= <<$([""itemDetails"",item.itemType])()$>>"
-2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemDetailsCREDIT.st,"itemDetailsCREDIT() ::= <<
-<tr>
-	<th>$messages.accountRemainingCredit$</th>
-	<td colspan=""2""></td>
-	<td>$item.metadata.localizedAvailableCredit$</td>
-</tr>
-<tr>
-	<td colspan=""4"" class=""space""></td>
-</tr>
->>"
+2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemDetailsCREDIT.st,"itemDetailsCREDIT() ::= """""
 2021-06-01 00:00:00+12,snf.billing,en,companyTaxId,GST &#x2116; 121-961-830
 2021-06-01 00:00:00+12,snf.billing,en,invoiceItemTier,Tier
 2021-06-01 00:00:00+12,snf.billing,en,usageAmount,Usage
@@ -245,10 +237,22 @@ $invoice.localizedNonTaxInvoiceItems:itemRow()$
 			<td>$invoice.localizedNonTaxAmount$</td>
 		</tr>
 $invoice.localizedTaxInvoiceItemsGroupedByDescription:itemTaxGroupRow()$
+$if(invoice.creditAmount)$
+		<tr>
+			<td>$messages.invoiceCredit$</td>
+			<td>$invoice.localizedCreditAmount$</td>
+		</tr>
+$endif$
 		<tr>
 			<td>$messages.invoiceBalance$</td>
 			<td>$invoice.localizedBalance$</td>
 		</tr>
+$if(invoice.remainingCreditAmount)$
+		<tr>
+			<td>$messages.accountRemainingCredit$</td>
+			<td>$invoice.localizedRemainingCreditAmount$</td>
+		</tr>
+$endif$
 	</tbody>
 </table>
 >>"
@@ -266,7 +270,8 @@ $invoice.localizedTaxInvoiceItemsGroupedByDescription:itemTaxGroupRow()$
 		</tr>
 	</thead>
 	<tbody>
-$invoice.localizedInvoiceUsageRecords:nodeUsageRow()$	</tbody>
+$invoice.localizedInvoiceUsageRecords:nodeUsageRow()$
+	</tbody>
 </table>
 >>"
 2021-06-01 00:00:00+12,/snf/text/html/invoice,en,itemDetailsUSAGE.st,"itemDetailsUSAGE() ::= <<

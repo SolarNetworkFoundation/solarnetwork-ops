@@ -1,9 +1,10 @@
 #!/usr/bin/env sh
 
-virgoVersion="3.7.2.RELEASE"
+virgoVersion="3.7.4.RELEASE"
 virgoDownloadUrl="https://www.eclipse.org/downloads/download.php?file=/virgo/release/VP/${virgoVersion}/virgo-tomcat-server-${virgoVersion}.zip&r=1"
 # 3.7.0 virgoDownloadSha="7d95293d55cc51d0febc3a3feeff211305614fa9f7fb41ac6a1129220fc0810692c6cd765bd16cbb712874aff77e08d3fd3dc6c7b0a150f433d82fd7b8f9b873"
-virgoDownloadSha="f997cbdd9beed4fd953f5bf7a9cf3c5b3940a1d565f6722148ecdae5e21e84a7d414e7f0e1cd222172753956a3654f6959f74ccd216476de9f7beda6478c2ac6"
+# 3.7.2 virgoDownloadSha="f997cbdd9beed4fd953f5bf7a9cf3c5b3940a1d565f6722148ecdae5e21e84a7d414e7f0e1cd222172753956a3654f6959f74ccd216476de9f7beda6478c2ac6"
+virgoDownloadSha="09e67039fc4c89cd3e71a09e7cee2dc57f3837873f22fbcd238d8b037b0ef6b3568e743b96ab5fc049fb9b8285de685f3a2ba3e7b94172f4133c5d4b501cea0d"
 
 virgoDownloadPath="/var/tmp/virgo-tomcat-server-${virgoVersion}.zip"
 
