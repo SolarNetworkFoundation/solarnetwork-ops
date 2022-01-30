@@ -13,10 +13,10 @@ git clone https://github.com/timescale/timescaledb.git
 
 # checkout version tag
 cd timescaledb
-git checkout 0.10.1     # or some other release
+git checkout 2.5.1     # or some other release
 
 # perform build
-export PATH=/Applications/Postgres.app/Contents/Versions/9.6/bin:$PATH
+export PATH=/Applications/Postgres.app/Contents/Versions/12/bin:$PATH
 OPENSSL_ROOT_DIR=/usr/local/opt/openssl ./bootstrap -DREGRESS_CHECKS=OFF
 cd build && make
 make install
