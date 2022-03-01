@@ -1,12 +1,18 @@
 #!/usr/bin/env sh
 
-virgoVersion="3.7.4.RELEASE"
-virgoDownloadUrl="https://www.eclipse.org/downloads/download.php?file=/virgo/release/VP/${virgoVersion}/virgo-tomcat-server-${virgoVersion}.zip&r=1"
-# 3.7.0 virgoDownloadSha="7d95293d55cc51d0febc3a3feeff211305614fa9f7fb41ac6a1129220fc0810692c6cd765bd16cbb712874aff77e08d3fd3dc6c7b0a150f433d82fd7b8f9b873"
-# 3.7.2 virgoDownloadSha="f997cbdd9beed4fd953f5bf7a9cf3c5b3940a1d565f6722148ecdae5e21e84a7d414e7f0e1cd222172753956a3654f6959f74ccd216476de9f7beda6478c2ac6"
-virgoDownloadSha="09e67039fc4c89cd3e71a09e7cee2dc57f3837873f22fbcd238d8b037b0ef6b3568e743b96ab5fc049fb9b8285de685f3a2ba3e7b94172f4133c5d4b501cea0d"
+VIRGO_VERSION="${VIRGO_VERSION:-3.7.4.RELEASE}"
+virgoDownloadUrl="https://www.eclipse.org/downloads/download.php?file=/virgo/release/VP/${VIRGO_VERSION}/virgo-tomcat-server-${VIRGO_VERSION}.zip&r=1"
 
-virgoDownloadPath="/var/tmp/virgo-tomcat-server-${virgoVersion}.zip"
+case $VIRGO_VERSION in
+	3.7.0.RELEASE) virgoDownloadSha="7d95293d55cc51d0febc3a3feeff211305614fa9f7fb41ac6a1129220fc0810692c6cd765bd16cbb712874aff77e08d3fd3dc6c7b0a150f433d82fd7b8f9b873";;
+	3.7.2.RELEASE) virgoDownloadSha="f997cbdd9beed4fd953f5bf7a9cf3c5b3940a1d565f6722148ecdae5e21e84a7d414e7f0e1cd222172753956a3654f6959f74ccd216476de9f7beda6478c2ac6";;
+	3.7.4.RELEASE) virgoDownloadSha="09e67039fc4c89cd3e71a09e7cee2dc57f3837873f22fbcd238d8b037b0ef6b3568e743b96ab5fc049fb9b8285de685f3a2ba3e7b94172f4133c5d4b501cea0d";;
+	*)
+		echo "Unsupported virgo version ${VIRGO_VERSION}"
+		exit 1
+esac
+
+virgoDownloadPath="/var/tmp/virgo-tomcat-server-${VIRGO_VERSION}.zip"
 
 APP_NAME="solarapp"
 CLEAN=""
@@ -75,6 +81,12 @@ if [ -z "$VIRGO_HOME" ]; then
 	exit 1;
 fi
 
+if [ "$APP_NAME" = "solarin" -a "$VIRGO_VERSION" != "3.7.2.RELEASE" ];then
+	echo "SolarIn only supports Virgo 3.7.2.RELEASE. Try running like"
+	echo "VIRGO_VERSION=3.7.2.RELEASE $0 ..."
+	exit 1
+fi
+
 SETUP_HOME=$(pwd)
 
 shaFileHash=
@@ -94,14 +106,14 @@ if [ -d "$VIRGO_HOME/$APP_NAME" -a -n "$CLEAN" ]; then
 	rm -rf "$VIRGO_HOME/$APP_NAME"
 fi
 if [ -d "$VIRGO_HOME/$APP_NAME" ]; then
-	echo "Virgo already installed at [$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}]"
+	echo "Virgo already installed at [$VIRGO_HOME/virgo-tomcat-server-${VIRGO_VERSION}]"
 else
 	if [ -e "$virgoDownloadPath" ]; then
 		sha512File "$virgoDownloadPath"
 	fi
 
 	if [ "$shaFileHash" != "$virgoDownloadSha" ]; then
-		echo "\nDownloading Virgo $virgoVersion..."
+		echo "\nDownloading Virgo $VIRGO_VERSION..."
 		curl -L -s -S -o "$virgoDownloadPath" "$virgoDownloadUrl"
 		if [ -e "$virgoDownloadPath" ]; then
 			sha512File "$virgoDownloadPath"
@@ -113,21 +125,21 @@ else
 	fi
 
 	echo "Extracting $virgoDownloadPath -> $VIRGO_HOME"
-	if [ -d "$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}" ]; then
-		rm -rf "$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}"
+	if [ -d "$VIRGO_HOME/virgo-tomcat-server-${VIRGO_VERSION}" ]; then
+		rm -rf "$VIRGO_HOME/virgo-tomcat-server-${VIRGO_VERSION}"
 	fi
 	unzip -q -d "$VIRGO_HOME" "$virgoDownloadPath"
-	mv "$VIRGO_HOME/virgo-tomcat-server-${virgoVersion}" "$VIRGO_HOME/$APP_NAME"
+	mv "$VIRGO_HOME/virgo-tomcat-server-${VIRGO_VERSION}" "$VIRGO_HOME/$APP_NAME"
 fi
 
 #
 # Remove splash webapp
 #
-if [ -e "$VIRGO_HOME/$APP_NAME/pickup/org.eclipse.virgo.apps.splash_${virgoVersion}.jar" ];then
+if [ -e "$VIRGO_HOME/$APP_NAME/pickup/org.eclipse.virgo.apps.splash_${VIRGO_VERSION}.jar" ];then
 	if [ -n "$VERBOSE" ]; then
-		echo "Removing Virgo splash webapp pickup/org.eclipse.virgo.apps.splash_${virgoVersion}.jar"
+		echo "Removing Virgo splash webapp pickup/org.eclipse.virgo.apps.splash_${VIRGO_VERSION}.jar"
 	fi
-	rm -f "$VIRGO_HOME/$APP_NAME/pickup/org.eclipse.virgo.apps.splash_${virgoVersion}.jar"
+	rm -f "$VIRGO_HOME/$APP_NAME/pickup/org.eclipse.virgo.apps.splash_${VIRGO_VERSION}.jar"
 fi
 
 #

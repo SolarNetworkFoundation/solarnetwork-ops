@@ -3,7 +3,7 @@
 	<property name="app.name" value="${APP_NAME}"/>
 	<property name="env.name" value="${ENV_NAME}"/>
 	<property name="dest.dir" value="${VIRGO_HOME}/${app.name}"/>
-	
+
 	<property name="app.dir" value="apphome/${app.name}"/>
 	<property name="env.dir" value="local/${env.name}/${app.name}"/>
 	<property name="env.props" value="local/${env.name}/${app.name}.properties"/>
@@ -18,7 +18,7 @@
 		<echo message="Copying ${app.dir} → ${dest.dir}"/>
 		<copy todir="${dest.dir}" overwrite="yes">
 			<fileset dir="${app.dir}" includes="**"/>
-		</copy>		
+		</copy>
 	</target>
 
 	<target name="copy-env" if="env.present" depends="copy-env-with-filter,copy-env-without-filter,set-perms"/>
@@ -29,10 +29,10 @@
 			<fileset dir="${env.dir}" includes="**" excludes="**/*.secret"/>
 		</copy>
 	</target>
-	
+
 	<!-- Pattern set to limit which files are filtered (i.e. so JAR files aren't filtered). -->
 	<patternset id="filterable.pats">
-		<include name="**/*.cfg"/>		
+		<include name="**/*.cfg"/>
 		<include name="**/*.plan"/>
 		<include name="**/*.properties"/>
 		<include name="**/*.xml"/>
@@ -58,23 +58,23 @@
 			</filterset>
 		</copy>
 	</target>
-	
+
 	<!-- Make sure scripts have executable bit, which might have been lost by copy tasks. -->
 	<target name="set-perms" depends="set-perms-ssh">
 		<chmod perm="775">
 			<fileset dir="${dest.dir}/bin" includes="*.sh"/>
-		</chmod>		
+		</chmod>
 	</target>
-	
+
 	<target name="set-perms-ssh">
 		<available file="${dest.dir}/.ssh" type="dir" property="ssh.present"/>
 		<chmod perm="700" if:set="ssh.present">
 			<dirset dir="${dest.dir}" includes=".ssh"/>
-		</chmod>		
+		</chmod>
 		<available file="${dest.dir}/.ssh/authorized_keys" type="file" property="ssh.auth.present"/>
 		<chmod perm="600" if:set="ssh.auth.present">
 			<fileset dir="${dest.dir}/.ssh" includes="authorized_keys"/>
-		</chmod>		
+		</chmod>
 	</target>
 
 </project>
