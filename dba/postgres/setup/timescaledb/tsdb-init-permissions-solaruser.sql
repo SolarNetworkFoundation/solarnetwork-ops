@@ -7,6 +7,10 @@
 
 GRANT ALL ON TABLE solardatm.agg_stale_datm TO solaruser;
 GRANT ALL ON TABLE solardatm.da_datm_aux TO solaruser;
+
+-- allow updating node datum stream metadata
+GRANT UPDATE(node_id, source_id) ON solardatm.da_datm_meta TO solaruser;
+
 -- GRANT EXECUTE ON FUNCTION solaragg.find_datum_hour_slots(bigint[], text[], timestamp with time zone, timestamp with time zone) TO solaruser;
 -- MAYBE? FUNCTION solardatm.find_datm_hours(uuid, timestamp with time zone, timestamp with time zone)
 --GRANT EXECUTE ON FUNCTION solardatm.mark_stale_datm_hours(uuid, timestamp with time zone, timestamp with time zone) TO solaruser;
