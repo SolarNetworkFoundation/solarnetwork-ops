@@ -193,8 +193,8 @@ $$
 BEGIN
 	schemaname := schem_name;
 	FOR objname, stmt IN
-		(SELECT o.indexname AS objname, 
-			format('ALTER INDEX %I.%I SET TABLESPACE %I', schem_name, o.indexname, tblspace_Name) AS stmt
+		(SELECT o.indexname AS objname,
+			format('ALTER INDEX %I.%I SET TABLESPACE %I', schem_name, o.indexname, tblspace_name) AS stmt
 		FROM pg_catalog.pg_indexes o
 		WHERE o.schemaname = schem_name
 		ORDER BY o.indexname)
