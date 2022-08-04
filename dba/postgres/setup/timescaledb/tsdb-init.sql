@@ -40,6 +40,7 @@
 \i init/postgres-init-user-datum-expire.sql
 \i init/postgres-init-user-datum-import.sql
 \i init/postgres-init-user-event-hook.sql
+\i init/postgres-init-user-events.sql
 \i init/postgres-init-ocpp-schema.sql
 \i tsdb-init-ocpp-schema.sql
 \i init/postgres-init-ocpp.sql

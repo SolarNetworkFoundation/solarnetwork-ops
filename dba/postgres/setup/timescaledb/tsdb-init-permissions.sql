@@ -22,3 +22,4 @@ GRANT SELECT ON TABLE solarcommon.messages TO solar;
 \i tsdb-init-permissions-solarinput.sql
 \i tsdb-init-permissions-solarquery.sql
 \i tsdb-init-permissions-solarjobs.sql
+\i tsdb-init-permissions-solaruser.sql

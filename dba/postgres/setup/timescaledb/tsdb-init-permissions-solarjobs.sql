@@ -16,6 +16,7 @@ GRANT ALL     ON TABLE solaruser.user_node_event_task TO solarjobs;
 GRANT ALL     ON TABLE solaruser.user_node_event_task_result TO solarjobs;
 
 GRANT EXECUTE ON FUNCTION solardatm.store_datum(timestamp with time zone, bigint, text, timestamp with time zone, text, boolean) TO solarjobs;
+GRANT EXECUTE ON FUNCTION solardatm.store_stream_datum(uuid, timestamp with time zone, timestamp with time zone, numeric[], numeric[], text[], text[], boolean) TO solarjobs;
 
 -- Allow long exports to run without timeout: NOTE this must be set on users granted this role,
 -- it is shown here as a reminder.

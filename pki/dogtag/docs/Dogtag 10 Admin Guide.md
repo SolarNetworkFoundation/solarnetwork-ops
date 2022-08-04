@@ -195,7 +195,7 @@ Note the **Request ID** values. Then approve each request:
 ## Approve system certificate renewal requests
 
 ```
-[caadmin@ca ~]$ pki ca-cert-request-review 10137 --action approve
+pki -n 'PKI Administrator for solarnetwork.net' ca-cert-request-approve 10137
 ```
 
 A typical response looks like this:
@@ -216,7 +216,7 @@ Note the **Certificate ID** values. Then download each certificate to a file:
 ## Download renewed system certificates
 
 ```
-[caadmin@ca ~]$ pki ca-cert-show 0x1007e --encoded --output ocspSigningCert-2020-0x1007e.crt
+[caadmin@ca ~]$ pki ca-cert-export 0x1007e --output-file ocspSigningCert-2020-0x1007e.crt
 ```
 
 ## Install renewed system certificates
