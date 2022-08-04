@@ -221,6 +221,8 @@ else
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_acc_datm_daily',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+
+		SELECT public.create_hypertable('solaruser.user_event_log', 'event_id', chunk_time_interval => interval '1 months', create_default_indexes => FALSE, time_partitioning_func => 'solarcommon.uuid_to_timestamp_v7');
 	EOF
 fi
 
