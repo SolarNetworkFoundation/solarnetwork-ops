@@ -6,6 +6,7 @@ SELECT public.create_hypertable('solaruser.user_event_log', 'event_id',
 ALTER INDEX solaruser.user_event_log_pk 		SET TABLESPACE solarindex;
 ALTER INDEX solaruser.user_event_log_tags_idx 	SET TABLESPACE solarindex;
 
+GRANT EXECUTE ON FUNCTION solarcommon.uuid_to_timestamp_v7(uuid) TO PUBLIC;
 GRANT INSERT ON TABLE solaruser.user_event_log TO solar;
 
 SELECT add_retention_policy('solaruser.user_event_log', INTERVAL '1 year', if_not_exists => TRUE);
