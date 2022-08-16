@@ -261,7 +261,7 @@ pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
 # List user certificates
 
 ```
-pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-cert-find suagent
+pki -d ~/.dogtag/nssdb -n caadmin ca-user-cert-find suagent
 
   Cert ID: 2;65545;CN=SolarNetwork Root CA,OU=SolarNetwork Certification Authority,O=SolarNetwork;UID=suagent,E=suagent@solarnetwork.net,CN=suagent,OU=SolarUser,O=SolarNetwork
   Version: 2
@@ -286,7 +286,7 @@ pki ca-cert-show 0x100c7
 
 ```
 # request cert renew
-pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-cert-request-submit \
+pki -d ~/.dogtag/nssdb -n caadmin ca-cert-request-submit \
     --profile caManualRenewal --renewal --serial 0x10009
 
 -----------------------------
@@ -299,19 +299,19 @@ Submitted certificate request
   Certificate ID: 0x10040
 
 # NOTE if Status is pending, then approve else skip this step
-# pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-cert-request-approve 10075
+# pki -d ~/.dogtag/nssdb -n caadmin ca-cert-request-approve 10075
 
 # export
-pki -n 'PKI Administrator for solarnetwork.net' ca-cert-export 0x10040 --output-file pki-suagent-20201118.crt
+pki -n caadmin ca-cert-export 0x10040 --output-file pki-suagent-20201118.crt
 
 # add to user
-pki -n 'PKI Administrator for solarnetwork.net' ca-user-cert-add suagent --input pki-suagent-20201118.crt
+pki -n caadmin ca-user-cert-add suagent --input pki-suagent-20201118.crt
 
 # import cert to nssdb
-pki -n 'PKI Administrator for solarnetwork.net' client-cert-import suagent --serial 0x10040
+pki -n caadmin client-cert-import suagent --serial 0x10040
 
 # export cert + key to p12
-pki -n 'PKI Administrator for solarnetwork.net' pkcs12-cert-import suagent \
+pki -n caadmin pkcs12-cert-import suagent \
     --no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC' \
     --pkcs12-file pki-suagent-20201118.p12 \
     --pkcs12-password Secret.123
