@@ -47,8 +47,17 @@ CREATE ROLE solaruser WITH
   NOREPLICATION;
 GRANT solar TO solaruser;
 
--- group for bare-minimum authentication/authorization requests
+-- group for bare-minimum authentication/authorization requests (not in solar group)
 CREATE ROLE solarauthn WITH
+  NOLOGIN
+  NOSUPERUSER
+  INHERIT
+  NOCREATEDB
+  NOCREATEROLE
+  NOREPLICATION;
+
+-- group for OSCP (not in solar group)
+CREATE ROLE solaroscp WITH
   NOLOGIN
   NOSUPERUSER
   INHERIT

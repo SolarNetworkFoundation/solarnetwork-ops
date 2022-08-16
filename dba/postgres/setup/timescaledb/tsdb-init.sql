@@ -3,8 +3,6 @@
  *
  * All database roles are assumed to be created already (see tsdb-init-roles.sql)
  * and all necessary extensions are assumed to be installed already.
- *
- * The init/postgres-init-plv8.sql script should be run PRIOR to running this.
  * ============================================================================
  */
 
@@ -44,6 +42,9 @@
 \i init/postgres-init-ocpp-schema.sql
 \i tsdb-init-ocpp-schema.sql
 \i init/postgres-init-ocpp.sql
+\i init/postgres-init-oscp-schema.sql
+\i tsdb-init-oscp-schema.sql
+\i init/postgres-init-oscp.sql
 \i init/postgres-init-quartz-schema.sql
 \i tsdb-init-quartz-schema.sql
 \i init/postgres-init-quartz.sql
