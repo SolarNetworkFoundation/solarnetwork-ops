@@ -35,4 +35,4 @@ GRANT SELECT ON TABLE solaroscp.oscp_co_token TO solaroscp;
 ALTER FUNCTION solaroscp.create_fp_token(BIGINT, BIGINT) SECURITY DEFINER;
 ALTER FUNCTION solaroscp.create_cp_token(BIGINT, BIGINT) SECURITY DEFINER;
 ALTER FUNCTION solaroscp.create_co_token(BIGINT, BIGINT) SECURITY DEFINER;
-ALTER FUNCTION solaroscp.fp_for_token(TEXT) SECURITY DEFINER;
+ALTER FUNCTION solaroscp.fp_id_for_token(TEXT) SECURITY DEFINER;

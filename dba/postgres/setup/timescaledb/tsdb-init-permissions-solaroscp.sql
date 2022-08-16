@@ -8,4 +8,4 @@ REVOKE ALL ON TABLE solaroscp.oscp_cp_token FROM solaruser;
 REVOKE ALL ON TABLE solaroscp.oscp_co_token FROM solaruser;
 
 ALTER FUNCTION solaroscp.create_fp_token(text) SECURITY DEFINER;
-ALTER FUNCTION solaroscp.fp_for_token(text) SECURITY DEFINER;
+ALTER FUNCTION solaroscp.fp_id_for_token(TEXT) SECURITY DEFINER;
