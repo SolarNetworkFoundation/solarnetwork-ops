@@ -36,7 +36,7 @@ BEGIN
 			, ('datum-days-stored', 	400000::BIGINT, 	0.00000005::NUMERIC)
 			, ('datum-days-stored', 	1000000::BIGINT, 	0.000000006::NUMERIC)
 		) AS t(min, meter_key, cost);
-	ELSIF ts < '2022-11-01'::DATE THEN
+	ELSIF ts < '2022-10-01'::DATE THEN
 		RETURN QUERY SELECT *, '2021-06-01'::DATE FROM ( VALUES
 			  ('datum-props-in', 		0::BIGINT, 				0.000005::NUMERIC)
 			, ('datum-props-in', 		500000::BIGINT, 		0.000003::NUMERIC)
@@ -54,7 +54,7 @@ BEGIN
 			, ('datum-days-stored', 	100000000000::BIGINT,	0.000000002::NUMERIC)
 		) AS t(min, meter_key, cost);
 	ELSE
-		RETURN QUERY SELECT *, '2022-11-01'::DATE FROM ( VALUES
+		RETURN QUERY SELECT *, '2022-10-01'::DATE FROM ( VALUES
 			  ('datum-props-in', 		0::BIGINT, 				0.000005::NUMERIC)
 			, ('datum-props-in', 		500000::BIGINT, 		0.000003::NUMERIC)
 			, ('datum-props-in', 		10000000::BIGINT, 		0.0000008::NUMERIC)
@@ -71,9 +71,9 @@ BEGIN
 			, ('datum-days-stored', 	100000000000::BIGINT,	0.000000002::NUMERIC)
 
 			, ('ocpp-chargers', 		0::BIGINT, 				2::NUMERIC)
-			, ('ocpp-chargers', 		1000::BIGINT, 			1::NUMERIC)
-			, ('ocpp-chargers', 		100000::BIGINT, 		0.5::NUMERIC)
-			, ('ocpp-chargers', 		10000000::BIGINT, 		0.3::NUMERIC)
+			, ('ocpp-chargers', 		250::BIGINT, 			1::NUMERIC)
+			, ('ocpp-chargers', 		12500::BIGINT, 			0.5::NUMERIC)
+			, ('ocpp-chargers', 		500000::BIGINT, 		0.3::NUMERIC)
 
 			, ('oscp-cap-groups', 		0::BIGINT, 				18::NUMERIC)
 			, ('oscp-cap-groups', 		100::BIGINT, 			9::NUMERIC)
