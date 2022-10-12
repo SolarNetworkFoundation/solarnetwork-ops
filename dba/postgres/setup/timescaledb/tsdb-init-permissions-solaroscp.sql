@@ -1,4 +1,5 @@
 GRANT USAGE ON SCHEMA public TO solaroscp;
+GRANT USAGE ON SCHEMA public TO solaruser;
 
 GRANT SELECT(user_id, node_id, archived) ON solaruser.user_node TO solaroscp;
 

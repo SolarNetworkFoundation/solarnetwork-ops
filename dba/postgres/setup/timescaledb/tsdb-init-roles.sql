@@ -56,7 +56,7 @@ CREATE ROLE solarauthn WITH
   NOCREATEROLE
   NOREPLICATION;
 
--- group for OSCP (not in solar group)
+-- group for OSCP
 CREATE ROLE solaroscp WITH
   NOLOGIN
   NOSUPERUSER
