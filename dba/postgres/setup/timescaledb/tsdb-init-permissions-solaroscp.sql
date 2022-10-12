@@ -15,7 +15,8 @@ REVOKE ALL ON TABLE solaroscp.oscp_co_token FROM solaruser;
 GRANT SELECT ON TABLE solaroscp.oscp_co_token TO solaroscp;
 
 REVOKE ALL ON FUNCTION solaroscp.create_fp_token FROM PUBLIC;
---REVOKE ALL ON FUNCTION solaroscp.create_fp_token FROM solaruser;
+GRANT EXECUTE ON FUNCTION solaroscp.create_fp_token TO solaroscp;
+GRANT EXECUTE ON FUNCTION solaroscp.create_fp_token TO solaruser;
 ALTER FUNCTION solaroscp.create_fp_token(BIGINT, BIGINT) SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION solaroscp.update_fp_token FROM PUBLIC;
@@ -23,7 +24,8 @@ REVOKE ALL ON FUNCTION solaroscp.update_fp_token FROM solaruser;
 ALTER FUNCTION solaroscp.update_fp_token(BIGINT, BIGINT) SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION solaroscp.fp_id_for_token FROM PUBLIC;
---REVOKE ALL ON FUNCTION solaroscp.fp_id_for_token FROM solaruser;
+GRANT EXECUTE ON FUNCTION solaroscp.fp_id_for_token TO solaroscp;
+GRANT EXECUTE ON FUNCTION solaroscp.fp_id_for_token TO solaruser;
 ALTER FUNCTION solaroscp.fp_id_for_token(TEXT, BOOLEAN) SECURITY DEFINER;
 
 REVOKE ALL ON FUNCTION solaroscp.save_cp_token FROM PUBLIC;
