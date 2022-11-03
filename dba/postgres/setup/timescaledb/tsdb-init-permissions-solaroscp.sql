@@ -1,5 +1,6 @@
 GRANT USAGE ON SCHEMA public TO solaroscp;
-GRANT USAGE ON SCHEMA public TO solaruser;
+GRANT USAGE ON SCHEMA solaroscp TO solaruser;
+GRANT USAGE ON SCHEMA solaroscp TO solarjobs;
 
 GRANT SELECT(user_id, node_id, archived) ON solaruser.user_node TO solaroscp;
 
@@ -47,3 +48,9 @@ ALTER FUNCTION solaroscp.get_cp_token(BIGINT, BIGINT) SECURITY DEFINER;
 REVOKE ALL ON FUNCTION solaroscp.conf_id_for_fp_id FROM PUBLIC;
 REVOKE ALL ON FUNCTION solaroscp.conf_id_for_fp_id FROM solaruser;
 ALTER FUNCTION solaroscp.conf_id_for_fp_id(BIGINT, BIGINT) SECURITY DEFINER;
+
+-- allow generating datum streams from OSCP messages
+GRANT INSERT, UPDATE ON solardatm.da_datm_meta TO solaroscp;
+GRANT INSERT, UPDATE ON solardatm.da_datm TO solaroscp;
+GRANT ALL(stream_id, ts_start, datum_count, prop_count, prop_u_count) ON solardatm.aud_datm_io TO solaroscp;
+GRANT INSERT, UPDATE ON TABLE solardatm.aud_stale_datm TO solaroscp;
