@@ -470,10 +470,10 @@ BEGIN
 			, ('ocpp-chargers', 		12500::BIGINT, 			0.5::NUMERIC)
 			, ('ocpp-chargers', 		500000::BIGINT, 		0.3::NUMERIC)
 
-			, ('oscp-cap-groups', 		0::BIGINT, 				18::NUMERIC)
-			, ('oscp-cap-groups', 		100::BIGINT, 			9::NUMERIC)
-			, ('oscp-cap-groups', 		1000::BIGINT, 			5::NUMERIC)
-			, ('oscp-cap-groups', 		10000::BIGINT, 			3::NUMERIC)
+			, ('oscp-cap-groups', 		0::BIGINT, 				50::NUMERIC)
+			, ('oscp-cap-groups', 		30::BIGINT, 			30::NUMERIC)
+			, ('oscp-cap-groups', 		100::BIGINT, 			15::NUMERIC)
+			, ('oscp-cap-groups', 		300::BIGINT, 			10::NUMERIC)
 		) AS t(min, meter_key, cost);
 	END IF;
 END
