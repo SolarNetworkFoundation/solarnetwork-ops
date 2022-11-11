@@ -53,4 +53,4 @@ ALTER FUNCTION solaroscp.conf_id_for_fp_id(BIGINT, BIGINT) SECURITY DEFINER;
 GRANT INSERT, UPDATE ON solardatm.da_datm_meta TO solaroscp;
 GRANT INSERT, UPDATE ON solardatm.da_datm TO solaroscp;
 GRANT ALL(stream_id, ts_start, datum_count, prop_count, prop_u_count) ON solardatm.aud_datm_io TO solaroscp;
-GRANT INSERT, UPDATE ON TABLE solardatm.aud_stale_datm TO solaroscp;
+GRANT INSERT, UPDATE ON TABLE solardatm.agg_stale_datm TO solaroscp;
