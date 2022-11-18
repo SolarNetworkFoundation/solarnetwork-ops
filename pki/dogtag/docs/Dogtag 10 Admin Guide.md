@@ -164,7 +164,7 @@ $ certutil -L -d /var/lib/pki/pki-tomcat/alias -n "caSigningCert cert-rootca CA"
 
 Here's a one-liner to print out the dates for all subsystem certificates:
 
-```bash
+```sh
 pki-server subsystem-cert-find ca |grep Nickname |awk 'BEGIN { FS = ": " }; {print $2}' \
   |while read nick; do echo "$nick:"; \
   certutil -L -d /var/lib/pki/pki-tomcat/alias -n "$nick" |egrep "Serial|Before|After"; done
@@ -174,8 +174,8 @@ pki-server subsystem-cert-find ca |grep Nickname |awk 'BEGIN { FS = ": " }; {pri
 
 As the `caadmin` user, for each expiring system certificate run:
 
-```
-[caadmin@ca ~]$ pki ca-cert-request-submit --profile caManualRenewal --serial 0x10000 --renewal
+```sh
+pki ca-cert-request-submit --profile caManualRenewal --renewal --serial 0x10000
 ```
 
 A typical result looks like this:
@@ -195,7 +195,7 @@ Note the **Request ID** values. Then approve each request:
 ## Approve system certificate renewal requests
 
 ```
-pki -n 'PKI Administrator for solarnetwork.net' ca-cert-request-approve 10137
+pki -n caadmin ca-cert-request-approve 10137
 ```
 
 A typical response looks like this:
@@ -216,14 +216,14 @@ Note the **Certificate ID** values. Then download each certificate to a file:
 ## Download renewed system certificates
 
 ```
-[caadmin@ca ~]$ pki ca-cert-export 0x1007e --output-file ocspSigningCert-2020-0x1007e.crt
+pki ca-cert-export 0x1007e --output-file ocspSigningCert-2020-0x1007e.crt
 ```
 
 ## Install renewed system certificates
 
 Finally, as the `root` user, install the certificates.
 
-```
+```sh
 [root ~caadmin]$ systemctl stop pki-tomcatd@pki-tomcat.service
 [root ~caadmin]$ pki-server subsystem-cert-update ca ocsp_signing --cert ocspSigningCert-2020-0x1007e.crt
 [root ~caadmin]$ pki-server subsystem-cert-update ca sslserver --cert Server-Cert-2020-0x1007f.crt
@@ -236,7 +236,7 @@ Finally, as the `root` user, install the certificates.
 
 As the `caadmin` OS user:
 
-```
+```sh
 pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
 
 -----------------
