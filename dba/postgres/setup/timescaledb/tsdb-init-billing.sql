@@ -6,6 +6,7 @@ CREATE SEQUENCE IF NOT EXISTS solarbill.bill_inv_seq MINVALUE 1000 INCREMENT BY 
 CREATE TABLE IF NOT EXISTS solarbill.bill_address (
 	id				BIGINT NOT NULL DEFAULT nextval('solarbill.bill_seq'),
 	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	user_id			BIGINT NOT NULL,
 	disp_name		CHARACTER VARYING(128) NOT NULL,
 	email			citext NOT NULL,
 	country			CHARACTER VARYING(2) NOT NULL,
@@ -17,6 +18,8 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_address (
 	address			CHARACTER VARYING(256)[],
 	CONSTRAINT bill_address_pkey PRIMARY KEY (id)
 );
+
+CREATE INDEX IF NOT EXISTS bill_address_user_idx ON solarbill.bill_address (user_id, created DESC);
 
 -- table to store billing account information, with reference to current address
 CREATE TABLE IF NOT EXISTS solarbill.bill_account (
