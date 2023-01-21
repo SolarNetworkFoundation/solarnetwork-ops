@@ -261,7 +261,7 @@ pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
 # List user certificates
 
 ```
-pki -d ~/.dogtag/nssdb -n caadmin ca-user-cert-find suagent
+pki -n caadmin ca-user-cert-find suagent
 
   Cert ID: 2;65545;CN=SolarNetwork Root CA,OU=SolarNetwork Certification Authority,O=SolarNetwork;UID=suagent,E=suagent@solarnetwork.net,CN=suagent,OU=SolarUser,O=SolarNetwork
   Version: 2
@@ -286,8 +286,7 @@ pki ca-cert-show 0x100c7
 
 ```
 # request cert renew
-pki -d ~/.dogtag/nssdb -n caadmin ca-cert-request-submit \
-    --profile caManualRenewal --renewal --serial 0x10009
+pki -n caadmin ca-cert-request-submit --profile caManualRenewal --renewal --serial 0x10009
 
 -----------------------------
 Submitted certificate request
@@ -299,7 +298,7 @@ Submitted certificate request
   Certificate ID: 0x10040
 
 # NOTE if Status is pending, then approve else skip this step
-# pki -d ~/.dogtag/nssdb -n caadmin ca-cert-request-approve 10075
+# pki -n caadmin ca-cert-request-approve 10075
 
 # export
 pki -n caadmin ca-cert-export 0x10040 --output-file pki-suagent-20201118.crt
