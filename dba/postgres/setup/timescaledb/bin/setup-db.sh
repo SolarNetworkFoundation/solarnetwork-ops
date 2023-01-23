@@ -217,8 +217,12 @@ else
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'agg_datm_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_io',			'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_daily',		'ts_start',	'2 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_node_io',			'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_node_daily',		'ts_start',	'2 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_node_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_acc_datm_daily',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
