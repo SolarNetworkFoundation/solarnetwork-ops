@@ -45,9 +45,6 @@
 \i init/postgres-init-oscp-schema.sql
 \i tsdb-init-oscp-schema.sql
 \i init/postgres-init-oscp.sql
-\i init/postgres-init-quartz-schema.sql
-\i tsdb-init-quartz-schema.sql
-\i init/postgres-init-quartz.sql
 \i tsdb-init-billing-schema.sql
 \i tsdb-init-billing.sql
 

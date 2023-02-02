@@ -1,6 +1,6 @@
 -- remove PUBLIC access from all objects
 SELECT stmt || ';' AS stmt
-FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solarbill', 'solardatm', 'solarev', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s,
+FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'solarbill', 'solardatm', 'solarev', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s,
 LATERAL (SELECT * FROM public.revoke_all_public(s.schem)) AS res;
 
 DO $$
