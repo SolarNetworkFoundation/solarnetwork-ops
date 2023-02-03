@@ -1,16 +1,19 @@
 #!/usr/bin/env sh
+set -e
 
 BASE_DIR="/vagrant"
 BASE_DIR_DB_INIT="/db-init"
-DB_INDEX_TSPACE_PATH="/solar/index96"
+DB_INDEX_TSPACE_PATH="/solar/idx"
 DB_INDEX_TSPACE_OPTS="random_page_cost=1, effective_io_concurrency=10"
 DB_USER_PATH="example/tsdb-init-users.sql"
+DB_OWNER="solarnet"
+DB_OWNER_PASSWORD="solarnet"
 DRY_RUN=""
 HOSTNAME="db.solarnetworkdev.net"
 OS_LOADER_CONF="example/loader.conf"
 OS_SYSCTL_CONF="example/sysctl.conf"
 PG_CONF_AWK="example/pg-conf.awk"
-PG_DATA_DIR="/solar/data96"
+PG_DATA_DIR="/solar/dat"
 PG_HBA_CONF="example/pg_hba.conf"
 PG_IDENT_MAP="cert"
 PG_IDENT_CONF="example/pg_ident.conf"
@@ -22,13 +25,13 @@ PG_SSL_CERT="tls/server.crt"
 PG_SSL_CIPHERS="ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES256:ECDH+AES128:!aNULL:!SHA1"
 PG_SSL_KEY="tls/server.key"
 PG_USER="postgres"
-PG_WAL_DIR="/solar/wal96"
+PG_WAL_DIR="/solar/wal"
 PKG_REPO_CONF="example/solarnet.conf"
 PKG_REPO_CERT="example/solarnet-repo.cert"
 UPDATE_PKGS=""
 VERBOSE=""
 Z_POOLS="snjournal:da0 sndata:da1 snindex:da2"
-Z_MOUNTS="sndata/data96:/solar/data96 snjournal/wal96:/solar/wal96 snindex/index96:/solar/index96"
+Z_MOUNTS="sndata/dat:/solar/dat snjournal/wal:/solar/wal snindex/idx:/solar/idx"
 Z_MOUNT_STDPROPS="atime=off exec=off setuid=off compression=lz4 recordsize=128k"
 
 if [ $(id -u) -ne 0 ]; then
@@ -50,7 +53,7 @@ Arguments:
  -C <db init base dir>  - base dir for the DB init scripts; defaults to /db-init
  -c <pg preload lib>    - value for the Postgres shared_preload_libraries; defaults to
                           auto_explain,pg_stat_statements,timescaledb
- -D <pg data dir>       - directory to initialize Postgres data; defaults to /solar/data96
+ -D <pg data dir>       - directory to initialize Postgres data; defaults to /solar/dat
  -d <pg listen addr>    - the Postgres address to listen to; defaults to *
  -d <pg listen addr>    - the Postgres address to listen on; defaults to *
  -E <pg ssl cert>       - relative path to the Postgres SSL public certificate; defaults to tls/server.crt
@@ -63,10 +66,12 @@ Arguments:
  -h <hostname>          - the hostname to use; defaults to solardb
  -I <idx tspace opts>   - the SQL options to use for the index tablespace; defaults to
                           'random_page_cost=1, effective_io_concurrency=10'
- -i <idx tspace path>   - the tablespace path; defaults to /solar/index96
+ -i <idx tspace path>   - the tablespace path; defaults to /solar/idx
  -J <loader conf path>  - relative path to /boot/loader.conf settings to add; defaults to example/loader.conf
  -j <sysctl conf path>  - relative path to /etc/sysctl.conf settings to add; defaults to example/sysctl.conf
  -n                     - dry run; do not make any actual changes
+ -o                     - database owner; defaults to 'solarnet'
+ -O                     - database owner password; defaults to 'solarnet'
  -P <pkg conf>          - relative path to the pkg configuration to add; defaults to example/solarnet.conf
  -p <pkg cert>          - relative path to the pkg certificate to add; defaults to example/solarnet-repo.cert
  -U <db user sql path>  - path relative to -C for SQL to create database users; defaults to example/tsdb-init-users.sql
@@ -75,11 +80,11 @@ Arguments:
  -Z <zpools>            - space delimited pairs of ZFS pool names and associated devices;
                           defaults to 'snjournal:da0 sndata:da1 snindex:da2'
  -z <zfs mounts>        - space delimited pairs of ZFS filesystems and associated mount points to create;
-                          defaults to 'sndata/data96:/solar/data96 snjournal/wal96:/solar/data96/pg_xlog snindex/index96:/solar/index96'
+                          defaults to 'sndata/dat:/solar/dat snjournal/wal:/solar/dat snindex/idx:/solar/idx'
 EOF
 }
 
-while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gg:h:I:i:J:j:nP:p:U:uvZ:z:" opt; do
+while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gg:h:I:i:J:j:no:O:P:p:U:uvZ:z:" opt; do
 	case $opt in
 		A) PG_IDENT_MAP="${OPTARG}";;
 		a) PG_IDENT_CONF="${OPTARG}";;
@@ -98,8 +103,10 @@ while getopts ":A:a:B:b:C:c:D:d:E:e:F:f:Gg:h:I:i:J:j:nP:p:U:uvZ:z:" opt; do
 		h) HOSTNAME="${OPTARG}";;
 		I) DB_INDEX_TSPACE_OPTS="${OPTARG}";;
 		i) DB_INDEX_TSPACE_PATH="${OPTARG}";;
-		I) OS_LOADER_CONF="${OPTARG}";;
-		i) OS_SYSCTL_CONF="${OPTARG}";;
+		J) OS_LOADER_CONF="${OPTARG}";;
+		j) OS_SYSCTL_CONF="${OPTARG}";;
+		O) DB_OWNER_PASSWORD="${OPTARG}";;
+		o) DB_OWNER="${OPTARG}";;
 		P) PKG_REPO_CONF="${OPTARG}";;
 		p) PKG_REPO_CERT="${OPTARG}";;
 		n) DRY_RUN='TRUE';;
@@ -117,7 +124,7 @@ done
 shift $(($OPTIND - 1))
 
 # install package if not already installed
-pkg_install () {	
+pkg_install () {
 	if pkg info --quiet $1 >/dev/null 2>&1; then
 		echo "Package $1 already installed."
 	else
@@ -202,7 +209,7 @@ setup_sendmail() {
 		echo "Disabling sendmail outbound..."
 		if [ -z "$DRY_RUN" ]; then
 			echo 'sendmail_outbound_enable="NO"' >>/etc/rc.conf
-		fi	
+		fi
 	fi
 }
 
@@ -219,7 +226,7 @@ setup_zpool () {
 			for zprop in $Z_MOUNT_STDPROPS; do
 				zfs set $zprop "$pool"
 			done
-		fi	
+		fi
 	fi
 }
 
@@ -232,7 +239,7 @@ setup_zfs_mount () {
 		echo "Creating ZFS filesystem $fs mounted on $mpoint..."
 		if [ -z "$DRY_RUN" ]; then
 			zfs create -o "mountpoint=$mpoint" "$fs"
-		fi	
+		fi
 	fi
 }
 
@@ -254,7 +261,7 @@ setup_zfs () {
 		echo "Configuring ZFS to start at boot..."
 		if [ -z "$DRY_RUN" ]; then
 			echo 'zfs_enable="YES"' >>/etc/rc.conf
-		fi	
+		fi
 	fi
 	local pair=""
 	for pair in $Z_POOLS; do
@@ -266,9 +273,9 @@ setup_zfs () {
 }
 
 setup_postgres () {
-	pkg_install postgresql96-plv8js
-	pkg_install postgresql96-server
-	pkg_install postgresql96-contrib
+	pkg_install postgresql12-server
+	pkg_install postgresql12-contrib
+	pkg_install postgresql-aggs_for_vecs
 	pkg_install timescaledb
 	if grep -q postgresql_enable /etc/rc.conf >/dev/null; then
 		echo "Postgres already configured to start at boot."
@@ -277,8 +284,8 @@ setup_postgres () {
 		if [ -z "$DRY_RUN" ]; then
 			echo 'postgresql_enable="YES"' >>/etc/rc.conf
 			echo 'postgresql_data="'"$PG_DATA_DIR"'"' >>/etc/rc.conf
-			echo 'postgresql_initdb_flags="--encoding=utf-8 --lc-collate=C --auth-local=ident --auth-host=md5 --xlogdir='"$PG_WAL_DIR"'"' >> /etc/rc.conf
-		fi	
+			echo 'postgresql_initdb_flags="--encoding=utf-8 --lc-collate=C --auth-local=peer --auth-host=md5 --waldir='"$PG_WAL_DIR"'"' >> /etc/rc.conf
+		fi
 	fi
 	if [ -f "$PG_DATA_DIR/postgresql.conf" ]; then
 		echo "Postgres already initialized at $PG_DATA_DIR."
@@ -291,14 +298,14 @@ setup_postgres () {
 			service postgresql initdb
 		fi
 	fi
-	
+
 	if [ ! -e "$PG_DATA_DIR/postgresql.conf.orig" ];then
 		echo "Making backup of Postgres configuration to postgresql.conf.orig..."
 		if [ -z "$DRY_RUN" ]; then
 			cp -a "$PG_DATA_DIR/postgresql.conf" "$PG_DATA_DIR/postgresql.conf.orig"
 		fi
 	fi
-	
+
 	if grep -q "^listen_addresses = '$PG_LISTEN_ADDR'" "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
 		echo "Postgres already configured with listen address $PG_LISTEN_ADDR"
 	else
@@ -308,7 +315,7 @@ setup_postgres () {
 				"$PG_DATA_DIR/postgresql.conf"
 		fi
 	fi
-	
+
 	if grep -q "shared_preload_libraries.*$PG_PRELOAD_LIB" "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
 		echo "shared_preload_libraries already configured in postgresql.conf."
 	else
@@ -318,16 +325,7 @@ setup_postgres () {
 				"$PG_DATA_DIR/postgresql.conf"
 		fi
 	fi
-	
-	if grep -q plv8.start_proc "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
-		echo "plv8 startup procedure already configured."
-	else
-		echo "Configuring plv8 startup procedure..."
-		if [ -z "$DRY_RUN" ]; then
-			echo "plv8.start_proc = 'plv8_startup'" >>"$PG_DATA_DIR/postgresql.conf"
-		fi
-	fi
-	
+
 	if grep -q "^ssl = on" "$PG_DATA_DIR/postgresql.conf">/dev/null; then
 		echo "Postgres SSL already enabled."
 	elif [ -n "$PG_SSL_CIPHERS" ]; then
@@ -357,7 +355,7 @@ setup_postgres () {
 			fi
 		fi
 	fi
-	
+
 	if grep -q "^$PG_IDENT_MAP\b" "$PG_DATA_DIR/pg_ident.conf" >/dev/null; then
 		echo "Postgres pg_ident.conf already contains map $PG_IDENT_MAP."
 	else
@@ -371,7 +369,7 @@ setup_postgres () {
 			fi
 		fi
 	fi
-	
+
 	if [ -e "$BASE_DIR/$PG_HBA_CONF" ]; then
 		if diff -q "$PG_DATA_DIR/pg_hba.conf" "$BASE_DIR/$PG_HBA_CONF" >/dev/null; then
 			echo "Postgres pg_hba.conf already configured."
@@ -385,7 +383,7 @@ setup_postgres () {
 		echo "Postgres pg_hba file $PG_HBA_CONF not found."
 		exit 1
 	fi
-	
+
 	if [ -n "$PG_CONF_AWK" ]; then
 		if [ ! -e "$BASE_DIR/$PG_CONF_AWK" ]; then
 			echo "Custom Postgres awk configuration script $PG_CONF_AWK not found."
@@ -404,14 +402,14 @@ setup_postgres () {
 			fi
 		fi
 	fi
-	
+
 	if diff -q "$PG_DATA_DIR/postgresql.conf.orig" "$PG_DATA_DIR/postgresql.conf" >/dev/null; then
 		echo "Postgres configuration unchanged from $PG_DATA_DIR/postgresql.conf.orig"
 	else
 		echo "Postgres configuration changes from $PG_DATA_DIR/postgresql.conf.orig:"
-		diff "$PG_DATA_DIR/postgresql.conf.orig" "$PG_DATA_DIR/postgresql.conf"
+		diff "$PG_DATA_DIR/postgresql.conf.orig" "$PG_DATA_DIR/postgresql.conf" || true
 	fi
-	
+
 	if  service postgresql status; then
 		echo "Restarting Postgres..."
 		if [ -z "$DRY_RUN" ]; then
@@ -429,13 +427,16 @@ setup_db () {
 	if [ ! -d "$BASE_DIR_DB_INIT" ]; then
 		echo "Missing $BASE_DIR_DB_INIT setup directory.";
 	else
-		su postgres -c "psql -d solarnetwork -c 'SELECT now()'" >/dev/null 2>&1
-		if [ -n "$PG_RECREATE" -o $? -ne 0 ]; then
-			echo "Creating Postgres database solarnetwork..."
-			cd "$BASE_DIR_DB_INIT"
-			./bin/setup-db.sh -mrv -d solarnetwork -i solarindex -I "$DB_INDEX_TSPACE_PATH" -j "$DB_INDEX_TSPACE_OPTS" -L "$DB_USER_PATH"
-		else
+		local dbExists=""
+		if su $PG_USER -c "psql -d solarnetwork -c 'SELECT CURRENT_DATE'" >/dev/null 2>&1; then
 			echo "Postgres database solarnetwork already exists."
+			dbExists=1
+		fi
+		if [ -n "$PG_RECREATE" -o -z "$dbExists" ]; then
+			echo "Creating Postgres database solarnetwork..."
+			su $PG_USER -c "cd $BASE_DIR_DB_INIT && ./bin/setup-db.sh -mrv -d solarnetwork -i solarindex \
+				-I '$DB_INDEX_TSPACE_PATH' -j '$DB_INDEX_TSPACE_OPTS' -L '$DB_USER_PATH' \
+				-u '$DB_OWNER' -O '$DB_OWNER_PASSWORD'"
 		fi
 	fi
 }
@@ -485,12 +486,12 @@ show_results () {
 		*******************************************************************************************
 		INSTALLATION REPORT
 		*******************************************************************************************
-			
+
 		To access services, you may need to add a hosts entry for $HOSTNAME
 		from one of these IP addresses:
-		
+
 		`ifconfig |grep 'inet ' |grep -v '127\.0' |awk -F ' ' '{ print $2 }'`
-	
+
 	EOF
 }
 

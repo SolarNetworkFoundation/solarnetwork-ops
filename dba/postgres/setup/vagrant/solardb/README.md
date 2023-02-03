@@ -25,6 +25,23 @@ tls
 └── server.key
 ```
 
+# Forwarded ports
+
+The following ports are forwarded to the VM, so you can access the services running there easily:
+
+| Host Port | VM Port | Service |
+:-----------|:--------|:--------|
+| 55432     | 5432    | Postgres; login `solarnet` password `solarnet` database `solarnetwork` |
+
+# Syncing shared directories
+
+The VM's "shared" directories are actually only copies of the host machine's directories. If you
+make changes and would like to sync those changes back into the VM, run:
+
+```sh
+vagrant rsync
+```
+
 # ZFS configuration
 
 The machine creates 3 extra drives that get initialised as ZFS pools:
