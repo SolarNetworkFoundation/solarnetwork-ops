@@ -3,7 +3,7 @@
 # Input has ' = ' as delimiter, e.g. [[:space:]]=[[:space:]], so that $1 is the setting name and $2
 # is the setting value (any any trailing comments).
 #
-# To match settings that may be commented out, use a regex like ""^#?setting_name".
+# To match settings that may be commented out, use a regex like ""^#?setting_name$".
 #
 # To substitute a setting value, preserving trailing comments, use the sub regex like "[^[:space:]]+".
 #
@@ -20,11 +20,29 @@ $1 ~ "^#?work_mem" {
 	next
 }
 
-$1 ~ "^auto_explain" {
+$1 ~ "^#?wal_init_zero$" {
+	sub("[^[:space:]]+", "off", $2)
+	printf "wal_init_zero = %s\n", $2
+	next
+}
+
+$1 ~ "^#?wal_recycle$" {
+	sub("[^[:space:]]+", "off", $2)
+	printf "wal_recycle = %s\n", $2
+	next
+}
+
+$1 ~ "^#?jit$" {
+	sub("[^[:space:]]+", "off", $2)
+	printf "jit = %s\n", $2
+	next
+}
+
+$1 ~ "^auto_explain$" {
 	auto_expl = 1
 }
 
-$1 ~ "^pg_stat_statements" {
+$1 ~ "^pg_stat_statements$" {
 	stat_stmt = 1
 }
 
