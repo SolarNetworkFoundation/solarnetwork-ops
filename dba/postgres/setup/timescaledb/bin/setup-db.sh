@@ -14,6 +14,7 @@
 
 PSQL_CONN_ARGS=""
 PG_DB_OWNER="solarnet"
+PG_DB_OWNER_PASSWORD="solarnet"
 PG_DB="solarnetwork"
 PG_DB_TABLESPACE=""
 PG_DB_TABLESPACE_PATH=""
@@ -32,7 +33,7 @@ INDEX_TABLESPACE_OPTS=""
 DRY_RUN=""
 VERBOSE=""
 
-while getopts ":a:c:d:D:e:E:f:i:I:j:L:mrtT:u:U:v" opt; do
+while getopts ":a:c:d:D:e:E:f:i:I:j:L:mO:rtT:u:U:v" opt; do
 	case $opt in
 		c) PSQL_CONN_ARGS="${OPTARG}";;
 		d) PG_DB="${OPTARG}";;
@@ -45,6 +46,7 @@ while getopts ":a:c:d:D:e:E:f:i:I:j:L:mrtT:u:U:v" opt; do
 		j) INDEX_TABLESPACE_OPTS="${OPTARG}";;
 		L) USER_SCRIPT="${OPTARG}";;
 		m) CREATE_USER='TRUE';;
+		O) PG_DB_OWNER_PASSWORD="${OPTARG}";;
 		P) PERMISSION_SCRIPT="${OPTARG}";;
 		r) RECREATE_DB='TRUE';;
 		R) USER_ROLE_SCRIPT="${OPTARG}";;
@@ -91,12 +93,18 @@ fi
 if [ -n "$CREATE_USER" ]; then
 	echo
 	if [ -n "$VERBOSE" ]; then
-		echo "Creating database owner..."
+		echo "Creating database owner [$PG_DB_OWNER]..."
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE USER $PG_DB_OWNER WITH LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION'"
 	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtc "CREATE USER $PG_DB_OWNER WITH LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION"
+		if [ -n "$PG_DB_OWNER_PASSWORD" ]; then
+			if [ -n "$VERBOSE" ]; then
+				echo "Setting database owner [$PG_DB_OWNER] password..."
+			fi
+			psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtc "ALTER USER $PG_DB_OWNER WITH PASSWORD '$PG_DB_OWNER_PASSWORD'"
+		fi
 	fi
 
 	echo
