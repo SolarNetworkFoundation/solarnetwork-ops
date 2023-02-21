@@ -1,4 +1,4 @@
-// NOTE this code is for njs >= 0.2.4
+// NOTE this code is for 0.4.0 <= njs via js_import
 
 var messageCount = 0;
 var clientId = '';
@@ -99,3 +99,5 @@ function discoverClientId(s) {
         messageCount++;
     });
 }
+
+export default {discoverClientId, getClientId};

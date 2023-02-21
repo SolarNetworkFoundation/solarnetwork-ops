@@ -1,3 +1,5 @@
+// NOTE this code is for njs >= 0.4.0 via js_import
+
 var crypto = require('crypto');
 
 var AUTH_SCHEME_PATTERN = /^(SolarNetworkWS|SNWS2)\b/;
@@ -6,9 +8,9 @@ var SNWS_V2_KEY_PATTERN = /Credential=([^,]+)(?:,|$)/;
 
 function addAuthorization(request, digest) {
 	var header = request.headersIn['Authorization'],
-		match, 
+		match,
 		scheme;
-	
+
 	if ( !header ) {
 		return;
 	}
@@ -18,7 +20,7 @@ function addAuthorization(request, digest) {
 		return;
 	}
 	scheme = match[1];
-	
+
 	if ( "SNWS2" == scheme ) {
 		match = header.match(SNWS_V2_KEY_PATTERN);
 	} else {
@@ -53,7 +55,7 @@ function addNormalizedQueryParameters(request, digest) {
 		vals,
 		valsLen,
 		val;
-		
+
 	for ( key in request.args ) {
 		keys.push(key);
 	}
@@ -61,7 +63,7 @@ function addNormalizedQueryParameters(request, digest) {
 	if ( len < 1 ) {
 		return;
 	}
-	
+
 	keys.sort();
 	for ( i = 0; i < len; i += 1 ) {
 		key = keys[i];
@@ -85,7 +87,7 @@ function addNormalizedAccept(request, digest) {
 	if ( !header ) {
 		return;
 	}
-	
+
 	if ( header.match(/application\/json/i) ) {
 		digest.update('+json');
 	} else if ( header.match(/text\/csv/i) ) {
@@ -109,7 +111,7 @@ function addNormalizedAcceptEncoding(request, digest) {
 	if ( !header ) {
 		return;
 	}
-	
+
 	// assume server prefers br, then gzip
 	if ( header.search(/\bbr\b/) >= 0 ) {
 		enc = '>br';
@@ -133,3 +135,5 @@ function keyForRequest(request) {
 	request.log('Key = ' +key.toString('hex'));
 	return key;
 }
+
+export default {keyForRequest};
