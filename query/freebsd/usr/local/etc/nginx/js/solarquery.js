@@ -132,7 +132,7 @@ function keyForRequest(request) {
 	addNormalizedAccept(request, digest);
 	addNormalizedAcceptEncoding(request, digest);
 	var key = digest.digest();
-	request.log('Key = ' +key.toString('hex'));
+	//request.log('Key = ' +key.toString('hex'));
 	return key;
 }
 
