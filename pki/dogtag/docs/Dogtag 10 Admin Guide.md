@@ -63,7 +63,7 @@ From VNC as the `caadmin` user, can access admin UI like
 ## List certificates
 
 ```
-certutil -L -d /var/lib/pki/rootca/alias
+certutil -L -d /var/lib/pki/pki-tomcat/alias
 
 Certificate Nickname                                         Trust Attributes
                                                              SSL,S/MIME,JAR/XPI
