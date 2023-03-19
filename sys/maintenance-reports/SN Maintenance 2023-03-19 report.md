@@ -22,7 +22,7 @@ sed -i '' -e 's/postgresql_enable="YES"/postgresql_enable="NO"/' /etc/rc.conf
 freebsd-update fetch
 ```
 
-**Repeat on replica server.**
+> :warning: Repeat on replica server.
  
 # Stop apps
 
@@ -37,22 +37,26 @@ service nginx stop
 Shutdown ECS apps SolarIn, SolarJobs, SolarQuery, SolarUser, OSCP FP:
 
 ```sh
-for c in solarin solarjobs solarquery solaruser; do \
+for c in solarin solarjobs solarquery solaruser oscp-fp; do \
 aws ecs list-services --profile snf --output json --cluster $c |grep 'arn:aws' |tr -d \"; done \
 |while read s; do aws ecs update-service --desired-count 0 --profile snf --cluster ${s##*/} --service $s; done
 ```
+
+> :warning: Monitor logs in CloudWatch to wait for ECS applications to actually terminate.
 
 # OS Upgrade, part 2
 
 Back on DB server:
 
 ```sh
+service postgresql onestop
 shutdown -p now
 ```
 
-**Repeat on replica server.**
+> :warning: Repeat on replica server.
 
-Then create snapshots of OS disks **and** data disks, so can restore if needed.
+Then create snapshots of OS disks **and** data disks, so can restore if needed. Gave each snapshot
+a common date element in its name, e.g. `SolarDB_0 boot 20230319`.
 
 Then start up DB server, and continue:
 
@@ -64,23 +68,24 @@ Which output:
 
 ```sh
 Installing updates...
-Kernel updates have been installed.  Please reboot and run
-"/usr/sbin/freebsd-update install" again to finish installing updates.
+src component not installed, skipped
+Installing updates...Scanning //usr/share/certs/blacklisted for certificates...
+Scanning //usr/share/certs/trusted for certificates...
+Scanning //usr/local/share/certs for certificates...
+Scanning //usr/local/etc/ssl/certs for certificates...
+ done.
 ```
 
-Then reboot and continue:
+Then continue and then reboot:
 
 ```sh
-reboot
-
-# when back up, continue with
-/usr/sbin/freebsd-update install
-
+pkg clean -a
 pkg update
 pkg upgrade
+reboot
 ```
 
-**Repeat on replica server.**
+> :warning: Repeat on replica server.
 
 # Update Postgres extensions
 
@@ -127,7 +132,6 @@ Clean up rollback files to free up image space:
 
 ```sh
 rm -r /var/db/freebsd-update/*
-pkg clean -a
 ```
 
 **Repeat on replica server.**
@@ -138,11 +142,11 @@ pkg clean -a
 Create new versioned AMIs **SolarDB-0 v4** and **SolarDB-A v4**. The description is
 **FreeBSD 12.3p12 Postgres 12.14 Timescale 2.10.1 aggs_for_vecs 1.3**. This will reboot the systems.
 
-Once rebooted, start Postgres and enable staring at boot:
+Once rebooted, start Postgres and enable starting at boot:
 
-```
+```sh
 su - 
-service postgres onestart
+service postgresql onestart
 
 # enable Postgres to start on boot
 sed -i '' -e 's/postgresql_enable="NO"/postgresql_enable="YES"/' /etc/rc.conf
@@ -172,3 +176,14 @@ snssh ec2-user@solarin-proxy
 su -
 service nginx start
 ```
+
+# Clean up temporary EC2 snapshots
+
+Deleted all the EC2 temporary snapshots; easily found by filtering on common date element `20230319`.
+
+# Notes
+
+ * Errors reported by SolarIn/SolarUser on startup about Dogtag connection failing. Found that 
+   restarting Dogtag Tomcat fixed the issue.
+ * SolarIn async buffer queue seems to mis-report removals and/or lag after the initial rush of
+   backed-up datum when SolarIn was restored. Unclear where the issue is.
