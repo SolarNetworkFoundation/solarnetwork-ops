@@ -81,7 +81,7 @@ If the certificates do not have the proper trust attributes, it will not functio
 Update the attributes with `certutil`, for example:
 
 ```
-certutil -M -d /var/lib/pki/rootca/alias -n 'auditSigningCert cert-rootca CA' -t 'u,u,Pu' 
+certutil -M -d /var/lib/pki/pki-tomcat/alias -n 'auditSigningCert cert-rootca CA' -t 'u,u,Pu' 
 ```
 
 The trust arguments, from the `certutil` man page, are:
