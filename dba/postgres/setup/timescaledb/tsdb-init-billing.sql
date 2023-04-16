@@ -957,7 +957,6 @@ $$
 DECLARE
 	pay_rec 		solarbill.bill_payment;
 BEGIN
-
 	INSERT INTO solarbill.bill_payment (created,acct_id,pay_type,amount,currency,ext_key,ref)
 	SELECT pay_date, a.id, pay_type, pay_amount, a.currency, pay_ext_key, pay_ref
 	FROM solarbill.bill_account a
@@ -983,7 +982,7 @@ BEGIN
 				, inv.total_amount - COALESCE(inv.paid_amount, 0::NUMERIC(11,2)) AS due
 				, GREATEST(0, LEAST(
 					inv.total_amount - COALESCE(inv.paid_amount, 0::NUMERIC(11,2))
-					, pay.payment - COALESCE(SUM(inv.total_amount - COALESCE(inv.paid_amount, 0::NUMERIC(11,2))) OVER win))) AS applied
+					, pay.payment - COALESCE(SUM(inv.total_amount - COALESCE(inv.paid_amount, 0::NUMERIC(11,2))) OVER win, 0::NUMERIC(11,2)))) AS applied
 			FROM solarbill.bill_invoice_info inv, payment pay
 			WHERE id = ANY(inv_ids) AND acct_id = accountid
 			WINDOW win AS (ORDER BY inv.id ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING)
