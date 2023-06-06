@@ -63,7 +63,7 @@ From VNC as the `caadmin` user, can access admin UI like
 ## List certificates
 
 ```
-certutil -L -d /var/lib/pki/rootca/alias
+certutil -L -d /var/lib/pki/pki-tomcat/alias
 
 Certificate Nickname                                         Trust Attributes
                                                              SSL,S/MIME,JAR/XPI
@@ -81,7 +81,7 @@ If the certificates do not have the proper trust attributes, it will not functio
 Update the attributes with `certutil`, for example:
 
 ```
-certutil -M -d /var/lib/pki/rootca/alias -n 'auditSigningCert cert-rootca CA' -t 'u,u,Pu' 
+certutil -M -d /var/lib/pki/pki-tomcat/alias -n 'auditSigningCert cert-rootca CA' -t 'u,u,Pu' 
 ```
 
 The trust arguments, from the `certutil` man page, are:
@@ -164,7 +164,7 @@ $ certutil -L -d /var/lib/pki/pki-tomcat/alias -n "caSigningCert cert-rootca CA"
 
 Here's a one-liner to print out the dates for all subsystem certificates:
 
-```bash
+```sh
 pki-server subsystem-cert-find ca |grep Nickname |awk 'BEGIN { FS = ": " }; {print $2}' \
   |while read nick; do echo "$nick:"; \
   certutil -L -d /var/lib/pki/pki-tomcat/alias -n "$nick" |egrep "Serial|Before|After"; done
@@ -174,8 +174,8 @@ pki-server subsystem-cert-find ca |grep Nickname |awk 'BEGIN { FS = ": " }; {pri
 
 As the `caadmin` user, for each expiring system certificate run:
 
-```
-[caadmin@ca ~]$ pki ca-cert-request-submit --profile caManualRenewal --serial 0x10000 --renewal
+```sh
+pki ca-cert-request-submit --profile caManualRenewal --renewal --serial 0x10000
 ```
 
 A typical result looks like this:
@@ -195,7 +195,7 @@ Note the **Request ID** values. Then approve each request:
 ## Approve system certificate renewal requests
 
 ```
-pki -n 'PKI Administrator for solarnetwork.net' ca-cert-request-approve 10137
+pki -n caadmin ca-cert-request-approve 10137
 ```
 
 A typical response looks like this:
@@ -216,14 +216,14 @@ Note the **Certificate ID** values. Then download each certificate to a file:
 ## Download renewed system certificates
 
 ```
-[caadmin@ca ~]$ pki ca-cert-export 0x1007e --output-file ocspSigningCert-2020-0x1007e.crt
+pki ca-cert-export 0x1007e --output-file ocspSigningCert-2020-0x1007e.crt
 ```
 
 ## Install renewed system certificates
 
 Finally, as the `root` user, install the certificates.
 
-```
+```sh
 [root ~caadmin]$ systemctl stop pki-tomcatd@pki-tomcat.service
 [root ~caadmin]$ pki-server subsystem-cert-update ca ocsp_signing --cert ocspSigningCert-2020-0x1007e.crt
 [root ~caadmin]$ pki-server subsystem-cert-update ca sslserver --cert Server-Cert-2020-0x1007f.crt
@@ -236,7 +236,7 @@ Finally, as the `root` user, install the certificates.
 
 As the `caadmin` OS user:
 
-```
+```sh
 pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
 
 -----------------
@@ -261,7 +261,7 @@ pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
 # List user certificates
 
 ```
-pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-cert-find suagent
+pki -n caadmin ca-user-cert-find suagent
 
   Cert ID: 2;65545;CN=SolarNetwork Root CA,OU=SolarNetwork Certification Authority,O=SolarNetwork;UID=suagent,E=suagent@solarnetwork.net,CN=suagent,OU=SolarUser,O=SolarNetwork
   Version: 2
@@ -286,8 +286,7 @@ pki ca-cert-show 0x100c7
 
 ```
 # request cert renew
-pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-cert-request-submit \
-    --profile caManualRenewal --renewal --serial 0x10009
+pki -n caadmin ca-cert-request-submit --profile caManualRenewal --renewal --serial 0x10009
 
 -----------------------------
 Submitted certificate request
@@ -299,19 +298,19 @@ Submitted certificate request
   Certificate ID: 0x10040
 
 # NOTE if Status is pending, then approve else skip this step
-# pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-cert-request-approve 10075
+# pki -n caadmin ca-cert-request-approve 10075
 
 # export
-pki -n 'PKI Administrator for solarnetwork.net' ca-cert-export 0x10040 --output-file pki-suagent-20201118.crt
+pki -n caadmin ca-cert-export 0x10040 --output-file pki-suagent-20201118.crt
 
 # add to user
-pki -n 'PKI Administrator for solarnetwork.net' ca-user-cert-add suagent --input pki-suagent-20201118.crt
+pki -n caadmin ca-user-cert-add suagent --input pki-suagent-20201118.crt
 
 # import cert to nssdb
-pki -n 'PKI Administrator for solarnetwork.net' client-cert-import suagent --serial 0x10040
+pki -n caadmin client-cert-import suagent --serial 0x10040
 
 # export cert + key to p12
-pki -n 'PKI Administrator for solarnetwork.net' pkcs12-cert-import suagent \
+pki -n caadmin pkcs12-cert-import suagent \
     --no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC' \
     --pkcs12-file pki-suagent-20201118.p12 \
     --pkcs12-password Secret.123

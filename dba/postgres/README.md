@@ -1,6 +1,6 @@
 # SolarNetwork Postgres Deployment
 
-SolarNetwork relies on a Postgres 9.6 database. The main production deployment is modified
+SolarNetwork relies on a Postgres database. The main production deployment is modified
 from a standard developer deployment to make use of Timescale "hypertables" for several
 of the main time-series tables. Additionally the authentication and authorization is more
 restrictive.

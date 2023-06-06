@@ -1,7 +1,8 @@
-log_format solarin '$remote_addr [$time_local] $request $status $body_bytes_sent '
+js_include js/headers.js;
+js_set $req_headers_json req_headers_json;
+log_format solarin escape=json '$remote_addr [$time_local] $request $status $body_bytes_sent '
                    '"$http_user_agent" $ssl_client_s_dn br=$brotli_ratio gzip=$gzip_ratio '
-                   'rt=$request_time urt="$upstream_response_time"';
-
+                   'rt=$request_time urt="$upstream_response_time" $req_headers_json';
 server {
     listen 443 ssl;
     listen 11444 ssl;
@@ -43,7 +44,7 @@ server {
         proxy_set_header SSL_SESSION_ID $ssl_session_id;
     }
 
-    location /solarin {
+     location /solarin {
         proxy_pass http://$backends:9083;
         proxy_connect_timeout 1s;
         proxy_http_version 1.1;
@@ -55,7 +56,7 @@ server {
         proxy_set_header SSL_SESSION_ID $ssl_session_id;
     }
 
-    location /solarocpp {
+   location /solarocpp {
         proxy_pass http://$backends_ocpp:9085;
         proxy_connect_timeout 1s;
         proxy_http_version 1.1;

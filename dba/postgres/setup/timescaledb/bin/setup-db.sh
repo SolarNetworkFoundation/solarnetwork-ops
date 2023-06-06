@@ -14,6 +14,7 @@
 
 PSQL_CONN_ARGS=""
 PG_DB_OWNER="solarnet"
+PG_DB_OWNER_PASSWORD="solarnet"
 PG_DB="solarnetwork"
 PG_DB_TABLESPACE=""
 PG_DB_TABLESPACE_PATH=""
@@ -32,7 +33,7 @@ INDEX_TABLESPACE_OPTS=""
 DRY_RUN=""
 VERBOSE=""
 
-while getopts ":a:c:d:D:e:E:f:i:I:j:L:mrtT:u:U:v" opt; do
+while getopts ":a:c:d:D:e:E:f:i:I:j:L:mO:rtT:u:U:v" opt; do
 	case $opt in
 		c) PSQL_CONN_ARGS="${OPTARG}";;
 		d) PG_DB="${OPTARG}";;
@@ -45,6 +46,7 @@ while getopts ":a:c:d:D:e:E:f:i:I:j:L:mrtT:u:U:v" opt; do
 		j) INDEX_TABLESPACE_OPTS="${OPTARG}";;
 		L) USER_SCRIPT="${OPTARG}";;
 		m) CREATE_USER='TRUE';;
+		O) PG_DB_OWNER_PASSWORD="${OPTARG}";;
 		P) PERMISSION_SCRIPT="${OPTARG}";;
 		r) RECREATE_DB='TRUE';;
 		R) USER_ROLE_SCRIPT="${OPTARG}";;
@@ -91,12 +93,18 @@ fi
 if [ -n "$CREATE_USER" ]; then
 	echo
 	if [ -n "$VERBOSE" ]; then
-		echo "Creating database owner..."
+		echo "Creating database owner [$PG_DB_OWNER]..."
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE USER $PG_DB_OWNER WITH LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION'"
 	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtc "CREATE USER $PG_DB_OWNER WITH LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION"
+		if [ -n "$PG_DB_OWNER_PASSWORD" ]; then
+			if [ -n "$VERBOSE" ]; then
+				echo "Setting database owner [$PG_DB_OWNER] password..."
+			fi
+			psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtc "ALTER USER $PG_DB_OWNER WITH PASSWORD '$PG_DB_OWNER_PASSWORD'"
+		fi
 	fi
 
 	echo
@@ -197,9 +205,9 @@ if [ -n "$VERBOSE" ]; then
 	echo "Setting ownership of database objects..."
 fi
 if [ -n "$DRY_RUN" ]; then
-	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solarcommon', 'solarbill', 'solardatm', 'solarev', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res'"
+	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'solarcommon', 'solarbill', 'solardatm', 'solarev', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res'"
 else
-	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'quartz', 'solarcommon', 'solarbill', 'solarev', 'solardatm', 'solarnet', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res" || exit 11
+	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'solarcommon', 'solarbill', 'solarev', 'solardatm', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res" || exit 11
 fi
 
 echo
@@ -217,8 +225,12 @@ else
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'agg_datm_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_io',			'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
-		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_daily',		'ts_start',	'2 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_datm_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_node_io',			'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_node_daily',		'ts_start',	'2 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_node_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'aud_acc_datm_daily',	'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 

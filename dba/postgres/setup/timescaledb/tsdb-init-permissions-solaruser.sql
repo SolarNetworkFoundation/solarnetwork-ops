@@ -6,6 +6,8 @@
 --GRANT EXECUTE ON FUNCTION solaruser.snws2_find_verified_token_details(token_id text, req_date timestamp with time zone, host text, path text, signature text) TO solar;
 
 GRANT ALL ON TABLE solardatm.agg_stale_datm TO solaruser;
+GRANT ALL ON TABLE solardatm.aud_node_io TO solaruser;
+GRANT ALL ON TABLE solardatm.aud_stale_node TO solaruser;
 GRANT ALL ON TABLE solardatm.da_datm_aux TO solaruser;
 GRANT INSERT ON TABLE solaruser.user_event_log TO solar;
 

@@ -1,7 +1,10 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
 vm_define="solardb"
 vm_name="SolarNet DB"
-vm_box="freebsd/FreeBSD-11.2-RELEASE"
-vm_box_version=">= 2018.06.22"
+vm_box="freebsd/FreeBSD-13.1-RELEASE"
+vm_box_version=">= 2022.05.12"
 cpu_count=1
 memory_size=2048
 gui=false
@@ -35,6 +38,8 @@ Vagrant.configure("2") do |config|
 	config.ssh.shell = "sh"
 
 	config.vm.provision :shell, inline: "#{setup_path} #{setup_args}"
+
+	config.vm.network "forwarded_port", guest: 5432, host: 55432 # Postgres
 
 	config.vm.provider "virtualbox" do |v|
 		v.gui = gui

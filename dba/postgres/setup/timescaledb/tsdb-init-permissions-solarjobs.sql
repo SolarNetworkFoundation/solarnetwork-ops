@@ -1,5 +1,3 @@
-GRANT USAGE   ON SCHEMA quartz TO solarjobs;
-
 GRANT ALL     ON SEQUENCE solaruser.user_alert_seq TO solarjobs;
 
 GRANT ALL     ON TABLE solarcommon.app_setting TO solarjobs;

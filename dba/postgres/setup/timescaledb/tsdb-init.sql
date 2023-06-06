@@ -3,8 +3,6 @@
  *
  * All database roles are assumed to be created already (see tsdb-init-roles.sql)
  * and all necessary extensions are assumed to be installed already.
- *
- * The init/postgres-init-plv8.sql script should be run PRIOR to running this.
  * ============================================================================
  */
 
@@ -19,6 +17,8 @@
 \i init/postgres-init-datm-schema.sql
 \i tsdb-init-datm-schema.sql
 \i init/postgres-init-datm-core.sql
+\i init/postgres-init-datm-util.sql
+\i init/postgres-init-datm-query.sql
 \i init/postgres-init-datm-agg-query.sql
 \i init/postgres-init-datm-agg.sql
 \i init/postgres-init-datm-agg-util.sql
@@ -27,8 +27,6 @@
 \i init/postgres-init-datm-delete.sql
 \i init/postgres-init-datm-in.sql
 \i init/postgres-init-datm-in-loc.sql
-\i init/postgres-init-datm-util.sql
-\i init/postgres-init-datm-query.sql
 \i init/postgres-init-datm-query-agg.sql
 \i init/postgres-init-datm-query-diff.sql
 \i init/postgres-init-datum-export.sql
@@ -44,9 +42,9 @@
 \i init/postgres-init-ocpp-schema.sql
 \i tsdb-init-ocpp-schema.sql
 \i init/postgres-init-ocpp.sql
-\i init/postgres-init-quartz-schema.sql
-\i tsdb-init-quartz-schema.sql
-\i init/postgres-init-quartz.sql
+\i init/postgres-init-oscp-schema.sql
+\i tsdb-init-oscp-schema.sql
+\i init/postgres-init-oscp.sql
 \i tsdb-init-billing-schema.sql
 \i tsdb-init-billing.sql
 
