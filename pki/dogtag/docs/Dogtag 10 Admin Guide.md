@@ -301,10 +301,10 @@ Submitted certificate request
 # pki -n caadmin ca-cert-request-approve 10075
 
 # export
-pki -n caadmin ca-cert-export 0x10040 --output-file pki-suagent-20201118.crt
+pki -n caadmin ca-cert-export 0x10040 --output-file pki-suagent-202011-0x10040.crt
 
 # add to user
-pki -n caadmin ca-user-cert-add suagent --input pki-suagent-20201118.crt
+pki -n caadmin ca-user-cert-add suagent --input pki-suagent-202011-0x10040.crt
 
 # import cert to nssdb
 pki -n caadmin client-cert-import suagent --serial 0x10040
@@ -312,7 +312,7 @@ pki -n caadmin client-cert-import suagent --serial 0x10040
 # export cert + key to p12
 pki -n caadmin pkcs12-cert-import suagent \
     --no-trust-flags --no-chain --key-encryption 'PBE/SHA1/DES3/CBC' \
-    --pkcs12-file pki-suagent-20201118.p12 \
+    --pkcs12-file pki-suagent-202011-0x10040.p12 \
     --pkcs12-password Secret.123
 ```
 
