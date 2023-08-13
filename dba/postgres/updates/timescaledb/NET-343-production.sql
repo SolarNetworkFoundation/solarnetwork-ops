@@ -16,3 +16,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA solardnp3 GRANT ALL ON TABLES TO solaruser;
 \i init/updates/NET-343-dnp3.sql
 
 \i tsdb-init-permissions-solardnp3.sql
+
+SELECT stmt || ';' FROM (SELECT unnest(ARRAY['solardnp3']) AS schem) AS s,
+LATERAL (SELECT * FROM public.set_index_tablespace(s.schem, 'solarindex')) AS res \gexec
