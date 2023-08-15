@@ -205,9 +205,9 @@ if [ -n "$VERBOSE" ]; then
 	echo "Setting ownership of database objects..."
 fi
 if [ -n "$DRY_RUN" ]; then
-	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'solarcommon', 'solarbill', 'solardatm', 'solarev', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res'"
+	echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT res.* FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'solarcommon', 'solarbill', 'solardatm', 'solardnp3', 'solarev', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res'"
 else
-	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'solarcommon', 'solarbill', 'solarev', 'solardatm', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res" || exit 11
+	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAtc "SELECT stmt || ';' FROM (SELECT unnest(ARRAY['_timescaledb_solarnetwork', 'solarcommon', 'solarbill', 'solardatm', 'solardnp3', 'solarev', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s, LATERAL (SELECT * FROM public.set_ownership(s.schem, '$PG_DB_OWNER')) AS res" || exit 11
 fi
 
 echo
@@ -247,7 +247,7 @@ if [ -n "$INDEX_TABLESPACE" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c 'SELECT * FROM public.set_index_tablespace(ARRAY[...], '$INDEX_TABLESPACE')'"
 	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -At <<-EOF
-			SELECT stmt || ';' FROM (SELECT unnest(ARRAY['solardatm', 'solarnet', 'solaruser']) AS schem) AS s,
+			SELECT stmt || ';' FROM (SELECT unnest(ARRAY['solarbill', 'solardatm', 'solardnp3', 'solarev', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s,
 			LATERAL (SELECT * FROM public.set_index_tablespace(s.schem, '$INDEX_TABLESPACE')) AS res;
 		EOF
 	fi
