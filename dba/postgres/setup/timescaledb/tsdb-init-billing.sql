@@ -451,7 +451,7 @@ BEGIN
 			, ('datum-days-stored', 	1000000000::BIGINT, 	0.000000003::NUMERIC)
 			, ('datum-days-stored', 	100000000000::BIGINT,	0.000000002::NUMERIC)
 		) AS t(min, meter_key, cost);
-	ELSE
+	ELSIF ts < '2023-10-01'::DATE THEN
 		RETURN QUERY SELECT *, '2022-10-01'::DATE FROM ( VALUES
 			  ('datum-props-in', 		0::BIGINT, 				0.000005::NUMERIC)
 			, ('datum-props-in', 		500000::BIGINT, 		0.000003::NUMERIC)
@@ -477,6 +477,38 @@ BEGIN
 			, ('oscp-cap-groups', 		30::BIGINT, 			30::NUMERIC)
 			, ('oscp-cap-groups', 		100::BIGINT, 			15::NUMERIC)
 			, ('oscp-cap-groups', 		300::BIGINT, 			10::NUMERIC)
+		) AS t(min, meter_key, cost);
+	ELSE
+		RETURN QUERY SELECT *, '2023-10-01'::DATE FROM ( VALUES
+			  ('datum-props-in', 		0::BIGINT, 				0.000005::NUMERIC)
+			, ('datum-props-in', 		500000::BIGINT, 		0.000003::NUMERIC)
+			, ('datum-props-in', 		10000000::BIGINT, 		0.0000008::NUMERIC)
+			, ('datum-props-in', 		500000000::BIGINT, 		0.0000002::NUMERIC)
+
+			, ('datum-out',				0::BIGINT, 				0.0000001::NUMERIC)
+			, ('datum-out',				10000000::BIGINT, 		0.00000004::NUMERIC)
+			, ('datum-out',				1000000000::BIGINT, 	0.000000004::NUMERIC)
+			, ('datum-out',				100000000000::BIGINT, 	0.000000001::NUMERIC)
+
+			, ('datum-days-stored', 	0::BIGINT, 				0.00000005::NUMERIC)
+			, ('datum-days-stored', 	10000000::BIGINT, 		0.00000001::NUMERIC)
+			, ('datum-days-stored', 	1000000000::BIGINT, 	0.000000003::NUMERIC)
+			, ('datum-days-stored', 	100000000000::BIGINT,	0.000000002::NUMERIC)
+
+			, ('ocpp-chargers', 		0::BIGINT, 				2::NUMERIC)
+			, ('ocpp-chargers', 		250::BIGINT, 			1::NUMERIC)
+			, ('ocpp-chargers', 		12500::BIGINT, 			0.5::NUMERIC)
+			, ('ocpp-chargers', 		500000::BIGINT, 		0.3::NUMERIC)
+
+			, ('oscp-cap-groups', 		0::BIGINT, 				50::NUMERIC)
+			, ('oscp-cap-groups', 		30::BIGINT, 			30::NUMERIC)
+			, ('oscp-cap-groups', 		100::BIGINT, 			15::NUMERIC)
+			, ('oscp-cap-groups', 		300::BIGINT, 			10::NUMERIC)
+
+			, ('dnp3-data-points', 		0::BIGINT, 				1::NUMERIC)
+			, ('dnp3-data-points', 		20::BIGINT, 			0.6::NUMERIC)
+			, ('dnp3-data-points', 		100::BIGINT, 			0.4::NUMERIC)
+			, ('dnp3-data-points', 		500::BIGINT, 			0.2::NUMERIC)
 		) AS t(min, meter_key, cost);
 	END IF;
 END
@@ -669,14 +701,23 @@ $$
 	, ocpp AS (
 		SELECT count(*) AS ocpp_charger_count
 		FROM solarev.ocpp_charge_point
-		WHERE user_id = userid
-			AND enabled = TRUE
+		WHERE user_id = userid AND enabled = TRUE
 	)
 	, oscp AS (
 		SELECT count(*) AS oscp_cap_group_count
 		FROM solaroscp.oscp_cg_conf
-		WHERE user_id = userid
-			AND enabled = TRUE
+		WHERE user_id = userid AND enabled = TRUE
+	)
+	, dnp3 AS (
+		SELECT count(*) AS dnp3_data_point_count FROM (
+			SELECT user_id, server_id, idx, 'm' AS dtype
+			FROM solardnp3.dnp3_server_meas
+			WHERE user_id = userid AND enabled = TRUE
+			UNION ALL
+			SELECT user_id, server_id, idx, 'c' AS dtype
+			FROM solardnp3.dnp3_server_ctrl
+			WHERE user_id = userid AND enabled = TRUE
+		) counts
 	)
 	SELECT
 		  tiers.meter_key
@@ -687,12 +728,14 @@ $$
 			WHEN 'datum-out' THEN n.datum_out
 			WHEN 'ocpp-chargers' THEN ocpp.ocpp_charger_count
 			WHEN 'oscp-cap-groups' THEN oscp.oscp_cap_group_count
+			WHEN 'dnp3-data-points' THEN dnp3.dnp3_data_point_count
 			ELSE NULL END - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(CASE meter_key
 			WHEN 'datum-props-in' THEN n.prop_in
 			WHEN 'datum-days-stored' THEN n.datum_stored
 			WHEN 'datum-out' THEN n.datum_out
 			WHEN 'ocpp-chargers' THEN ocpp.ocpp_charger_count
 			WHEN 'oscp-cap-groups' THEN oscp.oscp_cap_group_count
+			WHEN 'dnp3-data-points' THEN dnp3.dnp3_data_point_count
 			ELSE NULL END - tiers.min, 0))) AS tier_count
 		, tiers.cost AS tier_rate
 		, LEAST(GREATEST(CASE meter_key
@@ -701,14 +744,16 @@ $$
 			WHEN 'datum-out' THEN n.datum_out
 			WHEN 'ocpp-chargers' THEN ocpp.ocpp_charger_count
 			WHEN 'oscp-cap-groups' THEN oscp.oscp_cap_group_count
+			WHEN 'dnp3-data-points' THEN dnp3.dnp3_data_point_count
 			ELSE NULL END - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(CASE meter_key
 			WHEN 'datum-props-in' THEN n.prop_in
 			WHEN 'datum-days-stored' THEN n.datum_stored
 			WHEN 'datum-out' THEN n.datum_out
 			WHEN 'ocpp-chargers' THEN ocpp.ocpp_charger_count
 			WHEN 'oscp-cap-groups' THEN oscp.oscp_cap_group_count
+			WHEN 'dnp3-data-points' THEN dnp3.dnp3_data_point_count
 			ELSE NULL END - tiers.min, 0))) * tiers.cost AS tier_cost
-	FROM usage n, ocpp, oscp
+	FROM usage n, ocpp, oscp, dnp3
 	CROSS JOIN tiers
 	WINDOW win AS (PARTITION BY tiers.meter_key ORDER BY tiers.min)
 $$;
@@ -747,7 +792,11 @@ CREATE OR REPLACE FUNCTION solarbill.billing_usage_details(userid BIGINT, ts_min
 		oscp_cap_groups				BIGINT,
 		oscp_cap_groups_cost		NUMERIC,
 		oscp_cap_groups_tiers		NUMERIC[],
-		oscp_cap_groups_tiers_cost	NUMERIC[]
+		oscp_cap_groups_tiers_cost	NUMERIC[],
+		dnp3_data_points			BIGINT,
+		dnp3_data_points_cost		NUMERIC,
+		dnp3_data_points_tiers		NUMERIC[],
+		dnp3_data_points_tiers_cost	NUMERIC[]
 	) LANGUAGE sql STABLE AS
 $$
 	WITH tier_costs AS (
@@ -792,13 +841,19 @@ $$
 		, solarcommon.first(CASE meter_key WHEN 'oscp-cap-groups' THEN tier_counts ELSE NULL END) AS oscp_cap_groups_tiers
 		, solarcommon.first(CASE meter_key WHEN 'oscp-cap-groups' THEN tier_costs ELSE NULL END) AS oscp_cap_groups_cost
 
+		, SUM(CASE meter_key WHEN 'dnp3-data-points' THEN total_count ELSE NULL END)::BIGINT AS dnp3_data_points
+		, SUM(CASE meter_key WHEN 'dnp3-data-points' THEN total_cost ELSE NULL END) AS dnp3_data_points_cost
+		, solarcommon.first(CASE meter_key WHEN 'dnp3-data-points' THEN tier_counts ELSE NULL END) AS dnp3_data_points_tiers
+		, solarcommon.first(CASE meter_key WHEN 'dnp3-data-points' THEN tier_costs ELSE NULL END) AS dnp3_data_points_cost
+
 	FROM costs
 	HAVING
 		SUM(CASE meter_key WHEN 'datum-props-in' THEN total_count ELSE NULL END)::BIGINT > 0 OR
 		SUM(CASE meter_key WHEN 'datum-days-stored' THEN total_count ELSE NULL END)::BIGINT > 0 OR
 		SUM(CASE meter_key WHEN 'datum-out' THEN total_count ELSE NULL END)::BIGINT > 0 OR
 		SUM(CASE meter_key WHEN 'ocpp-chargers' THEN total_count ELSE NULL END)::BIGINT > 0 OR
-		SUM(CASE meter_key WHEN 'oscp-cap-groups' THEN total_count ELSE NULL END)::BIGINT > 0
+		SUM(CASE meter_key WHEN 'oscp-cap-groups' THEN total_count ELSE NULL END)::BIGINT > 0 OR
+		SUM(CASE meter_key WHEN 'dnp3-data-points' THEN total_count ELSE NULL END)::BIGINT > 0
 $$;
 
 /**
