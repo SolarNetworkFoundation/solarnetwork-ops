@@ -669,7 +669,7 @@ $$;
 
 
 /**
- * Calculate the costs associated with billing tiers fora given user on a given month.
+ * Calculate the costs associated with billing tiers for a given user on a given month.
  *
  * This calls the `solarbill.billing_usage_tiers()` function to determine the pricing tiers to use
  * at the given `effective_date`.
