@@ -577,7 +577,7 @@ $$
 		GROUP BY a.node_id
 	)
 	SELECT
-		COALESCE(s.node_id, a.node_id) AS node_id
+		COALESCE(s.node_id, a.node_id, svc.node_id) AS node_id
 		, COALESCE(a.prop_count, 0)::BIGINT AS prop_in
 		, COALESCE(s.datum_count, 0)::BIGINT AS datum_stored
 		, COALESCE(a.datum_q_count, 0)::BIGINT AS datum_out
