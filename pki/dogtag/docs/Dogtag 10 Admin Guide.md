@@ -353,3 +353,35 @@ Certificate fingerprint (SHA-256): F6:1F:E9:CA:03:08:3F:C2:87:00:C0:0E:B7:07:11:
 suagent, 28/09/2021, PrivateKeyEntry, 
 Certificate fingerprint (SHA-256): FD:2B:7E:8C:14:51:42:B9:34:78:3B:59:AC:4C:B3:E4:D5:67:3F:F6:DC:30:AF:90:7C:BB:E8:B7:22:D2:CE:29
 ```
+
+# Turning back time
+
+If a system or user certificate has expired, you can "turn back time" on the server to before
+the expiration date and renew the certificate(s):
+
+```sh
+# stop the server
+systemctl stop pki-tomcatd@pki-tomcat.service
+
+# turn of NTP
+timedatectl set-ntp false
+
+# set the date
+timedatectl set-time yyyy-mm-dd
+
+# restart server again
+systemctl start pki-tomcatd@pki-tomcat.service
+```
+
+To re-enable NTP:
+
+```sh
+# stop the server
+systemctl stop pki-tomcatd@pki-tomcat.service
+
+# enable NTP and sync date
+timedatectl set-ntp true --adjust-system-clock
+
+# restart server again
+systemctl start pki-tomcatd@pki-tomcat.service
+```
