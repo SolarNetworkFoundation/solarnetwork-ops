@@ -75,12 +75,13 @@ CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_item (
 
 -- table to store billing invoice usage records
 CREATE TABLE IF NOT EXISTS solarbill.bill_invoice_node_usage (
-	inv_id			BIGINT NOT NULL,
-	node_id			BIGINT NOT NULL,
-	created 		TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    prop_count 		BIGINT NOT NULL DEFAULT 0,
-    datum_q_count 	BIGINT NOT NULL DEFAULT 0,
-    datum_s_count	BIGINT NOT NULL DEFAULT 0,
+	inv_id				BIGINT NOT NULL,
+	node_id				BIGINT NOT NULL,
+	created 			TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    prop_count 			BIGINT NOT NULL DEFAULT 0,
+    datum_q_count 		BIGINT NOT NULL DEFAULT 0,
+    datum_s_count		BIGINT NOT NULL DEFAULT 0,
+    instr_issued_count	BIGINT NOT NULL DEFAULT 0,
 	CONSTRAINT bill_invoice_usage_pkey PRIMARY KEY (inv_id, node_id),
 	CONSTRAINT bill_invoice_usage_inv_fk FOREIGN KEY (inv_id)
 		REFERENCES solarbill.bill_invoice (id) MATCH SIMPLE
@@ -451,7 +452,7 @@ BEGIN
 			, ('datum-days-stored', 	1000000000::BIGINT, 	0.000000003::NUMERIC)
 			, ('datum-days-stored', 	100000000000::BIGINT,	0.000000002::NUMERIC)
 		) AS t(min, meter_key, cost);
-	ELSE
+	ELSIF ts < '2023-10-01'::DATE THEN
 		RETURN QUERY SELECT *, '2022-10-01'::DATE FROM ( VALUES
 			  ('datum-props-in', 		0::BIGINT, 				0.000005::NUMERIC)
 			, ('datum-props-in', 		500000::BIGINT, 		0.000003::NUMERIC)
@@ -478,6 +479,43 @@ BEGIN
 			, ('oscp-cap-groups', 		100::BIGINT, 			15::NUMERIC)
 			, ('oscp-cap-groups', 		300::BIGINT, 			10::NUMERIC)
 		) AS t(min, meter_key, cost);
+	ELSE
+		RETURN QUERY SELECT *, '2023-10-01'::DATE FROM ( VALUES
+			  ('datum-props-in', 		0::BIGINT, 				0.000005::NUMERIC)
+			, ('datum-props-in', 		500000::BIGINT, 		0.000003::NUMERIC)
+			, ('datum-props-in', 		10000000::BIGINT, 		0.0000008::NUMERIC)
+			, ('datum-props-in', 		500000000::BIGINT, 		0.0000002::NUMERIC)
+
+			, ('datum-out',				0::BIGINT, 				0.0000001::NUMERIC)
+			, ('datum-out',				10000000::BIGINT, 		0.00000004::NUMERIC)
+			, ('datum-out',				1000000000::BIGINT, 	0.000000004::NUMERIC)
+			, ('datum-out',				100000000000::BIGINT, 	0.000000001::NUMERIC)
+
+			, ('datum-days-stored', 	0::BIGINT, 				0.00000005::NUMERIC)
+			, ('datum-days-stored', 	10000000::BIGINT, 		0.00000001::NUMERIC)
+			, ('datum-days-stored', 	1000000000::BIGINT, 	0.000000003::NUMERIC)
+			, ('datum-days-stored', 	100000000000::BIGINT,	0.000000002::NUMERIC)
+
+			, ('instr-issued', 			0::BIGINT, 				0.0001::NUMERIC)
+			, ('instr-issued', 			10000::BIGINT, 			0.00005::NUMERIC)
+			, ('instr-issued', 			100000::BIGINT, 		0.00002::NUMERIC)
+			, ('instr-issued', 			1000000::BIGINT,		0.00001::NUMERIC)
+
+			, ('ocpp-chargers', 		0::BIGINT, 				2::NUMERIC)
+			, ('ocpp-chargers', 		250::BIGINT, 			1::NUMERIC)
+			, ('ocpp-chargers', 		12500::BIGINT, 			0.5::NUMERIC)
+			, ('ocpp-chargers', 		500000::BIGINT, 		0.3::NUMERIC)
+
+			, ('oscp-cap-groups', 		0::BIGINT, 				50::NUMERIC)
+			, ('oscp-cap-groups', 		30::BIGINT, 			30::NUMERIC)
+			, ('oscp-cap-groups', 		100::BIGINT, 			15::NUMERIC)
+			, ('oscp-cap-groups', 		300::BIGINT, 			10::NUMERIC)
+
+			, ('dnp3-data-points', 		0::BIGINT, 				1::NUMERIC)
+			, ('dnp3-data-points', 		20::BIGINT, 			0.6::NUMERIC)
+			, ('dnp3-data-points', 		100::BIGINT, 			0.4::NUMERIC)
+			, ('dnp3-data-points', 		500::BIGINT, 			0.2::NUMERIC)
+		) AS t(min, meter_key, cost);
 	END IF;
 END
 $$;
@@ -494,7 +532,8 @@ CREATE OR REPLACE FUNCTION solarbill.billing_usage(userid BIGINT, ts_min TIMESTA
 		node_id BIGINT,
 		prop_in BIGINT,
 		datum_stored BIGINT,
-		datum_out BIGINT
+		datum_out BIGINT,
+		instr_issued BIGINT
 	) LANGUAGE sql STABLE AS
 $$
 	WITH nodes AS (
@@ -528,13 +567,24 @@ $$
 			AND a.ts_start >= nodes.sdate AND a.ts_start < nodes.edate
 		GROUP BY meta.node_id
 	)
+	, svc AS (
+		SELECT
+			a.node_id
+			, (SUM(a.cnt) FILTER (WHERE a.service = 'inst'))::BIGINT AS instr_issued
+		FROM nodes nodes
+		INNER JOIN solardatm.aud_node_daily a ON a.node_id = ANY(nodes.nodes)
+			AND a.ts_start >= nodes.sdate AND a.ts_start < nodes.edate
+		GROUP BY a.node_id
+	)
 	SELECT
-		COALESCE(s.node_id, a.node_id) AS node_id
+		COALESCE(s.node_id, a.node_id, svc.node_id) AS node_id
 		, COALESCE(a.prop_count, 0)::BIGINT AS prop_in
 		, COALESCE(s.datum_count, 0)::BIGINT AS datum_stored
-		, COALESCE(datum_q_count, 0)::BIGINT AS datum_out
+		, COALESCE(a.datum_q_count, 0)::BIGINT AS datum_out
+		, COALESCE(svc.instr_issued, 0)::BIGINT AS instr_issued
 	FROM stored s
 	FULL OUTER JOIN datum a ON a.node_id = s.node_id
+	FULL OUTER JOIN svc svc ON svc.node_id = s.node_id
 $$;
 
 /**
@@ -565,8 +615,9 @@ $$
 			, prop_in
 			, datum_stored
 			, datum_out
+			, instr_issued
 		FROM solarbill.billing_usage(userid, ts_min, ts_max)
-		WHERE prop_in > 0 OR datum_stored > 0 OR datum_out > 0
+		WHERE prop_in > 0 OR datum_stored > 0 OR datum_out > 0 OR instr_issued > 0
 	)
 	SELECT
 		  n.node_id
@@ -576,10 +627,12 @@ $$
 			WHEN 'datum-props-in' THEN n.prop_in
 			WHEN 'datum-days-stored' THEN n.datum_stored
 			WHEN 'datum-out' THEN n.datum_out
+			WHEN 'instr-issued' THEN n.instr_issued
 			ELSE NULL END - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(CASE meter_key
 			WHEN 'datum-props-in' THEN n.prop_in
 			WHEN 'datum-days-stored' THEN n.datum_stored
 			WHEN 'datum-out' THEN n.datum_out
+			WHEN 'instr-issued' THEN n.instr_issued
 			ELSE NULL END - tiers.min, 0))) AS tier_count
 	FROM usage n
 	CROSS JOIN tiers
@@ -597,7 +650,7 @@ $$;
  * @param ts_max the end date to calculate the costs for (exclusive)
  * @param effective_date optional pricing date, to calculate the costs effective at that time
  */
-CREATE OR REPLACE FUNCTION solarbill.billing_node_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date date DEFAULT CURRENT_DATE)
+CREATE OR REPLACE FUNCTION solarbill.billing_node_details(userid BIGINT, ts_min TIMESTAMP, ts_max TIMESTAMP, effective_date DATE DEFAULT CURRENT_DATE)
 	RETURNS TABLE(
 		node_id 				BIGINT,
 		prop_in 				BIGINT,
@@ -605,7 +658,9 @@ CREATE OR REPLACE FUNCTION solarbill.billing_node_details(userid BIGINT, ts_min 
 		datum_stored 			BIGINT,
 		datum_stored_tiers 		NUMERIC[],
 		datum_out 				BIGINT,
-		datum_out_tiers 		NUMERIC[]
+		datum_out_tiers 		NUMERIC[],
+		instr_issued 			BIGINT,
+		instr_issued_tiers 		NUMERIC[]
 	) LANGUAGE sql STABLE AS
 $$
 	WITH tiers AS (
@@ -631,13 +686,16 @@ $$
 
 		, SUM(CASE meter_key WHEN 'datum-out' THEN total_count ELSE NULL END)::BIGINT AS datum_out
 		, solarcommon.first(CASE meter_key WHEN 'datum-out' THEN tier_counts ELSE NULL END) AS datum_out_tiers
+
+		, SUM(CASE meter_key WHEN 'instr-issued' THEN total_count ELSE NULL END)::BIGINT AS instr_issued
+		, solarcommon.first(CASE meter_key WHEN 'instr-issued' THEN tier_counts ELSE NULL END) AS instr_issued_tiers
 	FROM counts
 	GROUP BY node_id
 $$;
 
 
 /**
- * Calculate the costs associated with billing tiers fora given user on a given month.
+ * Calculate the costs associated with billing tiers for a given user on a given month.
  *
  * This calls the `solarbill.billing_usage_tiers()` function to determine the pricing tiers to use
  * at the given `effective_date`.
@@ -664,19 +722,29 @@ $$
 			  SUM(prop_in)::BIGINT AS prop_in
 			, SUM(datum_stored)::BIGINT AS datum_stored
 			, SUM(datum_out)::BIGINT AS datum_out
+			, SUM(instr_issued)::BIGINT AS instr_issued
 		FROM solarbill.billing_usage(userid, ts_min, ts_max)
 	)
 	, ocpp AS (
 		SELECT count(*) AS ocpp_charger_count
 		FROM solarev.ocpp_charge_point
-		WHERE user_id = userid
-			AND enabled = TRUE
+		WHERE user_id = userid AND enabled = TRUE
 	)
 	, oscp AS (
 		SELECT count(*) AS oscp_cap_group_count
 		FROM solaroscp.oscp_cg_conf
-		WHERE user_id = userid
-			AND enabled = TRUE
+		WHERE user_id = userid AND enabled = TRUE
+	)
+	, dnp3 AS (
+		SELECT count(*) AS dnp3_data_point_count FROM (
+			SELECT user_id, server_id, idx, 'm' AS dtype
+			FROM solardnp3.dnp3_server_meas
+			WHERE user_id = userid AND enabled = TRUE
+			UNION ALL
+			SELECT user_id, server_id, idx, 'c' AS dtype
+			FROM solardnp3.dnp3_server_ctrl
+			WHERE user_id = userid AND enabled = TRUE
+		) counts
 	)
 	SELECT
 		  tiers.meter_key
@@ -685,30 +753,38 @@ $$
 			WHEN 'datum-props-in' THEN n.prop_in
 			WHEN 'datum-days-stored' THEN n.datum_stored
 			WHEN 'datum-out' THEN n.datum_out
+			WHEN 'instr-issued' THEN n.instr_issued
 			WHEN 'ocpp-chargers' THEN ocpp.ocpp_charger_count
 			WHEN 'oscp-cap-groups' THEN oscp.oscp_cap_group_count
+			WHEN 'dnp3-data-points' THEN dnp3.dnp3_data_point_count
 			ELSE NULL END - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(CASE meter_key
 			WHEN 'datum-props-in' THEN n.prop_in
 			WHEN 'datum-days-stored' THEN n.datum_stored
 			WHEN 'datum-out' THEN n.datum_out
+			WHEN 'instr-issued' THEN n.instr_issued
 			WHEN 'ocpp-chargers' THEN ocpp.ocpp_charger_count
 			WHEN 'oscp-cap-groups' THEN oscp.oscp_cap_group_count
+			WHEN 'dnp3-data-points' THEN dnp3.dnp3_data_point_count
 			ELSE NULL END - tiers.min, 0))) AS tier_count
 		, tiers.cost AS tier_rate
 		, LEAST(GREATEST(CASE meter_key
 			WHEN 'datum-props-in' THEN n.prop_in
 			WHEN 'datum-days-stored' THEN n.datum_stored
 			WHEN 'datum-out' THEN n.datum_out
+			WHEN 'instr-issued' THEN n.instr_issued
 			WHEN 'ocpp-chargers' THEN ocpp.ocpp_charger_count
 			WHEN 'oscp-cap-groups' THEN oscp.oscp_cap_group_count
+			WHEN 'dnp3-data-points' THEN dnp3.dnp3_data_point_count
 			ELSE NULL END - tiers.min, 0), COALESCE(LEAD(tiers.min) OVER win - tiers.min, GREATEST(CASE meter_key
 			WHEN 'datum-props-in' THEN n.prop_in
 			WHEN 'datum-days-stored' THEN n.datum_stored
 			WHEN 'datum-out' THEN n.datum_out
+			WHEN 'instr-issued' THEN n.instr_issued
 			WHEN 'ocpp-chargers' THEN ocpp.ocpp_charger_count
 			WHEN 'oscp-cap-groups' THEN oscp.oscp_cap_group_count
+			WHEN 'dnp3-data-points' THEN dnp3.dnp3_data_point_count
 			ELSE NULL END - tiers.min, 0))) * tiers.cost AS tier_cost
-	FROM usage n, ocpp, oscp
+	FROM usage n, ocpp, oscp, dnp3
 	CROSS JOIN tiers
 	WINDOW win AS (PARTITION BY tiers.meter_key ORDER BY tiers.min)
 $$;
@@ -740,6 +816,10 @@ CREATE OR REPLACE FUNCTION solarbill.billing_usage_details(userid BIGINT, ts_min
 		datum_out_cost 				NUMERIC,
 		datum_out_tiers 			NUMERIC[],
 		datum_out_tiers_cost 		NUMERIC[],
+		instr_issued 				BIGINT,
+		instr_issued_cost 			NUMERIC,
+		instr_issued_tiers 			NUMERIC[],
+		instr_issued_tiers_cost 	NUMERIC[],
 		ocpp_chargers				BIGINT,
 		ocpp_chargers_cost			NUMERIC,
 		ocpp_chargers_tiers			NUMERIC[],
@@ -747,7 +827,11 @@ CREATE OR REPLACE FUNCTION solarbill.billing_usage_details(userid BIGINT, ts_min
 		oscp_cap_groups				BIGINT,
 		oscp_cap_groups_cost		NUMERIC,
 		oscp_cap_groups_tiers		NUMERIC[],
-		oscp_cap_groups_tiers_cost	NUMERIC[]
+		oscp_cap_groups_tiers_cost	NUMERIC[],
+		dnp3_data_points			BIGINT,
+		dnp3_data_points_cost		NUMERIC,
+		dnp3_data_points_tiers		NUMERIC[],
+		dnp3_data_points_tiers_cost	NUMERIC[]
 	) LANGUAGE sql STABLE AS
 $$
 	WITH tier_costs AS (
@@ -782,6 +866,11 @@ $$
 		, solarcommon.first(CASE meter_key WHEN 'datum-out' THEN tier_counts ELSE NULL END) AS datum_out_tiers
 		, solarcommon.first(CASE meter_key WHEN 'datum-out' THEN tier_costs ELSE NULL END) AS datum_out_cost
 
+		, SUM(CASE meter_key WHEN 'instr-issued' THEN total_count ELSE NULL END)::BIGINT AS instr_issued
+		, SUM(CASE meter_key WHEN 'instr-issued' THEN total_cost ELSE NULL END) AS instr_issued_cost
+		, solarcommon.first(CASE meter_key WHEN 'instr-issued' THEN tier_counts ELSE NULL END) AS instr_issued_tiers
+		, solarcommon.first(CASE meter_key WHEN 'instr-issued' THEN tier_costs ELSE NULL END) AS instr_issued_cost
+
 		, SUM(CASE meter_key WHEN 'ocpp-chargers' THEN total_count ELSE NULL END)::BIGINT AS ocpp_chargers
 		, SUM(CASE meter_key WHEN 'ocpp-chargers' THEN total_cost ELSE NULL END) AS ocpp_chargers_cost
 		, solarcommon.first(CASE meter_key WHEN 'ocpp-chargers' THEN tier_counts ELSE NULL END) AS ocpp_chargers_tiers
@@ -792,13 +881,20 @@ $$
 		, solarcommon.first(CASE meter_key WHEN 'oscp-cap-groups' THEN tier_counts ELSE NULL END) AS oscp_cap_groups_tiers
 		, solarcommon.first(CASE meter_key WHEN 'oscp-cap-groups' THEN tier_costs ELSE NULL END) AS oscp_cap_groups_cost
 
+		, SUM(CASE meter_key WHEN 'dnp3-data-points' THEN total_count ELSE NULL END)::BIGINT AS dnp3_data_points
+		, SUM(CASE meter_key WHEN 'dnp3-data-points' THEN total_cost ELSE NULL END) AS dnp3_data_points_cost
+		, solarcommon.first(CASE meter_key WHEN 'dnp3-data-points' THEN tier_counts ELSE NULL END) AS dnp3_data_points_tiers
+		, solarcommon.first(CASE meter_key WHEN 'dnp3-data-points' THEN tier_costs ELSE NULL END) AS dnp3_data_points_cost
+
 	FROM costs
 	HAVING
 		SUM(CASE meter_key WHEN 'datum-props-in' THEN total_count ELSE NULL END)::BIGINT > 0 OR
 		SUM(CASE meter_key WHEN 'datum-days-stored' THEN total_count ELSE NULL END)::BIGINT > 0 OR
 		SUM(CASE meter_key WHEN 'datum-out' THEN total_count ELSE NULL END)::BIGINT > 0 OR
+		SUM(CASE meter_key WHEN 'instr-issued' THEN total_count ELSE NULL END)::BIGINT > 0 OR
 		SUM(CASE meter_key WHEN 'ocpp-chargers' THEN total_count ELSE NULL END)::BIGINT > 0 OR
-		SUM(CASE meter_key WHEN 'oscp-cap-groups' THEN total_count ELSE NULL END)::BIGINT > 0
+		SUM(CASE meter_key WHEN 'oscp-cap-groups' THEN total_count ELSE NULL END)::BIGINT > 0 OR
+		SUM(CASE meter_key WHEN 'dnp3-data-points' THEN total_count ELSE NULL END)::BIGINT > 0
 $$;
 
 /**
