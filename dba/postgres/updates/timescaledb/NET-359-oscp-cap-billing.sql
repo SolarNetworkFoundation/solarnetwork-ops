@@ -80,7 +80,7 @@ BEGIN
 			, ('oscp-cap-groups', 		100::BIGINT, 			15::NUMERIC)
 			, ('oscp-cap-groups', 		300::BIGINT, 			10::NUMERIC)
 		) AS t(min, meter_key, cost);
-	ELSEIF ts < '2024-03-01'::DATE THEN
+	ELSEIF ts < '2024-02-01'::DATE THEN
 		RETURN QUERY SELECT *, '2023-10-01'::DATE FROM ( VALUES
 			  ('datum-props-in', 		0::BIGINT, 				0.000005::NUMERIC)
 			, ('datum-props-in', 		500000::BIGINT, 		0.000003::NUMERIC)
@@ -118,7 +118,7 @@ BEGIN
 			, ('dnp3-data-points', 		500::BIGINT, 			0.2::NUMERIC)
 		) AS t(min, meter_key, cost);
 	ELSE
-		RETURN QUERY SELECT *, '2024-03-01'::DATE FROM ( VALUES
+		RETURN QUERY SELECT *, '2024-02-01'::DATE FROM ( VALUES
 			  ('datum-props-in', 		0::BIGINT, 				0.000005::NUMERIC)
 			, ('datum-props-in', 		500000::BIGINT, 		0.000003::NUMERIC)
 			, ('datum-props-in', 		10000000::BIGINT, 		0.0000008::NUMERIC)
