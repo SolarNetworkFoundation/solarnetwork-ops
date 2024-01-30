@@ -647,3 +647,5 @@ $invoice.localizedInvoiceUsageRecords:nodeUsageRow()$
 	</tbody>
 </table>
 >>"
+2024-01-31 00:00:00+12,snf.billing,en,oscp-cap.item,OSCP Capacity
+2024-01-31 00:00:00+12,snf.billing,en,oscp-cap.unit,Watts
