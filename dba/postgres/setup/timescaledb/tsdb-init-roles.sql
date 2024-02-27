@@ -66,6 +66,16 @@ CREATE ROLE solaroscp WITH
   NOREPLICATION;
 GRANT solar TO solaroscp;
 
+-- group for DIN
+CREATE ROLE solardin WITH
+  NOLOGIN
+  NOSUPERUSER
+  INHERIT
+  NOCREATEDB
+  NOCREATEROLE
+  NOREPLICATION;
+GRANT solar TO solardin;
+
 -- group for DNP3
 CREATE ROLE solardnp3 WITH
   NOLOGIN
