@@ -45,6 +45,12 @@
 \i init/postgres-init-oscp-schema.sql
 \i tsdb-init-oscp-schema.sql
 \i init/postgres-init-oscp.sql
+\i init/postgres-init-din-schema.sql
+\i tsdb-init-din-schema.sql
+\i init/postgres-init-din.sql
+\i init/postgres-init-dnp3-schema.sql
+\i tsdb-init-dnp3-schema.sql
+\i init/postgres-init-dnp3.sql
 \i tsdb-init-billing-schema.sql
 \i tsdb-init-billing.sql
 

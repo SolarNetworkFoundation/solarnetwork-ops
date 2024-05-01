@@ -52,7 +52,7 @@
  ## Acceptable values:
  ##   - an integer
 -vmq_acl.acl_reload_interval = 10
-+vmq_acl.acl_reload_interval = 0
++vmq_acl.acl_reload_interval = 60
  
  ## Set the path to a password file.
  ## 
