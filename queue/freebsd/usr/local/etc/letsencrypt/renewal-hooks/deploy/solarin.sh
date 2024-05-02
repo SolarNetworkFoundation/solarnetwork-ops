@@ -2,8 +2,9 @@
 
 set -e
 
+daemon_cert_root=/mnt/cert-support/tls
+
 for domain in $RENEWED_DOMAINS; do
-		daemon_cert_root=/mnt/cert-support/tls
 
 		# Make sure the certificate and private key files are
 		# never world readable, even just for an instant while
@@ -22,5 +23,5 @@ for domain in $RENEWED_DOMAINS; do
 				"$daemon_cert_root/$domain.fullchain" \
 				"$daemon_cert_root/$domain.key"
 done
-service nginx reload >/dev/null
 
+service nginx reload >/dev/null
