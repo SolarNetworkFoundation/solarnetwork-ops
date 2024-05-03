@@ -1,4 +1,4 @@
-// NOTE this code is for 0.4.0 <= njs via js_import
+// NOTE this code is for 0.8.0 <= njs via js_import
 
 var messageCount = 0;
 var clientId = '';
@@ -18,7 +18,7 @@ function decodeRemainingLength(buffer, p) {
         result = 0,
         b;
     do {
-        b = buffer.charCodeAt(p);
+        b = buffer[p];
         result += (b & 127) * multiplier;
         multiplier *= 128;
         p += 1;
@@ -28,27 +28,27 @@ function decodeRemainingLength(buffer, p) {
 }
 
 function variableLengthStringLength(buffer, p) {
-    var msb = buffer.charCodeAt(p),
-        lsb = buffer.charCodeAt(p + 1);
+    var msb = buffer[p],
+        lsb = buffer[p + 1];
     return (msb << 8) | lsb;
 }
 
 function extractVariableLengthString(buffer, p) {
-    var msb = buffer.charCodeAt(p),
-        lsb = buffer.charCodeAt(p + 1),
+    var msb = buffer[p],
+        lsb = buffer[p + 1],
         len = (msb << 8) | lsb,
-        result = buffer.substr(p + 2, len);
+        result = buffer.toString('utf8', p + 2, p + 2 + len);
     return result;
 }
 
 function discoverClientId(s) {
-    s.on('upload', function(data, flags) {
+    s.on('upstream', function(data, flags) {
         if ( messageCount > 0 || data.length < 1 ) {
             return;
         }
         if ( messageCount < 1 ) {
             // upper 4 bits of byte 0 is packet type
-            var packetType = data.charCodeAt(0) >> 4;
+            var packetType = data[0] >> 4;
 
             if ( packetType === 1 ) {                  // CONNECT
                 var lenPos = decodeRemainingLength(data, 1);
@@ -60,7 +60,7 @@ function discoverClientId(s) {
                     + 2                                // variable length string length bytes
                     + protoNameLength;                 // proto name variable length string
 
-                var vers = data.charCodeAt(versPos);
+                var vers = data[versPos];
 
                 var clientIdPos = versPos + 4;         // version byte, conn flags byte, timer bytes
 
@@ -74,8 +74,8 @@ function discoverClientId(s) {
 
                 /*
                 s.log('MQTT packet type = ' + packetType
-                    + ', data = ' + data.slice(0, 32).toString('hex')
-                    +', len = ' +data.slice(0,32).length
+                    + ', data = ' + data.toString('hex', 0, 32)
+                    +', len = ' +data.toString('hex', 0, 32).length
                     +', versPos = ' + versPos
                     +', vers = ' +vers
                     +', clientIdPos = ' +clientIdPos
