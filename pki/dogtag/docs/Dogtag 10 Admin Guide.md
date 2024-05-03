@@ -224,12 +224,12 @@ pki ca-cert-export 0x1007e --output-file ocspSigningCert-2020-0x1007e.crt
 Finally, as the `root` user, install the certificates.
 
 ```sh
-[root ~caadmin]$ systemctl stop pki-tomcatd@pki-tomcat.service
-[root ~caadmin]$ pki-server subsystem-cert-update ca ocsp_signing --cert ocspSigningCert-2020-0x1007e.crt
-[root ~caadmin]$ pki-server subsystem-cert-update ca sslserver --cert Server-Cert-2020-0x1007f.crt
-[root ~caadmin]$ pki-server subsystem-cert-update ca subsystem --cert subsystemCert-2020-0x10081.crt
-[root ~caadmin]$ pki-server subsystem-cert-update ca audit_signing --cert auditSigningCert-2020-0x10080.crt
-[root ~caadmin]$ systemctl start pki-tomcatd@pki-tomcat.service
+systemctl stop pki-tomcatd@pki-tomcat.service
+pki-server subsystem-cert-update ca ocsp_signing --cert ocspSigningCert-2020-0x1007e.crt
+pki-server subsystem-cert-update ca sslserver --cert Server-Cert-2020-0x1007f.crt
+pki-server subsystem-cert-update ca subsystem --cert subsystemCert-2020-0x10081.crt
+pki-server subsystem-cert-update ca audit_signing --cert auditSigningCert-2020-0x10080.crt
+systemctl start pki-tomcatd@pki-tomcat.service
 ```
 
 # List users
@@ -237,7 +237,7 @@ Finally, as the `root` user, install the certificates.
 As the `caadmin` OS user:
 
 ```sh
-pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
+pki -n caadmin ca-user-find
 
 -----------------
 4 entries matched
@@ -255,8 +255,9 @@ pki -d ~/.dogtag/nssdb -n 'PKI Administrator for solarnetwork.net' ca-user-find
   Full name: SolarUser Agent
 ```
 
-> :warning: **Note** that the `-n` argument might be `caadmin` depending on the state of the NSS DB.
-> Also note that the `-d` default is `~/.dogtag/nssdb` so that argument can be omitted.
+> :warning: **Note** that the `-n` argument might be `'PKI Administrator for solarnetwork.net'` 
+> depending on the state of the NSS DB. Also note that the `-d` default is `~/.dogtag/nssdb` so
+> that argument can be omitted.
 
 # List user certificates
 
