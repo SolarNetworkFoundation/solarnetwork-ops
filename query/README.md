@@ -10,7 +10,7 @@ corresponding file whose name omits the `.tmpl` suffix.
 Initial package installation:
 
 ```sh
-pkg install --repository snf nginx postfix 
+pkg install --repository snf nginx postfix tmux
 ```
 
 

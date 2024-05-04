@@ -15,7 +15,7 @@ Initial package installation:
 
 ```sh
 pkg install --repository FreeBSD py39-certbot py39-certbot-dns-route53
-pkg install --repository snf nginx postfix 
+pkg install --repository snf nginx postfix tmux
 ```
 
 
