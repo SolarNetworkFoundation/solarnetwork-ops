@@ -63,3 +63,13 @@ aws_access_key_id=TOKEN_ID
 aws_secret_access_key=TOKEN_SECRET
 ```
 
+### Manually run Certbot deploy hook
+
+If for any reason you need to run the [solarin.sh](./proxy/usr/local/etc/letsencrypt/renewal-hooks/deploy/solarin.sh)
+deploy hook, you can do so as `root` like this for the `in.solarnetwork.net` certificate:
+
+```sh
+RENEWED_DOMAINS=in.solarnetwork.net \
+RENEWED_LINEAGE=/usr/local/etc/letsencrypt/live/in.solarnetwork.net \
+/usr/local/etc/letsencrypt/renewal-hooks/deploy/solarin.sh
+```
