@@ -8,7 +8,7 @@ analysis. First download the CSV access logs from S3. Then you can load them int
 duckdb logs.db
 ```
 
-Then load the CSV into a `logs` table (note the `read_csv_auth('*/*.log.gz'` part that determines
+Then load the CSV into a `logs` table (note the `read_csv_auto('*/*.log.gz'` part that determines
 which log files are loaded):
 
 ```sql
