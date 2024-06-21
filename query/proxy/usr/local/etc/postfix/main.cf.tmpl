@@ -1,0 +1,10 @@
+# SNF start
+relayhost = [email-smtp.us-west-2.amazonaws.com]:587
+alias_maps = hash:/etc/aliases
+smtp_tls_note_starttls_offer = yes
+smtp_tls_security_level = encrypt
+smtp_sasl_password_maps = hash:/usr/local/etc/postfix/sasl_passwd
+smtp_sasl_security_options = noanonymous
+smtp_sasl_auth_enable = yes
+smtp_tls_CAfile = /usr/local/share/certs/ca-root-nss.crt
+
