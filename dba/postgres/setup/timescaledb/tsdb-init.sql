@@ -51,7 +51,7 @@
 \i init/postgres-init-dnp3-schema.sql
 \i tsdb-init-dnp3-schema.sql
 \i init/postgres-init-dnp3.sql
-\i tsdb-init-billing-schema.sql
-\i tsdb-init-billing.sql
+\i init/postgres-init-billing-schema.sql
+\i init/postgres-init-billing.sql
 
 \i tsdb-init-hypertables-support.sql
