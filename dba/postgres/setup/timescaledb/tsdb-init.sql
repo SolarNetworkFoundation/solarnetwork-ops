@@ -36,6 +36,7 @@
 \i init/postgres-init-user-alerts.sql
 \i init/postgres-init-user-datum-export.sql
 \i init/postgres-init-user-datum-expire.sql
+\i init/postgres-init-user-datum-flux.sql
 \i init/postgres-init-user-datum-import.sql
 \i init/postgres-init-user-event-hook.sql
 \i init/postgres-init-user-events.sql
@@ -51,7 +52,8 @@
 \i init/postgres-init-dnp3-schema.sql
 \i tsdb-init-dnp3-schema.sql
 \i init/postgres-init-dnp3.sql
+\i init/postgres-init-billing-schema.sql
 \i tsdb-init-billing-schema.sql
-\i tsdb-init-billing.sql
+\i init/postgres-init-billing.sql
 
 \i tsdb-init-hypertables-support.sql
