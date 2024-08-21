@@ -30,3 +30,7 @@ GRANT EXECUTE ON FUNCTION solaruser.snws2_signature_data(req_date timestamp with
 GRANT EXECUTE ON FUNCTION solaruser.snws2_signing_key(sign_date date, secret text) TO solar;
 GRANT EXECUTE ON FUNCTION solaruser.snws2_signing_key_hex(sign_date date, secret text) TO solar;
 GRANT EXECUTE ON FUNCTION solaruser.snws2_validated_request_date(req_date timestamp with time zone, tolerance interval) TO solar;
+
+-- allow query for OAuth credential billing purposes
+GRANT SELECT (user_id, id, created, modified, enabled, oauth)
+ON TABLE solaroscp.oscp_fp_token TO solaruser;
