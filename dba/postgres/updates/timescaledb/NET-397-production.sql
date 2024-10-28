@@ -1,5 +1,6 @@
 ALTER INDEX solardin.cin_integration_pk 					SET TABLESPACE solarindex;
 ALTER INDEX solardin.cin_datum_stream_pk 					SET TABLESPACE solarindex;
+ALTER INDEX solardin.cin_datum_stream_map_pk				SET TABLESPACE solarindex;
 ALTER INDEX solardin.cin_datum_stream_prop_pk 				SET TABLESPACE solarindex;
 ALTER INDEX solardin.cin_datum_stream_poll_task_pk 			SET TABLESPACE solarindex;
 
