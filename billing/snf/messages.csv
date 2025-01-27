@@ -655,3 +655,5 @@ $invoice.localizedInvoiceUsageRecords:nodeUsageRow()$
 2008-01-01 00:00:00+13,snf.billing,en,flux-data-out.unit,Bytes
 2008-01-01 00:00:00+13,snf.billing,en,oauth-client-creds.item,OAuth Credentials
 2008-01-01 00:00:00+13,snf.billing,en,oauth-client-creds.unit,Count
+2008-01-01 00:00:00+13,snf.billing,en,c2c-data.item,Cloud Integrations Data
+2008-01-01 00:00:00+13,snf.billing,en,c2c-data.unit,Bytes
