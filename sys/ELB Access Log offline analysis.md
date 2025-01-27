@@ -13,8 +13,9 @@ which log files are loaded):
 
 ```sql
 create table logs as select * from 
-  read_csv_auto('*/*.log.gz', delim=' ', 
-  types = { 
+  read_csv_auto('2025/01/*/*.log.gz'
+  , delim=' '
+  , types = { 
    'type': 'VARCHAR', 
    'time': 'TIMESTAMP', 
    'elb': 'VARCHAR', 
@@ -44,8 +45,8 @@ create table logs as select * from
    'target_status_code_list': 'VARCHAR', 
    'classification': 'VARCHAR', 
    'classification_reason': 'VARCHAR' 
-  }, 
-  names=[
+  }
+  , names=[
     'type', 'time', 'elb', 'client_port', 'target_port',
     'request_processing_time', 'target_processing_time', 'response_processing_time',
     'elb_status_code', 'target_status_code', 'received_bytes', 'sent_bytes', 'request',
@@ -54,6 +55,7 @@ create table logs as select * from
     'redirect_url', 'error_reason', 'target_port_list', 'target_status_code_list',
     'classification', 'classification_reason'
   ]
+  , union_by_name=true
 );
 ```
 
