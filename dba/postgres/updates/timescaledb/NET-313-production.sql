@@ -15,4 +15,4 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA solaroscp GRANT ALL ON TABLES TO solaruser;
 
 \i init/updates/NET-313-oscp-fp.sql
 
-\i tsdb-init-permissions-solaroscp.sql
+\i ../../setup/timescaledb/tsdb-init-permissions-solaroscp.sql
