@@ -264,7 +264,7 @@ envdir ~/pgbackrest.d/env pgbackrest --link-all --process-max=4 \
  --tablespace-map=16400=/sndb/dat \
  --tablespace-map=16401=/sndb/idx \
  --link-map=pg_wal=/sndb/wal/12 \
---link-map=tls/server.crt=/var/tmp/pgrestore/server.crt \
+ --link-map=tls/server.crt=/var/tmp/pgrestore/server.crt \
  --link-map=tls/server.key=/var/tmp/pgrestore/server.key \  
  --log-level-console=info \
 restore
