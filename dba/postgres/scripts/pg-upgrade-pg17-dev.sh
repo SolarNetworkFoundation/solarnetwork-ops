@@ -1,6 +1,10 @@
 #!/bin/sh -e
 #
-# Upgrade TSDB (dev) Postgres 15 -> 17
+# Upgrade SNDB (dev) Postgres 15 -> 17
+
+PGPKG_OLDSERVER_VERS=15.12_1
+PGPKG_OLDCONTRIB_VERS=15.12
+TSPKG_OLDVERS=2.19.1
 
 PKG_HOME=/var/tmp/pgupgrade/17
 PKG_PKG=$PKG_HOME/pkg
@@ -17,9 +21,9 @@ pkg create -o $PKG_PKG postgresql15-server postgresql15-contrib timescaledb post
 echo "Installing Postgres 15 binaries into $PKG_ROOT"
 rm -rf $PKG_ROOT
 mkdir -p $PKG_ROOT
-tar xf $PKG_PKG/postgresql15-server-15.12_1.pkg -C $PKG_ROOT
-tar xf $PKG_PKG/postgresql15-contrib-15.12.pkg -C $PKG_ROOT
-tar xf $PKG_PKG/timescaledb-2.18.1.pkg -C $PKG_ROOT
+tar xf $PKG_PKG/postgresql15-server-$PGPKG_OLDSERVER_VERS.pkg -C $PKG_ROOT
+tar xf $PKG_PKG/postgresql15-contrib-$PGPKG_OLDCONTRIB_VERS.pkg -C $PKG_ROOT
+tar xf $PKG_PKG/timescaledb-$TSPKG_OLDVERS.pkg -C $PKG_ROOT
 tar xf $PKG_PKG/postgresql-aggs_for_vecs-1.3.2_1.pkg -C $PKG_ROOT
 
 echo "Deleting Postgres 15 packages"

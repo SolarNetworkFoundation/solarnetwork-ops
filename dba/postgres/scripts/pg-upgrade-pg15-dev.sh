@@ -1,6 +1,6 @@
 #!/bin/sh -e
 #
-# Upgrade TSDB (dev) Postgres 12 -> 15
+# Upgrade SNDB (dev) Postgres 12 -> 15
 
 PKG_HOME=/var/tmp/pgupgrade/15
 PKG_PKG=$PKG_HOME/pkg
@@ -11,7 +11,7 @@ TSPKG_OLDNAME="timescaledb210"
 TSPKG_NEWNAME="timescaledb210"
 
 # Because on production the version differs (2.10.1 v 2.10.2)
-TSPKG_OLDVERS="2.10.2"
+TSPKG_OLDVERS=2.10.2
 
 PGPKG_OLDSERVER_VERS=12.22
 PGPKG_OLDCONTRIB_VERS=12.22

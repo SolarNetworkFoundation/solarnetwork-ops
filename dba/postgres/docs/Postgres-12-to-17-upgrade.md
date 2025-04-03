@@ -6,7 +6,7 @@ Postgres 12 is no longer supported, so this document outlines the plan for upgra
 
 Complicating this upgrade is the TimescaleDB extension. Version 2.10.1 only supports Postgres up
 to version 15. So first Postgres must be upgraded to version 15. Then Timescale can be updated to
-version 2.18.x (the latest release at the time of this writing). Then Postgres can be updated to
+version 2.19.x (the latest release at the time of this writing). Then Postgres can be updated to
 version 17.
 
 See [the Timescale docs](https://docs.timescale.com/self-hosted/latest/upgrades/major-upgrade/#plan-your-upgrade-path)
@@ -20,7 +20,7 @@ So overall, the upgrade plan looks like this:
  1. Upgrade FreeBSD to 14.2, using custom `timescaledb210` port to stay on Timescale 2.10.1 and
     updating to the latest Postgres 12.x release.
  2. Upgrade Postgres to latest 15.x release. Upgrade pgBackRest stanza.
- 3. Upgrade Timescale to 2.18.x release. Perform full pgBackRest backup.
+ 3. Upgrade Timescale to 2.19.x release. Perform full pgBackRest backup.
  4. Upgrade Postgres to latest 17.x release. Upgrade pgBackRest stanza.
 
 See [this blog post](https://pgstef.github.io/2019/03/01/postgresql_major_version_upgrade_impact_on_pgbackrest.html)
@@ -33,7 +33,7 @@ Following the same [tsdb1 setup](./FreeBSD-setup-tsdb1-poudriere-portshaker.md) 
 a `tsdb2` ports tree that is a merge of the `freebsd-12` and `sn-custom` trees, followed
 by a `tsdb3` ports tree that is a merge of the `freebsd-14` and `sn-custom` trees, for Postgres 15,
 then a `tsdb4` ports tree that is a merge of the `freebsd` (head) and `sn-custom` trees, for
-Postgres 15 + Timescale 2.18, and then `tsdb5` for Postgers 17 + Timescale 2.18.
+Postgres 15 + Timescale 2.19, and then `tsdb5` for Postgers 17 + Timescale 2.19.
 
 ## Portshaker
 
@@ -78,11 +78,11 @@ tsdb2_merge_from="freebsd-14 sn-custom"
 tsdb3_ports_tree="/usr/local/poudriere/ports/tsdb3"
 tsdb3_merge_from="freebsd-14 sn-custom"
 
-# FreeBSD 14, Postgres 15, TS 2.18
+# FreeBSD 14, Postgres 15, TS 2.19
 tsdb4_ports_tree="/usr/local/poudriere/ports/tsdb4"
 tsdb4_merge_from="freebsd sn-custom"
 
-# FreeBSD 14, Postgres 17, TS 2.18
+# FreeBSD 14, Postgres 17, TS 2.19
 tsdb4_ports_tree="/usr/local/poudriere/ports/tsdb5"
 tsdb4_merge_from="freebsd sn-custom"
 ```
@@ -169,7 +169,7 @@ sudo poudriere bulk -j solardb_142x64 -p tsdb2 -f /usr/local/etc/poudriere.d/sol
 
 ### tsdb3 jail
 
-This is Postgres 15 + Timescale 2.10.2 + Timescale 2.18.1
+This is Postgres 15 + Timescale 2.10.2 + Timescale 2.19.1
 
 Set up `tsdb3` build:
 
@@ -232,7 +232,7 @@ sudo poudriere bulk -j solardb_142x64 -p tsdb3 -f /usr/local/etc/poudriere.d/sol
 
 ### tsdb4 jail
 
-This is Postgres 15 + Timescale 2.18.1
+This is Postgres 15 + Timescale 2.19.1
 
 Set up `tsdb4` build:
 
@@ -299,7 +299,7 @@ for v in 2 3 4 5; do poudriere bulk -j solardb_142x64 -p tsdb$v -f /usr/local/et
 
 ### tsdb5 jail
 
-This is Postgres 17 + Timescale 2.18.1
+This is Postgres 17 + Timescale 2.19.1
 
 Set up `tsdb5` build:
 
@@ -479,13 +479,16 @@ service postgresql onestart
 su -l postgres -c 'psql -d solarnetwork -f up15/update_extensions.sql'
 ```
 
-# Upgrade to Timescale 2.18
+# Upgrade to Timescale 2.19
 
-First update repo to `tsdb4` to get latest PG 15 + TS 2.18 packages. Then update packages and
-switch to TS 2.18:
+First update repo to `tsdb4` to get latest PG 15 + TS 2.19 packages. Then update packages and
+switch to TS 2.19:
 
 ```sh
-# point pkg to PG 15 + TS 2.18 repo
+# stop postgres
+service postgresql onestop
+
+# point pkg to PG 15 + TS 2.19 repo
 sed -ie 's/url: "\(.*\)"/url: "http:\/\/poudriere\/packages\/solardb_142x64-tsdb4"/' \
     /usr/local/etc/pkg/repos/snf.conf
 pkg update
