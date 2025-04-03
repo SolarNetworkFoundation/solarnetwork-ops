@@ -282,6 +282,7 @@ done
 zfs create -o mountpoint=/sndb/home dat/home
 zfs create -o mountpoint=/sndb/log dat/log
 zfs set compression=gzip dat/log
+zfs set recordsize=128k dat/log
 
 mkdir /sndb/log/12
 
