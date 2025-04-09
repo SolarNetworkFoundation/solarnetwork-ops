@@ -356,5 +356,35 @@ su -l postgres -c 'psql -xd solarnetwork -c "alter extension timescaledb update"
 See the [docs on handling streaming replication servers][rep-rsync], how `rsync` can be used to 
 quickly upgrade the replica.
 
+# VM replica clone
+
+To test the streaming replication setup, created a clone of the SNDB virtual machine.
+Then in the clone, converted that to a streaming standby server, by uncommenting the
+`primary_conninfo` setting in `postgresql.conf`. 
+
+Created `~postgres/.pgpass` with content like
+
+```
+sndb:*:replication:replicator:PASSWORD
+```
+
+Then ran the following as the `postgres` user:
+
+```sh
+su - postgres
+envdir ~/pgbackrest.d/env pgbackrest --link-all --process-max=4 \
+ --tablespace-map=16400=/sndb/dat \
+ --tablespace-map=16401=/sndb/idx \
+ --link-map=pg_wal=/sndb/wal/12 \
+ --log-level-console=info \
+ --delta \
+ --target-timeline=current \
+ --type=standby \
+ --recovery-option="primary_conninfo=host=sndb port=5432 user=replicator" \
+ --recovery-option='restore_command=envdir ~/pgbackrest.d/env pgbackrest archive-get %f "%p"' \
+ --recovery-option="recovery_target=" \
+  restore
+```
+
 [vmdk]: http://ftp-archive.freebsd.org/pub/FreeBSD-Archive/old-releases/VM-IMAGES/12.3-RELEASE/amd64/Latest/
 [rep-rsync]: https://www.postgresql.org/docs/current/pgupgrade.html#PGUPGRADE-STEP-REPLICAS

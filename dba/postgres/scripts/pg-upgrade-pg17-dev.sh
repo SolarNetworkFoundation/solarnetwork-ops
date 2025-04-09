@@ -53,7 +53,14 @@ mv /sndb/home/17/pg_wal/* /sndb/wal/17
 rmdir /sndb/home/17/pg_wal
 ln -s /sndb/wal/17 /sndb/home/17/pg_wal
 
+# Create log dir
+mkdir /sndb/log/17
+chown postgres:postgres /sndb/log/17
+
 echo "Configuring Postgres 17 cluster"
+
+# create backup of original configuration
+cp -a /sndb/home/17/postgresql.conf /sndb/home/17/postgresql.conf.orig
 
 # Setup shared preload
 sed -ie "/shared_preload_libraries =/c\\

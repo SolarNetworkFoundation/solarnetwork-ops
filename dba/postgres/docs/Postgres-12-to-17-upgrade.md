@@ -446,6 +446,16 @@ If need to rollback to start again:
 for f in dat dat/dat dat/home dat/log idx idx/idx wal wal/wal; do zfs rollback $f@pre-pg15-upgrade; done
 ```
 
+# Pre Upgrade prep
+
+Disable `cron` to be safe. Add to `/etc/rc.conf`
+
+```
+# Cron
+cron_enable="NO"
+```
+
+Then `service cron stop`.
 
 # Upgrade to Postgres 15
 
@@ -467,7 +477,11 @@ pg_upgrade -U postgres -k \
 	--check
 ```
 
-Assuming all OK, re-run without the `--check`. Then start the server to update extensions:
+Assuming all OK, re-run without the `--check`.
+
+## Update extensions
+
+Then start the server to update extensions:
 
 ```sh
 # go back to root user, if still postgres
@@ -537,7 +551,31 @@ pg_upgrade -U postgres -k \
 	--check
 ```
 
-Assuming all OK, re-run without the `--check`. Then start the server to update extensions:
+Assuming all OK, re-run without the `--check`.
+
+## Apply custom configuration
+
+See the [configuration diff](../freebsd/postgresql.conf.12.diff) and apply changes to the PG17
+configuration.
+
+## Update pgBackRest
+
+Update `~/pgbackrest.d/env` for new Postgres version, namely:
+
+ 1. `PGBACKREST_LOG_PATH` to `/sndb/log/17`
+ 2. `PGBACKREST_PG1_PATH` to `/sndb/home/17`
+
+Run `stanza-upgrade`:
+
+```sh
+# as postgres user still...
+
+envdir ~/pgbackrest.d/env pgbackrest --no-online stanza-upgrade
+```
+
+## Update extensions
+
+Then start the server to update extensions:
 
 ```sh
 # go back to root user, if still postgres
@@ -549,11 +587,28 @@ service postgresql onestart
 su -l postgres -c 'psql -d solarnetwork -f up17/update_extensions.sql'
 ```
 
-Now compare PG12 configuration to PG17 and migrate. Need to copy certificates:
+Then, verify pgBackRest:
 
 ```sh
-cp -a /tsdb/data/12/tls /tsdb/data/17/
+su -l postgres -c 'envdir ~/pgbackrest.d/env pgbackrest --log-level-console=info check'
 ```
+
+## Update statistics
+
+Need to update all statistics:
+
+```sh
+# regenerate stats
+su -l postgres -c '/usr/local/bin/vacuumdb -U postgres --all --analyze-in-stages'
+```
+
+
+# Perform full backup
+
+```sh
+su -l postgres -c 'envdir ~/pgbackrest.d/env pgbackrest --log-level-console=info --type=full --start-fast backup'
+```
+
 
 # ZFS snapshots (Post PG 17)
 
@@ -606,19 +661,110 @@ wal/wal@post-pg17-upgrade      8K      -    18M  -
 Now is the time to update the replica, trying the [`rsync` method][rep-rsync] and falling back to
 a full restore from pgBackRest if needed.
 
-# Update statistics
+## Install rsync
 
-Need to update all statistics:
+Install `rsync` to validate rsync-style "fast" replica sync.
 
 ```sh
-# regenerate stats
-su -l postgres -c '/usr/local/bin/vacuumdb -U postgres --all --analyze-in-stages'
+pkg install -r snf rsync
 ```
+
+## Configure SSH access for postgres OS user
+
+The `rsync` process will use `ssh` to connect, and will run as the `postgres` user, so
+set up password-less access in `~/.ssh/authorized_keys` on the replica.
+
+First generate key on **primary** server (without password):
+
+```sh
+ssh-keygen -t ed25519
+```
+
+Then on the **replica** server add the `~/.ssh/id_ed25519.pub` to `~/.ssh/authorized_keys`.
+
+## Sync database
+
+```sh
+# sync home
+rsync --archive --delete --hard-links --size-only --no-inc-recursive \
+ /sndb/home/12 /sndb/home/17 sndb-a:/sndb/home \
+ --verbose --dry-run 
+
+# sync dat tablespace
+rsync --archive --delete --hard-links --size-only --no-inc-recursive \
+ /sndb/dat/PG_12_201909212 /sndb/dat/PG_17_202406281 sndb-a:/sndb/dat \
+ --verbose --dry-run 
+
+# sync idx tablespace
+rsync --archive --delete --hard-links --size-only --no-inc-recursive \
+ /sndb/idx/PG_12_201909212 /sndb/idx/PG_17_202406281 sndb-a:/sndb/idx \
+ --verbose --dry-run 
+
+# sync wal
+rsync --archive --delete --hard-links --size-only --no-inc-recursive \
+ /sndb/wal/12 /sndb/wal/17 sndb-a:/sndb/wal \
+ --verbose --dry-run 
+```
+
+## Configure replica settings
+
+Edited `postgresql.auto.conf` on **replica** with additions:
+
+```
+primary_conninfo = 'host=sndb port=5432 user=replicator'
+restore_command = 'envdir ~/pgbackrest.d/env pgbackrest archive-get %f "%p"'
+recovery_target = ''
+```
+
+Then setup archive mode:
+
+```sh
+su -l postgres -c 'touch /sndb/home/17/standby.signal'
+```
+
+Finally, update `/etc/rc.conf` to point to PG17:
+
+```
+postgresql_data="/sndb/home/17"
+```
+
+## Startup primary
+
+```sh
+service postgresql onestart
+```
+
+## Update pgBackRest
+
+On **replica** update `~postgres/pgbackrest.d/env` for new Postgres version, namely:
+
+ 1. `PGBACKREST_LOG_PATH` to `/sndb/log/17`
+ 2. `PGBACKREST_PG1_PATH` to `/sndb/home/17`
+
+<!-- 
+Run `check`:
+
+```sh
+# as postgres user still...
+
+su -l postgres -c 'envdir ~/pgbackrest.d/env pgbackrest --log-level-console=info check'
+```
+ -->
+
+# Final tasks
+
+Re-enable cron by changing `/etc/rc.conf` with
+
+```
+cron_enable="YES"
+```
+
+followed by `service cron start`.
 
 # Post upgrade cleanup
 
-Modify the `up15/delete_old_cluster.sh` scripts to comment out the removal of the home dirs, as 
-might need to reference the original configuration later:
+After time has passed, modify the `up15/delete_old_cluster.sh` scripts to comment out the removal
+of the home dirs, as might need to reference the original configuration later:
 
 ```sh
 #!/bin/sh
