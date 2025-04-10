@@ -1,6 +1,6 @@
 #!/bin/sh -e
 #
-# Upgrade SNDB (dev) Postgres 12 -> 15
+# Upgrade SNDB (prod) Postgres 12 -> 15
 
 PKG_HOME=/var/tmp/pgupgrade/15
 PKG_PKG=$PKG_HOME/pkg
@@ -37,7 +37,7 @@ echo "Deleting Postgres 12 packages"
 pkg delete -fy databases/postgresql12-server databases/postgresql12-contrib databases/postgresql12-client databases/$TSPKG_OLDNAME databases/postgresql-aggs_for_vecs
 
 # point pkg to PG 15 repo
-sed -ie 's/url: "\(.*\)"/url: "http:\/\/poudriere\/packages\/solardb_142x64-tsdb3"/' \
+sed -ie 's/url: "\(.*\)"/url: "http:\/\/snf-freebsd-repo.s3-website-us-west-2.amazonaws.com\/solardb_142x64-tsdb3"/' \
     /usr/local/etc/pkg/repos/snf.conf
 pkg update
 
