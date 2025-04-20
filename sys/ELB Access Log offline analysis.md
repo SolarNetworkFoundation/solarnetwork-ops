@@ -140,6 +140,7 @@ columns:
 ```sql
 create or replace view logs_url as
 select time
+	, regexp_extract(client_port, '^(.+):\d+', 1) as client_ip
 	, target_port
 	, request_processing_time
 	, target_processing_time
@@ -149,6 +150,8 @@ select time
 	, sent_bytes
 	, request
 	, regexp_extract(request, 'https://data.solarnetwork.net:443([^? ]+)', 1) as url
+	, regexp_extract(request, '.*[?]([^ ]+)', 1) as query
+	, regexp_replace(regexp_extract(request, '.*[?]([^ ]+)', 1), '(startDate|endDate)=[^&]+', '\1=', 'gi') as query_norm
 from logs;
 ```
 
