@@ -38,22 +38,6 @@ aws ecs list-services --profile snf --output json --cluster $c |grep 'arn:aws' |
 ```
 
 
-## EC2 Apps
-
-The `solarin` app is the only remaining EC2 app.
-
-To **stop** the app:
-
-```sh
-sudo systemctl stop virgo@solarin
-```
-
-To **start** the app:
-
-```sh
-sudo systemctl stop virgo@solarin
-```
-
 # Postgres updates
 
 When an updated Postgres package has been published to the SNF S3 package repo, then on each
