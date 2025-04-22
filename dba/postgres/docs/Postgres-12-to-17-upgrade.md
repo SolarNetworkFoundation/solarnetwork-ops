@@ -36,6 +36,18 @@ See the [12 to 17 upgrade packages](./Postgres-12-to-17-upgrade-packages.md) gui
 
 Some prep tasks must be done:
 
+##  Disable cron
+
+Disable `cron` to be safe. Edit `/etc/rc.conf`
+
+```
+# Cron
+cron_enable="NO"
+```
+
+Then `service cron onestop`.
+
+
 ## Remove adminpack
 
 The `adminpack` module is removed from PG 17, and the upgrade will fail if that extension is
@@ -49,11 +61,18 @@ for db in template1 postgres solarnetwork; do su -l postgres -c "psql -d $db -c 
 for db in template1 postgres solarnetwork; do su -l postgres -c "psql -d $db -c 'DROP EXTENSION IF EXISTS adminpack'"; done
 ```
 
+## Create pgbackrest backup
+
+```sh
+su -l postgres -c 'envdir ~/pgbackrest.d/env pgbackrest --log-level-console=info --type=diff --start-fast backup'
+```
+
 ## Disable Timescale jobs
 
 ```sh
 su -l postgres -c "psql -d solarnetwork -c 'SELECT alter_job(job_id, scheduled => false) FROM timescaledb_information.jobs'"
 ```
+
 
 # Upgrade to FreeBSD 14.2
 
@@ -65,7 +84,9 @@ as a guide, the following general procedure is used.
 # free up RAM for removal of swapfile
 swapoff -a
 
-# COMMEND OUT md99 LINE IN /etc/fstab, THEN
+# comment out md99 LINE IN /etc/fstab
+sed -i '' -e 's/md99/#md99/' /etc/fstab
+
 # free up disk space for upgrade
 rm /usr/swap0
 
@@ -75,6 +96,27 @@ freebsd-update -r 14.2-RELEASE upgrade
 # merge updates... then install updates
 /usr/sbin/freebsd-update install
 ```
+
+## Merge notes
+
+The `sshd_conf` merge updates a variable name:
+
+```diff
+# Change to no to disable PAM authentication
+<<<<<<< current version
+ChallengeResponseAuthentication no
+=======
+#KbdInteractiveAuthentication yes
+>>>>>>> 14.2-RELEASE
+```
+
+The desired outcome is:
+
+```
+KbdInteractiveAuthentication no
+```
+
+## Reboot, finish upgrade
 
 Now have to reboot, then run install again:
 
@@ -86,19 +128,36 @@ reboot
 /usr/sbin/freebsd-update install
 ```
 
+## Adjust loader.conf
+
+The ZFS ARC max setting named changed:
+
+```sh
+# update ZFS ARC max setting
+sed -i '' -e 's/arc_max/arc.max/' /boot/loader.conf
+```
+
+## Upgrade packages
+
 Now have to update packages, so edit `/usr/local/etc/pkg/repos/snf.conf` to point to 14.2
 and `tsdb2` URL (for example `http://poudriere/packages/solardb_142x64-tsdb2`). Then:
 
 
 ```sh
-pkg update
+# update repo location
+sed -i '' -e 's|url:.*|url: "http://snf-freebsd-repo.s3-website-us-west-2.amazonaws.com/solardb_142x64-tsdb2",|' \
+  /usr/local/etc/pkg/repos/snf.conf   
 
-pkg upgrade
+# bootstrap
+pkg bootstrap -f
 
-# reinstall timescale
+# upgrade (this will remove timescaledb package, possibly python39)
+pkg upgrade -r snf
+
+# reinstall timescaledb
 pkg install timescaledb210
 
-# can remove python39 (replaced by python311)
+# can remove python39 (if not already, replaced by python311)
 pkg remove python39
 ```
 
@@ -126,13 +185,13 @@ rm -r /var/db/freebsd-update/*
 dd if=/dev/zero of=/usr/swap0 bs=1m count=1024
 chmod 600 /usr/swap0
 
-# note enable in /etc/fstab
-# md99   none    swap    sw,file=/usr/swap0,late 0       0
+# enable in /etc/fstab
+sed -i '' -e 's/#md99/md99/' /etc/fstab
 
 swapon -aL
 ```
 
-# Import zpools 
+# Import zpools (if necessary)
 
 ```sh
 # can verify pools available with
@@ -144,13 +203,18 @@ zpool import idx
 zpool import wal
 ```
 
-# Update timescale extension
+# Update Postgres extensions
 
 ```sh
 service postgresql onestart
 su -l postgres -c "psql -x -d solarnetwork -c 'ALTER EXTENSION timescaledb UPDATE'"
+su -l postgres -c "psql -x -d solarnetwork -c 'ALTER EXTENSION aggs_for_vecs UPDATE'"
 service postgresql onestop
 ```
+
+# Create AMI
+
+Create a fallback AMI, for Postgres 12.22, Timescale 2.10.2, aggs_for_vecs 1.3.2
 
 # ZFS snapshots (Pre PG 15)
 
@@ -167,20 +231,9 @@ If need to rollback to start again:
 for f in dat dat/dat dat/home dat/log idx idx/idx wal wal/wal; do zfs rollback $f@pre-pg15-upgrade; done
 ```
 
-# Pre Upgrade prep
-
-Disable `cron` to be safe. Add to `/etc/rc.conf`
-
-```
-# Cron
-cron_enable="NO"
-```
-
-Then `service cron stop`.
-
 # Upgrade to Postgres 15
 
-Run the [upgrade prep script](../scripts/pg-upgrade-pg15-dev.sh) first. Then:
+Run the [upgrade prep script](../scripts/pg-upgrade-pg15-prod.sh) first. Then:
 
 ```
 su - postgres
@@ -226,8 +279,7 @@ switch to TS 2.19:
 service postgresql onestop
 
 # point pkg to PG 15 + TS 2.19 repo
-sed -ie 's/url: "\(.*\)"/url: "http:\/\/poudriere\/packages\/solardb_142x64-tsdb4"/' \
-    /usr/local/etc/pkg/repos/snf.conf
+sed -i '' -e 's/tsdb3/tsdb4/' /usr/local/etc/pkg/repos/snf.conf
 pkg update
 
 pkg upgrade -r snf
@@ -256,7 +308,7 @@ for f in dat dat/dat dat/home dat/log idx idx/idx wal wal/wal; do zfs rollback $
 
 # Upgrade to Postgres 17
 
-Run the [upgrade prep script](../scripts/pg-upgrade-pg17-dev.sh) first. Then:
+Run the [upgrade prep script](../scripts/pg-upgrade-pg17-prod.sh) first. Then:
 
 ```
 su - postgres
@@ -327,6 +379,17 @@ su -l postgres -c '/usr/local/bin/vacuumdb -U postgres --all --analyze-in-stages
 
 
 # Perform full backup
+
+First update configuration to take advantage of block-delta configuration:
+
+```sh
+su - postgres
+echo y >~/pgbackrest.d/env/PGBACKREST_REPO1_BUNDLE
+echo y >~/pgbackrest.d/env/PGBACKREST_REPO1_BLOCK
+exit
+```
+
+Then perform full backup:
 
 ```sh
 su -l postgres -c 'envdir ~/pgbackrest.d/env pgbackrest --log-level-console=info --type=full --start-fast backup'
