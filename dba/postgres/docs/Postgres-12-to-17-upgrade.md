@@ -377,6 +377,14 @@ Need to update all statistics:
 su -l postgres -c '/usr/local/bin/vacuumdb -U postgres --all --analyze-in-stages'
 ```
 
+# Update Certbot
+
+The Certbot deploy script in `/usr/local/etc/letsencrypt/renewal-hooks/deploy/solardb.sh`
+needs to change:
+
+```sh
+sed -i -e 's|home/12|home/17|' /usr/local/etc/letsencrypt/renewal-hooks/deploy/solardb.sh
+```
 
 # Perform full backup
 
