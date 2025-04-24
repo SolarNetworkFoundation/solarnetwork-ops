@@ -1,0 +1,11 @@
+# Update statistics weekly
+0 4 * * Mon /usr/local/bin/vacuumdb -p 5432 --all --analyze-only
+
+# create full backup 1st of every quarter
+#0 3 1 1/3 * /usr/local/bin/envdir /var/db/postgres/pgbackrest.d/env /usr/local/bin/pgbackrest --type=full backup
+
+# create differential backup weekly
+#0 6 * * Sun /usr/local/bin/envdir /var/db/postgres/pgbackrest.d/env /usr/local/bin/pgbackrest --type=diff backup
+
+# create incremental backup daily
+#0 2 * * * /usr/local/bin/envdir /var/db/postgres/pgbackrest.d/env /usr/local/bin/pgbackrest --type=incr backup
