@@ -188,6 +188,20 @@ config_syslog () {
 	fi
 }
 
+config_swap () {
+	if [ -e /usr/swap0 ]; then
+		echo "Swap already configured."
+	else
+		echo "Configuring swap."
+		if [ -z "$DRY_RUN" ]; then
+			dd if=/dev/zero of=/usr/swap0 bs=1m count=1024
+			chmod 600 /usr/swap0
+			echo 'md99   none    swap    sw,file=/usr/swap0,late 0       0' >>/etc/fstab
+			swapon -aL
+		fi
+	fi
+}
+
 config_zfs () {
 	if [ "$(sysrc -nq zfs_enable)" = "YES" ]; then
 		echo "Configuring ZFS."
@@ -427,6 +441,9 @@ config_postgres () {
 		echo "Postgres already configured."
 	fi
 	check_file_contains "Postgres user" "$BASE_DIR/$POSTGRES_LOGIN_CONF" /etc/login.conf
+	if [ -z "$DRY_RUN" ]; then
+		cap_mkdb /etc/login.conf
+	fi
 	if [ -d "$pg_home" -a ! -e "$pg_home/postgresql.conf" ]; then
 		echo "Initializing Postgres cluster in $pg_home"
 		if [ -z "$DRY_RUN" ]; then
@@ -443,6 +460,7 @@ config_hostname
 config_boot_loader
 config_sysctl
 config_syslog
+config_swap
 pkg_bootstrap
 config_pkg
 pkg_add
