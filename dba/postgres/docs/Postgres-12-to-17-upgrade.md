@@ -203,12 +203,32 @@ zpool import idx
 zpool import wal
 ```
 
+# ZFS snapshots (Pre Anything)
+
+Create ZFS snapshots to allow rollback:
+
+```
+for f in dat idx wal; do zfs snapshot -r $f@pre-pg15-start; done
+```
+
 # Update Postgres extensions
+
+On primary **and** replica, start Postgres:
 
 ```sh
 service postgresql onestart
+```
+
+Then on **primary** update:
+
+```sh
 su -l postgres -c "psql -x -d solarnetwork -c 'ALTER EXTENSION timescaledb UPDATE'"
 su -l postgres -c "psql -x -d solarnetwork -c 'ALTER EXTENSION aggs_for_vecs UPDATE'"
+```
+
+Then on primary **and** replica, start Postgres:
+
+```sh
 service postgresql onestop
 ```
 
@@ -383,7 +403,7 @@ The Certbot deploy script in `/usr/local/etc/letsencrypt/renewal-hooks/deploy/so
 needs to change:
 
 ```sh
-sed -i -e 's|home/12|home/17|' /usr/local/etc/letsencrypt/renewal-hooks/deploy/solardb.sh
+sed -i '' -e 's|home/12|home/17|' /usr/local/etc/letsencrypt/renewal-hooks/deploy/solardb.sh
 ```
 
 # Perform full backup

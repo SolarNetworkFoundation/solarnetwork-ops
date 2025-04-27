@@ -2,6 +2,8 @@
 #
 # Upgrade SNDB (prod) Postgres 12 -> 15
 
+set -e
+
 PKG_HOME=/var/tmp/pgupgrade/15
 PKG_PKG=$PKG_HOME/pkg
 PKG_ROOT=$PKG_HOME/root
@@ -37,7 +39,7 @@ echo "Deleting Postgres 12 packages"
 pkg delete -fy databases/postgresql12-server databases/postgresql12-contrib databases/postgresql12-client databases/$TSPKG_OLDNAME databases/postgresql-aggs_for_vecs
 
 # point pkg to PG 15 repo
-sed -ie 's/url: "\(.*\)"/url: "http:\/\/snf-freebsd-repo.s3-website-us-west-2.amazonaws.com\/solardb_142x64-tsdb3"/' \
+sed -i '' -e 's/url: "\(.*\)"/url: "http:\/\/snf-freebsd-repo.s3-website-us-west-2.amazonaws.com\/solardb_142x64-tsdb3"/' \
     /usr/local/etc/pkg/repos/snf.conf
 pkg update
 
@@ -47,13 +49,14 @@ pkg install -r snf -y databases/postgresql15-server databases/postgresql15-contr
 
 # init new cluster
 echo "Initializing Postgres 15 cluster"
-sed -ie 's/\/sndb\/home\/12/\/sndb\/home\/15/' /etc/rc.conf
+sed -i '' -e 's/\/sndb\/home\/12/\/sndb\/home\/15/' /etc/rc.conf.min
+sed -i '' -e 's/\/sndb\/home\/12/\/sndb\/home\/15/' /etc/rc.conf.full
 service postgresql oneinitdb
 
 echo "Creating WAL filesystem"
 
 # Create WAL dataset, and move init WAL there
-mkdir /sndb/wal/15
+mkdir -p /sndb/wal/15
 chown postgres:postgres /sndb/wal/15
 chmod 700 /sndb/wal/15
 mv /sndb/home/15/pg_wal/* /sndb/wal/15
@@ -63,12 +66,13 @@ ln -s /sndb/wal/15 /sndb/home/15/pg_wal
 echo "Configuring Postgres 15 cluster"
 
 # Setup shared preload
-sed -ie "/shared_preload_libraries =/c\\
+sed -i '' -e "/shared_preload_libraries =/c\\
 shared_preload_libraries = 'timescaledb,pg_stat_statements'\\
 " /sndb/home/15/postgresql.conf
 
 # Copy settings
 mv /sndb/home/15/pg_hba.conf /sndb/home/15/pg_hba.conf.orig
 cp -a /sndb/home/12/pg_hba.conf /sndb/home/15/
+cp -a /sndb/home/12/pg_ident.conf /sndb/home/15/
 cp -a /sndb/home/12/postgresql.conf /sndb/home/15/postgresql.conf.12backup
 chmod ugo-w /sndb/home/15/postgresql.conf.12backup
