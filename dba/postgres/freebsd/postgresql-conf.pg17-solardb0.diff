@@ -1,0 +1,199 @@
+60c60
+< #listen_addresses = 'localhost'               # what IP address(es) to listen on;
+---
+> listen_addresses = '*'                # what IP address(es) to listen on;
+107,109c107,109
+< #ssl = off
+< #ssl_ca_file = ''
+< #ssl_cert_file = 'server.crt'
+---
+> ssl = on
+> ssl_ca_file = 'tls/solarnetwork-ca.crt'
+> ssl_cert_file = 'tls/db.solarnetwork.net.fullchain'
+112,113c112,113
+< #ssl_key_file = 'server.key'
+< #ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL'     # allowed SSL ciphers
+---
+> ssl_key_file = 'tls/db.solarnetwork.net.key'
+> ssl_ciphers = 'ECDH+AESGCM:ECDH+CHACHA20:ECDH+AES256:ECDH+AES128:!aNULL:!SHA1'        # allowed SSL ciphers
+129c129
+< shared_buffers = 128MB                        # min 128kB
+---
+> shared_buffers = 2GB                  # min 128kB
+140c140
+< #work_mem = 4MB                               # min 64kB
+---
+> work_mem = 16MB                               # min 64kB
+142,143c142,143
+< #maintenance_work_mem = 64MB          # min 64kB
+< #autovacuum_work_mem = -1             # min 64kB, or -1 to use maintenance_work_mem
+---
+> maintenance_work_mem = 512MB          # min 64kB
+> autovacuum_work_mem = 64MB            # min 64kB, or -1 to use maintenance_work_mem
+197,198c197,198
+< #bgwriter_lru_maxpages = 100          # max buffers written/round, 0 disables
+< #bgwriter_lru_multiplier = 2.0                # 0-10.0 multiplier on buffers scanned/round
+---
+> bgwriter_lru_maxpages = 200           # max buffers written/round, 0 disables
+> bgwriter_lru_multiplier = 3.0         # 0-10.0 multiplier on buffers scanned/round
+204c204
+< #effective_io_concurrency = 1         # 1-1000; 0 disables prefetching
+---
+> effective_io_concurrency = 2          # 1-1000; 0 disables prefetching
+207,209c207,209
+< #max_worker_processes = 8             # (change requires restart)
+< #max_parallel_workers_per_gather = 2  # limited by max_parallel_workers
+< #max_parallel_maintenance_workers = 2 # limited by max_parallel_workers
+---
+> max_worker_processes = 12             # (change requires restart)
+> max_parallel_workers_per_gather = 8   # limited by max_parallel_workers
+> max_parallel_maintenance_workers = 8  # limited by max_parallel_workers
+226c226
+
+---
+> synchronous_commit = off              # synchronization level;
+235c235
+< #full_page_writes = on                        # recover from partial page writes
+---
+> full_page_writes = off                        # recover from partial page writes
+240,242c240,242
+< #wal_init_zero = on                   # zero-fill new WAL files
+< #wal_recycle = on                     # recycle WAL files
+< #wal_buffers = -1                     # min 32kB, -1 sets based on shared_buffers
+---
+> wal_init_zero = off                   # zero-fill new WAL files
+> wal_recycle = off                     # recycle WAL files
+> wal_buffers = 16MB                    # min 32kB, -1 sets based on shared_buffers
+248c248
+< #commit_delay = 0                     # range 0-100000, in microseconds
+---
+> commit_delay = 200                    # range 0-100000, in microseconds
+253c253
+< #checkpoint_timeout = 5min            # range 30s-1d
+---
+> checkpoint_timeout = 30min            # range 30s-1d
+257,258c257,258
+< max_wal_size = 1GB
+< min_wal_size = 80MB
+---
+> max_wal_size = 40GB
+> min_wal_size = 4GB
+268c268
+< #archive_mode = off           # enables archiving; off, on, or always
+---
+> archive_mode = on             # enables archiving; off, on, or always
+273c273
+< #archive_command = ''         # command to use to archive a WAL file
+---
+> archive_command = 'envdir ~/pgbackrest.d/env pgbackrest archive-push %p'              # command to use to archive a WAL file
+277c277
+< #archive_timeout = 0          # force a WAL file switch after this
+---
+> archive_timeout = 90          # force a WAL file switch after this
+356c356
+< #hot_standby = on                     # "off" disallows queries during recovery
+---
+> hot_standby = on                      # "off" disallows queries during recovery
+358c358
+< #max_standby_archive_delay = 30s      # max delay before canceling queries
+---
+> max_standby_archive_delay = 60s       # max delay before canceling queries
+361c361
+< #max_standby_strea
+428c428
+< #effective_cache_size = 4GB
+---
+> effective_cache_size = 6GB
+451c451
+< #default_statistics_target = 100      # range 1-10000
+---
+> default_statistics_target = 4000      # range 1-10000
+455c455
+< #jit = on                             # allow JIT compilation
+---
+> jit = off                             # allow JIT compilation
+470c470
+< #log_destination = 'stderr'           # Valid values are combinations of
+---
+> log_destination = 'stderr'            # Valid values are combinations of
+477c477
+< #logging_collector = off              # Enable capturing of stderr, jsonlog,
+---
+> logging_collector = on                # Enable capturing of stderr, jsonlog,
+483c483
+< #log_directory = 'log'                        # directory where log files are written,
+---
+> log_directory = '/sndb/log/17'                        # directory where log files are written,
+487c487
+< #log_file_mode = 0600                 # creation mode for log files,
+---
+> log_file_mode = 0640                  # creation mode for log files,
+489c489
+< #log_rotation_age = 1d                        # Automatic rotation of logfiles will
+---
+> log_rotation_age = 0                  # Automatic rotation of logfiles will
+574c574
+< #log_autovacuum_min_duration = 10min  # log autovacuum activity;
+---
+> log_autovacuum_min_duration = 0       # log autovacuum activity;
+580,581c580,581
+< #log_connections = off
+< #log_disconnections = off
+---
+> log_connections = on
+> log_disconnections = on
+585c585
+< #log_line_prefix = '%m [%p] '         # special values:
+---
+> log_line_prefix = '%t [%p]: [%l-1] '          # special values:
+609c609
+< #log_lock_waits = off                 # log lock waits >= deadlock_timeout
+---
+> log_lock_waits = on                   # log lock waits >= deadlock_timeout
+620c620
+< #log_temp_files = -1                  # log temporary files equal or larger
+---
+> log_temp_files = 0                    # log temporary files equal or larger
+627c627
+< #cluster_name = ''                    # added to process titles if nonempty
+---
+> cluster_name = 'solardb-0'                    # added to process titles if nonempty
+641c641
+< #track_io_timing = off
+---
+> track_io_timing = on
+643c643
+< #track_functions = none                       # none, pl, all
+---
+> track_functions = all                 # none, pl, all
+662c662
+< #autovacuum_max_workers = 3           # max number of autovacuum subprocesses
+---
+> autovacuum_max_workers = 10           # max number of autovacuum subprocesses
+664c664
+< #autovacuum_naptime = 1min            # time between autovacuum runs
+---
+> autovacuum_naptime = 15               # time between autovacuum runs
+710c710
+< #temp_tablespaces = ''                        # a list of tablespace names, '' uses
+---
+> temp_tablespaces = 'solarindex'                       # a list of tablespace names, '' uses
+783c783
+< #max_locks_per_transaction = 64               # min 10
+---
+> max_locks_per_transaction = 256               # min 10
+843a844,857
+> 
+> #------------------------------------------------------------------------------
+> # pg_stat_statements
+> #------------------------------------------------------------------------------
+> 
+> pg_stat_statements.track = all
+> pg_stat_statements.track_utility = off
+> 
+> #------------------------------------------------------------------------------
+> # timescaledb
+> #------------------------------------------------------------------------------
+> 
+> timescaledb.max_background_workers = 4
+> 
