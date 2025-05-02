@@ -30,10 +30,13 @@ CREATE_USER=""
 INDEX_TABLESPACE=""
 INDEX_TABLESPACE_PATH=""
 INDEX_TABLESPACE_OPTS=""
+WARM_TABLESPACE=""
+WARM_TABLESPACE_PATH=""
+WARM_TABLESPACE_OPTS="seq_page_cost=1, random_page_cost=4, effective_io_concurrency=1, maintenance_io_concurrency=10"
 DRY_RUN=""
 VERBOSE=""
 
-while getopts ":a:c:d:D:e:E:f:i:I:j:L:mO:rtT:u:U:v" opt; do
+while getopts ":a:c:d:D:e:E:f:i:I:j:L:mO:rtT:u:U:vw:W:x:" opt; do
 	case $opt in
 		c) PSQL_CONN_ARGS="${OPTARG}";;
 		d) PG_DB="${OPTARG}";;
@@ -55,6 +58,9 @@ while getopts ":a:c:d:D:e:E:f:i:I:j:L:mO:rtT:u:U:v" opt; do
 		u) PG_DB_OWNER="${OPTARG}";;
 		U) PG_ADMIN_USER="${OPTARG}";;
 		v) VERBOSE='TRUE';;
+		w) WARM_TABLESPACE="${OPTARG}";;
+		W) WARM_TABLESPACE_PATH="${OPTARG}";;
+		x) WARM_TABLESPACE_OPTS="${OPTARG}";;
 		?)
 			echo "Unknown argument ${OPTARG}"
 			exit 1
@@ -187,6 +193,30 @@ if [ -n "$INDEX_TABLESPACE_OPTS" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'ALTER TABLESPACE $INDEX_TABLESPACE SET ($INDEX_TABLESPACE_OPTS)'"
 	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -Atc "ALTER TABLESPACE $INDEX_TABLESPACE SET ($INDEX_TABLESPACE_OPTS)"
+	fi
+fi
+
+if [ -n "$WARM_TABLESPACE" -a -n "$WARM_TABLESPACE_PATH" ]; then
+	echo
+	if [ -n "$VERBOSE" ]; then
+		echo "Creating warm tablespace $WARM_TABLESPACE => $WARM_TABLESPACE_PATH..."
+	fi
+	if [ -n "$DRY_RUN" ]; then
+		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE TABLESPACE $WARM_TABLESPACE OWNER $PG_DB_OWNER LOCATION '$WARM_TABLESPACE_PATH' $WARM_TABLESPACE_OPTS'"
+	else
+		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -Atc "CREATE TABLESPACE $WARM_TABLESPACE OWNER $PG_DB_OWNER LOCATION '$WARM_TABLESPACE_PATH'"
+	fi
+fi
+
+if [ -n "$WARM_TABLESPACE_OPTS" ]; then
+	echo
+	if [ -n "$VERBOSE" ]; then
+		echo "Setting warm tablespace $WARM_TABLESPACE options ($WARM_TABLESPACE_OPTS)..."
+	fi
+	if [ -n "$DRY_RUN" ]; then
+		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'ALTER TABLESPACE $WARM_TABLESPACE SET ($WARM_TABLESPACE_OPTS)'"
+	else
+		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -Atc "ALTER TABLESPACE $WARM_TABLESPACE SET ($WARM_TABLESPACE_OPTS)"
 	fi
 fi
 
