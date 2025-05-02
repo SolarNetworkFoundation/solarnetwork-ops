@@ -91,8 +91,8 @@ cld/cld  recordsize   128K            inherited from cld
 Setup new tablespaces `solarwarm` and `solarcold`:
 
 ```sh
-su -l postgres -c 'psql -xd solarnetwork -c "CREATE TABLESPACE solarwarm OWNER solarnet LOCATION '"'"'/sndb/wrm'"'"'"'
-su -l postgres -c 'psql -xd solarnetwork -c "CREATE TABLESPACE solarcold OWNER solarnet LOCATION '"'"'/sndb/cld'"'"'"'
+su -l postgres -c 'psql -xd solarnetwork -c "CREATE TABLESPACE solarwarm OWNER solarnet LOCATION '"'"'/sndb/wrm'"'"' WITH (seq_page_cost=1, random_page_cost=4, effective_io_concurrency=1, maintenance_io_concurrency=10)"'
+su -l postgres -c 'psql -xd solarnetwork -c "CREATE TABLESPACE solarcold OWNER solarnet LOCATION '"'"'/sndb/cld'"'"' WITH (seq_page_cost=1, random_page_cost=8, effective_io_concurrency=1, maintenance_io_concurrency=5)"'
 ```
 
 ## Setup move_chunks procedure
@@ -123,7 +123,7 @@ BEGIN
    SELECT COALESCE(jsonb_object_field_text(config, 'max_move')::INTEGER, 100) INTO STRICT max_move;
 
  IF ht IS NULL OR lag IS NULL OR destination_tablespace IS NULL THEN
-   RAISE EXCEPTION 'Config must have hypertable, lag and destination_tablespace';
+   RAISE EXCEPTION 'Config must have hypertable, lag, and destination_tablespace';
  END IF;
 
  IF index_destination_tablespace IS NULL THEN
