@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Server port="8005" shutdown="SHUTDOWN">
   <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
-  <Listener className="org.apache.catalina.core.AprLifecycleListener" SSLEngine="on" />
+  <!-- Unable to find work-around for OpenSSL startup error:
+    FIPS was not available to tcnative at build time. You will need to re-build tcnative against an OpenSSL with FIPS.
+    so commenting out for now
+  <Listener className="org.apache.catalina.core.AprLifecycleListener" FIPSMode="on" />
+  -->
   <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
   <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
   <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+  <Listener className="org.apache.catalina.security.TLSCertificateReloadListener" daysBefore="7" />
 
   <GlobalNamingResources>
     <Resource name="UserDatabase" auth="Container"
@@ -16,14 +21,14 @@
 
   <Service name="Catalina">
 
-		<Connector port="8080" protocol="org.apache.coyote.http11.Http11Nio2Protocol"
+		<Connector port="8080"
 			compression="on"
 			compressionMinSize="2048"
 			useSendfile="false"
 			compressibleMimeType="text/html,text/xml,application/xml,text/javascript,text/css,application/json,image/svg+xml"
 		/>
 
-		<Connector port="8443" protocol="org.apache.coyote.http11.Http11AprProtocol"
+		<Connector port="8443" protocol="org.apache.coyote.http11.Http11NioProtocol"
 			compression="on"
 			compressionMinSize="2048"
 			useSendfile="false"
@@ -47,7 +52,7 @@
       </Realm>
 
       <Host name="localhost"  appBase="/usr/local/solarssh/webapps"
-            unpackWARs="true" autoDeploy="true">
+            unpackWARs="true" autoDeploy="false">
         <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
                prefix="localhost_access_log" suffix=".log"
                maxDays="90"
@@ -56,4 +61,3 @@
     </Engine>
   </Service>
 </Server>
-

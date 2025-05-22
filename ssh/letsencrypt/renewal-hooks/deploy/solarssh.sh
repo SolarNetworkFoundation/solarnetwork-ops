@@ -26,4 +26,3 @@ for domain in $RENEWED_DOMAINS; do
 				"$daemon_cert_root/$domain.fullchain" \
 				"$daemon_cert_root/$domain.key"
 done
-service tomcat9 restart >/dev/null
