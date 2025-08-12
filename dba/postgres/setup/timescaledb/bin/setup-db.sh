@@ -208,7 +208,7 @@ if [ -n "$WARM_TABLESPACE" -a -n "$WARM_TABLESPACE_PATH" ]; then
 	fi
 fi
 
-if [ -n "$WARM_TABLESPACE_OPTS" ]; then
+if [ -n "$WARM_TABLESPACE" -a -n "$WARM_TABLESPACE_OPTS" ]; then
 	echo
 	if [ -n "$VERBOSE" ]; then
 		echo "Setting warm tablespace $WARM_TABLESPACE options ($WARM_TABLESPACE_OPTS)..."
