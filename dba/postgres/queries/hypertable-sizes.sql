@@ -12,15 +12,20 @@ WITH h AS (
 )
 , g AS (
 	SELECT table_name, d.chunk_name
+		, t.spcname AS chunk_tablespace
 		, COALESCE(ch.range_start, to_timestamp(ch.range_start_integer / 1000000)) AS range_start
 		, COALESCE(ch.range_end, to_timestamp(ch.range_end_integer / 1000000)) AS range_end
 		, table_bytes AS tab_bytes, index_bytes AS idx_bytes, total_bytes AS tot_bytes
 		, tab_size, idx_size, tot_size
 	FROM d
 	INNER JOIN timescaledb_information.chunks ch ON ch.chunk_name = d.chunk_name
+	INNER JOIN pg_namespace n ON n.nspname = d.chunk_schema
+	INNER JOIN pg_class c ON c.relnamespace = n.oid AND c.relname::TEXT = d.chunk_name
+	LEFT JOIN pg_tablespace t ON t.oid = c.reltablespace
 	UNION ALL
 	SELECT table_name AS table_name
 		, 'TOTAL' AS chunk_name
+		, NULL AS chunk_tablespace
 		, MIN(COALESCE(ch.range_start, to_timestamp(ch.range_start_integer / 1000000))) AS range_start
 		, MAX(COALESCE(ch.range_end, to_timestamp(ch.range_end_integer / 1000000))) AS range_end
 		, SUM(table_bytes) AS tab_bytes
@@ -45,6 +50,7 @@ UNION ALL
 
 SELECT 'TOTAL' AS table_name
 	, 'TOTAL' AS chunk_name
+	, NULL AS chunk_tablespace
 	, NULL AS range_start
 	, NULL AS range_end
 	, SUM(table_bytes) AS tab_bytes
