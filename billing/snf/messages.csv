@@ -206,7 +206,7 @@ $style()$
 >>"
 2021-06-01 00:00:00+12,/snf/text/html/invoice,en,fromSection.st,"fromSection() ::= <<
 <div class=""from"">
-	<img class=""logo"" src=""$messages.url-snf-logo-svg-data$"">
+	<img class=""logo"" width=""220"" height=""32"" src=""$messages.url-snf-logo-svg-data$"">
 	<div class=""addr"">
 		<p>$messages.companyName$</p>
 		<p>$messages.companyAddress$</p>
@@ -414,7 +414,7 @@ $item.localizedInvoiceItemUsageRecords:itemUsageRow()$
 	.from '{'
 		float: left;
 		width: 50%; '}'
-	.from .logo '{' height: 2rem; margin: 0 0 1rem 0; '}'
+	.from .logo '{' margin: 0 0 1rem 0; '}'
 	.from .addr '{' 
 		color: #666;
 		font-size: 0.8rem; '}'
