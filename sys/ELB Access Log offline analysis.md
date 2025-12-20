@@ -139,8 +139,13 @@ columns:
 
 ```sql
 create or replace view logs_url as
-select time
+SELECT time
 	, regexp_extract(client_port, '^(.+):\d+', 1) as client_ip
+	, CASE
+		WHEN target_port LIKE '%:9082' OR target_port LIKE '%:8080' THEN 'SolarQuery'
+		WHEN target_port LIKE '%:9081' THEN 'SolarUser'
+		ELSE ''
+		END AS app
 	, target_port
 	, request_processing_time
 	, target_processing_time
@@ -149,10 +154,10 @@ select time
 	, received_bytes
 	, sent_bytes
 	, request
-	, regexp_extract(request, 'https://data.solarnetwork.net:443([^? ]+)', 1) as url
+	, regexp_extract(request, 'https://(?:data|query).solarnetwork.net:443(?:/1m|/10m)?([^? ]+)', 1) as url
 	, regexp_extract(request, '.*[?]([^ ]+)', 1) as query
 	, regexp_replace(regexp_extract(request, '.*[?]([^ ]+)', 1), '(startDate|endDate)=[^&]+', '\1=', 'gi') as query_norm
-from logs;
+FROM logs;
 ```
 
 There here's a query that shows a count of requests for a given URL path, by day:
@@ -217,6 +222,25 @@ order by time, cnt desc;
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+Or by day, url for all SolarQuery apps:
+
+```sql
+SELECT CAST(time_bucket(interval '1 day', time) AS DATE) AS time
+    , url
+    , count(*) AS cnt
+    , ROUND(AVG(CASE WHEN target_processing_time < 0 THEN NULL ELSE target_processing_time END), 2) AS avg_processing_time
+    , MODE(CASE target_status_code WHEN '-' THEN 0 ELSE CAST(target_status_code AS INTEGER) END) AS most_status_code
+    , SUM(CASE target_status_code WHEN '403' THEN 1 WHEN '401' THEN 1 ELSE 0 END) AS err_auth_status_code
+    , SUM(CASE target_status_code WHEN '429' THEN 1 ELSE 0 END) AS err_too_many_code
+    , CAST(AVG(received_bytes) AS INTEGER) AS avg_received_bytes
+    , CAST(AVG(sent_bytes) AS INTEGER) AS avg_sent_bytes
+FROM logs_url
+WHERE app = 'SolarQuery'
+AND time BETWEEN '2024-12-31 00:00:00Z' AND '2025-05-01 00:00:00Z'
+GROUP BY time_bucket(interval '1 day', time), url
+HAVING cnt > 1000
+ORDER BY time, cnt DESC;
+```
 
 # SolarQuery Proxy offline analysis
 

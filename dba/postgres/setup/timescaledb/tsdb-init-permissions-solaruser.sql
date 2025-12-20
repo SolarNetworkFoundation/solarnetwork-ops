@@ -15,7 +15,7 @@ GRANT INSERT ON TABLE solaruser.user_event_log TO solar;
 
 -- allow updating node datum stream metadata
 GRANT INSERT(stream_id, node_id, source_id, jdata, updated) ON solardatm.da_datm_meta TO solaruser;
-GRANT UPDATE(node_id, source_id, jdata, updated) ON solardatm.da_datm_meta TO solaruser;
+GRANT UPDATE(node_id, source_id, names_i, names_a, names_s, jdata, updated) ON solardatm.da_datm_meta TO solaruser;
 
 -- GRANT EXECUTE ON FUNCTION solaragg.find_datum_hour_slots(bigint[], text[], timestamp with time zone, timestamp with time zone) TO solaruser;
 -- MAYBE? FUNCTION solardatm.find_datm_hours(uuid, timestamp with time zone, timestamp with time zone)

@@ -12,6 +12,7 @@ GRANT ALL     ON TABLE solaruser.user_export_datum_conf TO solarjobs;
 GRANT SELECT  ON TABLE solaruser.user_node_event_hook TO solarjobs;
 GRANT ALL     ON TABLE solaruser.user_node_event_task TO solarjobs;
 GRANT ALL     ON TABLE solaruser.user_node_event_task_result TO solarjobs;
+GRANT SELECT, UPDATE ON TABLE solaruser.user_node_instr_task TO solarjobs;
 
 GRANT EXECUTE ON FUNCTION solardatm.store_datum(timestamp with time zone, bigint, text, timestamp with time zone, text, boolean) TO solarjobs;
 GRANT EXECUTE ON FUNCTION solardatm.store_stream_datum(uuid, timestamp with time zone, timestamp with time zone, numeric[], numeric[], text[], text[], boolean) TO solarjobs;

@@ -2,7 +2,7 @@
 # 
 # PROVIDE: cert_support
 # REQUIRE: NETWORKING
-# BEFORE: tomcat9
+# BEFORE: tomcat101
 
 . /etc/rc.subr
 

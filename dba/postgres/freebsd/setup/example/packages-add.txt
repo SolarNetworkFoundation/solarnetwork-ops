@@ -1,0 +1,16 @@
+archivers/lzop
+databases/pgbackrest
+databases/postgresql-aggs_for_vecs
+databases/postgresql17-client
+databases/postgresql17-contrib
+databases/postgresql17-server
+databases/timescaledb
+ftp/curl
+mail/postfix
+net/rsync
+security/py-certbot-dns-route53
+sysutils/daemontools
+sysutils/munin-contrib
+sysutils/munin-node
+sysutils/pv
+sysutils/tmux
