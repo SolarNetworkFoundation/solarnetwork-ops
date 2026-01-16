@@ -1,0 +1,37 @@
+logging:
+  config: /var/lib/fluxhook/solarflux-vernemq-webhook-logback.xml
+  file.name: /var/log/fluxhook/solarflux-vernemq-webhook.log
+
+app.datasource.audit:
+  driverClassName: org.postgresql.Driver
+  url: "jdbc:postgresql://solardb-rw.solarnetwork:5432/solarnetwork?tcpKeepAlive=true"
+  username: solarquest
+  password: "SECRET"
+  hikari:
+    poolName: "Audit_Pool"
+    minimumIdle: 1
+    maximumPoolSize: 2
+    connectionTimeout: 20000
+    maxLifetime: 7200000
+    keepaliveTime: 120000
+    readOnly: false
+
+app.audit.jdbc:
+  flushDelay: 60000
+
+auth:
+  nodeIpMask: 10.0.0.0/16
+
+spring:
+  datasource:
+    url: "jdbc:postgresql://solardb-ro.solarnetwork:5432/solarnetwork?tcpKeepAlive=true"
+    username: solarauth
+    password: "SECRET"
+    hikari:
+      poolName: "Main_Pool"
+      minimumIdle: 1
+      maximumPoolSize: 15
+      connectionTimeout: 20000
+      maxLifetime: 7200000
+      keepaliveTime: 120000
+      readOnly: true
