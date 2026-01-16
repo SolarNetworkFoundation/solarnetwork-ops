@@ -1,0 +1,24 @@
+[Unit]
+Description=SolarFlux VerneMQ Webhook Server
+After=network.target
+
+[Service]
+Type=simple
+
+WorkingDirectory=/var/lib/fluxhook
+ExecStart=/var/lib/fluxhook/solarflux-webhook \
+	-XX:+ExitOnOutOfMemoryError \
+	-Djava.awt.headless=true \
+	-Djava.security.egd=file:/dev/./urandom \
+	-Djava.net.preferIPv4Stack=true \
+	-Dserver.contextPath=/ \
+	-Dserver.port=8280
+SuccessExitStatus=143
+
+User=fluxhook
+Group=fluxhook
+RestartSec=1
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
