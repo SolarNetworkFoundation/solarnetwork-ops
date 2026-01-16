@@ -9,6 +9,8 @@
 				<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} : %m%n</pattern>
 			</encoder>
 			<file>/var/log/fluxhook/audit.log</file>
+			<immediateFlush>false</immediateFlush>
+			<bufferSize>8KB</bufferSize>
 			<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
 				<fileNamePattern>/var/log/fluxhook/audit.log.%d{yyyy-MM-dd}.gz</fileNamePattern>
 				<maxHistory>30</maxHistory>
@@ -17,7 +19,7 @@
 		</appender>
 
         <logger name="net.solarnetwork" level="INFO"/>
-        
+
         <logger name="net.solarnetwork.flux.vernemq.webhook.AUDIT" additivity="false" level="INFO">
         	<appender-ref ref="AUDIT" />
 		</logger>
