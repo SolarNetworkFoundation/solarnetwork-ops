@@ -1,0 +1,61 @@
+global:
+  scrape_interval:     1m # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 1m # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: ['localhost:9093']
+
+
+scrape_configs:
+  - job_name: "oscp-fp"
+    basic_auth:
+      username: "prometheus@solarnetwork.net"
+      password: "PASSWORD"
+    metrics_path: "/ops/prometheus"
+    scrape_interval: "1m"
+    static_configs:
+      - targets: ['oscp-fp.solarnetwork:9084']
+  - job_name: "solarin"
+    basic_auth:
+      username: "prometheus@solarnetwork.net"
+      password: "PASSWORD"
+    metrics_path: "/ops/prometheus"
+    scrape_interval: "1m"
+    static_configs:
+      - targets: ['solarin.solarnetwork:9083']
+  - job_name: "solarjobs"
+    basic_auth:
+      username: "prometheus@solarnetwork.net"
+      password: "PASSWORD"
+    metrics_path: "/solarjobs/ops/prometheus"
+    scrape_interval: "1m"
+    static_configs:
+      - targets: ['solarjobs.solarnetwork:9080']
+  - job_name: "solarocpp"
+    basic_auth:
+      username: "prometheus@solarnetwork.net"
+      password: "PASSWORD"
+    metrics_path: "/ops/prometheus"
+    scrape_interval: "1m"
+    static_configs:
+      - targets: ['solarocpp.solarnetwork:9085']
+  - job_name: "solarquery"
+    basic_auth:
+      username: "prometheus@solarnetwork.net"
+      password: "PASSWORD"
+    metrics_path: "/solarquery/ops/prometheus"
+    scrape_interval: "1m"
+    static_configs:
+      - targets: ['solarquery.solarnetwork:9082']
+  - job_name: "solaruser"
+    basic_auth:
+      username: "prometheus@solarnetwork.net"
+      password: "PASSWORD"
+    metrics_path: "/solaruser/ops/prometheus"
+    scrape_interval: "1m"
+    static_configs:
+      - targets: ['solaruser.solarnetwork:9081']
