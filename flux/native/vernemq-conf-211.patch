@@ -1,0 +1,83 @@
+--- vernemq.conf.orig-211	2026-01-19 03:38:10.000000000 +0000
++++ vernemq.conf	2026-01-20 23:24:23.651040049 +0000
+@@ -175,7 +175,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - an integer
+-max_message_size = 0
++max_message_size = 8192
+ 
+ ## If a message is published with a QoS lower than the QoS of the subscription it is
+ ## delivered to, VerneMQ can upgrade the outgoing QoS. This is a non-standard option.
+@@ -286,6 +286,8 @@
+ ##   - an IP/port pair, e.g. 127.0.0.1:10011
+ ##   - a Unix Domain Socket, e.g. local:/var/run/app.sock:0
+ ## listener.tcp.name = 127.0.0.1:1883
++listener.tcp.name = 0.0.0.0:1883
++listener.ws.name = 0.0.0.0:8080
+ 
+ ## 
+ ## Acceptable values:
+@@ -342,6 +344,8 @@
+ ## Acceptable values:
+ ##   - text
+ ## listener.tcp.allowed_protocol_versions = 3,4,5
++listener.tcp.allowed_protocol_versions = 3,4,5
++listener.ws.allowed_protocol_versions = 3,4,5
+ 
+ ## listener.vmq.clustering is the IP address and TCP port that
+ ## the broker will bind to accept connections from other cluster
+@@ -366,7 +370,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - an IP/port pair, e.g. 127.0.0.1:10011
+-listener.http.default = 127.0.0.1:8888
++listener.http.default = 0.0.0.0:8888
+ 
+ ## The cafile is used to define the path to a file containing
+ ## the PEM encoded CA certificates that are trusted. Set the cafile
+@@ -795,7 +799,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - on or off
+-plugins.vmq_webhooks = off
++plugins.vmq_webhooks = on
+ 
+ ## The VerneMQ bridge plugin.
+ ## 
+@@ -811,7 +815,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - an integer
+-topic_max_depth = 10
++topic_max_depth = 50
+ 
+ ## Specifies the metadata plugin that is used for storing and replicating
+ ## VerneMQ metadata objects such as MQTT subscriptions and retained messages.
+@@ -853,7 +857,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - an integer
+-vmq_acl.acl_reload_interval = 10
++vmq_acl.acl_reload_interval = 60
+ 
+ ## Set the path to a password file.
+ ## 
+@@ -870,7 +874,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - an integer
+-vmq_passwd.password_reload_interval = 10
++vmq_passwd.password_reload_interval = 60
+ 
+ ## Configure the vmq_diversity plugin script dir. The script dir
+ ## is searched for Lua scripts which are automatically loaded when the
+@@ -2093,7 +2097,7 @@
+ ## 
+ ## Acceptable values:
+ ##   - text
+-distributed_cookie = vmq
++distributed_cookie = flux-48998284e92f
+ 
+ ## Sets the number of threads in async thread pool, valid range
+ ## is 0-1024. If thread support is available, the default is 64.
