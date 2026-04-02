@@ -9,3 +9,6 @@ GRANT ALL ON TABLE solarev.ocpp_charge_point_conn TO solarinput;
 GRANT ALL ON TABLE solarev.ocpp_charge_point_status TO solarinput;
 GRANT ALL ON TABLE solarev.ocpp_charge_sess TO solarinput;
 GRANT ALL ON TABLE solarev.ocpp_charge_sess_reading TO solarinput;
+
+REVOKE ALL ON TABLE solardatm.da_datm_alias FROM solarinput;
+GRANT SELECT ON TABLE solardatm.da_datm_alias TO solarinput;

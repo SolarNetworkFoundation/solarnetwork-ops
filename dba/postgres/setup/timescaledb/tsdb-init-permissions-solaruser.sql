@@ -17,6 +17,12 @@ GRANT INSERT ON TABLE solaruser.user_event_log TO solar;
 GRANT INSERT(stream_id, node_id, source_id, jdata, updated) ON solardatm.da_datm_meta TO solaruser;
 GRANT UPDATE(node_id, source_id, names_i, names_a, names_s, jdata, updated) ON solardatm.da_datm_meta TO solaruser;
 
+-- allow managing datum stream aliases
+GRANT ALL ON TABLE solardatm.da_datm_alias TO solaruser;
+
+-- allow read datum stream aliases
+GRANT SELECT ON TABLE solaruser.da_datm_meta_aliased TO solar;
+
 -- GRANT EXECUTE ON FUNCTION solaragg.find_datum_hour_slots(bigint[], text[], timestamp with time zone, timestamp with time zone) TO solaruser;
 -- MAYBE? FUNCTION solardatm.find_datm_hours(uuid, timestamp with time zone, timestamp with time zone)
 --GRANT EXECUTE ON FUNCTION solardatm.mark_stale_datm_hours(uuid, timestamp with time zone, timestamp with time zone) TO solaruser;

@@ -2,6 +2,7 @@ GRANT ALL     ON SEQUENCE solaruser.user_alert_seq TO solarjobs;
 
 GRANT ALL     ON TABLE solarcommon.app_setting TO solarjobs;
 GRANT ALL     ON TABLE solardatm.da_datm TO solarjobs;
+GRANT ALL     ON TABLE solardatm.da_datm_alias TO solarjobs;
 GRANT ALL     ON TABLE solardatm.da_datm_meta TO solarjobs;
 GRANT ALL     ON TABLE solaruser.user_adhoc_export_task TO solarjobs;
 GRANT ALL     ON TABLE solaruser.user_alert TO solarjobs;
@@ -20,3 +21,4 @@ GRANT EXECUTE ON FUNCTION solardatm.store_stream_datum(uuid, timestamp with time
 -- Allow long exports to run without timeout: NOTE this must be set on users granted this role,
 -- it is shown here as a reminder.
 ALTER ROLE solarjobs SET idle_in_transaction_session_timeout TO 0;
+
