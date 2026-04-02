@@ -19,6 +19,14 @@ scrape_configs:
     scrape_interval: "1m"
     static_configs:
       - targets: ['oscp-fp.solarnetwork:9084']
+  - job_name: "solardin"
+    basic_auth:
+      username: "prometheus@solarnetwork.net"
+      password: "PASSWORD"
+    metrics_path: "/ops/prometheus"
+    scrape_interval: "1m"
+    static_configs:
+      - targets: ['solardin.solarnetwork:9087']
   - job_name: "solarin"
     basic_auth:
       username: "prometheus@solarnetwork.net"
