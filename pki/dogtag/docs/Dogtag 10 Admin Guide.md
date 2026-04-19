@@ -170,6 +170,14 @@ pki-server subsystem-cert-find ca |grep Nickname |awk 'BEGIN { FS = ": " }; {pri
   certutil -L -d /var/lib/pki/pki-tomcat/alias -n "$nick" |egrep "Serial|Before|After"; done
 ```
 
+In Fedora 42+ (Dogtag 11.7) use `pki-server cert-find --show-all` instead:
+
+```sh
+pki-server subsystem-cert-find ca |grep Nickname |awk 'BEGIN { FS = ": " }; {print $2}' \
+  |while read nick; do echo "$nick:"; \
+  certutil -L -d /var/lib/pki/pki-tomcat/alias -n "$nick" |egrep "Serial|Before|After"; done
+```
+
 ## Submit system certificate renewal requests 
 
 As the `caadmin` user, for each expiring system certificate run:
