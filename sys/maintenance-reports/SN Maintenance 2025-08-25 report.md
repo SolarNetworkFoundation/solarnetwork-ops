@@ -1,4 +1,4 @@
-# SN DB Maintenance 2024-11-25
+# SN DB Maintenance 2025-08-25
 
 This maintenance is to add additional storage to the SN Postgres cluster, specifically the
 `idx` storage pool.
@@ -135,7 +135,7 @@ wrm                                  248G  33.3G   215G        -         -     0
 
 ## Attach new volume
 
-A new 200 GiB gp3 volume `vol-020b1ba008d5b21c2` named `SolarDB_0 idx2` has been created.
+A new 100 GiB gp3 volume `vol-020b1ba008d5b21c2` named `SolarDB_0 idx2` has been created.
 
 Monitored `/var/log/messages` and then attached the volume to the SolarDB A instance as device
 name is `/dev/sdl`. The log showed:
