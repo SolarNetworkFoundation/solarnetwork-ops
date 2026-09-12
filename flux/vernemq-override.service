@@ -1,0 +1,6 @@
+# settings for a 1GB stand-alone instance
+[Service]
+LimitNOFILE=65536
+MemoryHigh=520M
+MemoryMax=600M
+OOMScoreAdjust=-500

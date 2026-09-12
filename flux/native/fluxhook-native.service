@@ -7,6 +7,7 @@ Type=simple
 
 WorkingDirectory=/var/lib/fluxhook
 ExecStart=/var/lib/fluxhook/solarflux-webhook \
+	-Xmx160m \
 	-XX:+ExitOnOutOfMemoryError \
 	-Djava.awt.headless=true \
 	-Djava.security.egd=file:/dev/./urandom \
@@ -19,6 +20,10 @@ User=fluxhook
 Group=fluxhook
 RestartSec=1
 Restart=always
+
+MemoryHigh=180M
+MemoryMax=256M
+OOMScoreAdjust=500
 
 [Install]
 WantedBy=multi-user.target
