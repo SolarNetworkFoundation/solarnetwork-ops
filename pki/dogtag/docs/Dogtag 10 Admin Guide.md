@@ -198,6 +198,12 @@ Submitted certificate request
   Operation Result: success
 ```
 
+Here's a shortcut to do all at once:
+
+```sh
+for ser in 0x101b0 0x101b1 0x101b2 0x101b3; do pki ca-cert-request-submit --profile caManualRenewal --serial $ser --renewal; done
+```
+
 Note the **Request ID** values. Then approve each request:
 
 ## Approve system certificate renewal requests
@@ -217,6 +223,12 @@ Approved certificate request 10137
   Request Status: complete
   Operation Result: success
   Certificate ID: 0x1007e
+```
+
+A shortcut for all at once:
+
+```sh
+for req in 10855 10856 10857 10858; do pki -n caadmin ca-cert-request-approve $req; done
 ```
 
 Note the **Certificate ID** values. Then download each certificate to a file:
