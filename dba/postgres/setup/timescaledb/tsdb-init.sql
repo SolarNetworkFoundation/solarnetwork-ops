@@ -56,5 +56,6 @@
 \i init/postgres-init-billing-schema.sql
 \i tsdb-init-billing-schema.sql
 \i init/postgres-init-billing.sql
+\i init/postgres-init-migration-version.sql
 
 \i tsdb-init-hypertables-support.sql
