@@ -13,6 +13,9 @@ GRANT ALL ON TABLE solardatm.aud_stale_user TO solaruser;
 GRANT ALL ON TABLE solardatm.da_datm_aux TO solaruser;
 GRANT INSERT ON TABLE solaruser.user_event_log TO solar;
 
+-- allow viewing user metadata
+GRANT SELECT ON TABLE solaruser.user_meta TO solar;
+
 -- allow updating node datum stream metadata
 GRANT INSERT(stream_id, node_id, source_id, jdata, updated) ON solardatm.da_datm_meta TO solaruser;
 GRANT UPDATE(node_id, source_id, names_i, names_a, names_s, jdata, updated) ON solardatm.da_datm_meta TO solaruser;
