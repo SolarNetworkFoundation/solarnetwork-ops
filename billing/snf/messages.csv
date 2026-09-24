@@ -38,6 +38,7 @@ $style()$
 2008-01-01 00:00:00+13,snf.billing,en,accountOwnerName,Account
 2008-01-01 00:00:00+13,snf.billing,en,bankDetails-NZD,"<p><b>NZD bank details</b>: SolarNetwork Foundation, <kbd>38-9018-0514203-00</kbd>, SWIFT code <kbd>KIWINZ22</kbd>.</p>"
 2008-01-01 00:00:00+13,snf.billing,en,bankDetails-USD,"<p><b>USD bank details</b>: KB2050621USD1SOLARNETWORK, <kbd>GB70CITI18500810683213</kbd>, SWIFT code <kbd>CITIGB2L</kbd>.</p>"
+2026-09-01 00:00:00+12,snf.billing,en,bankDetails-USD,"<p><b>USD bank details</b>: SolarNetwork Foundation, <kbd>1733702USD001</kbd>, SWIFT code <kbd>KIWINZ22</kbd>.</p>"
 2008-01-01 00:00:00+13,snf.billing,en,invoiceItemKey,Service
 2008-01-01 00:00:00+13,/snf/text/html/invoice,en,footer.st,"footer() ::= <<
 <footer>
