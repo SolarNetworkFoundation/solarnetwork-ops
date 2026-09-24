@@ -29,11 +29,11 @@
 \i init/postgres-init-datm-in-loc.sql
 \i init/postgres-init-datm-query-agg.sql
 \i init/postgres-init-datm-query-diff.sql
-\i init/postgres-init-datum-export.sql
 \i init/postgres-init-user-schema.sql
 \i tsdb-init-user-schema.sql
 \i init/postgres-init-users.sql
 \i init/postgres-init-user-alerts.sql
+\i init/postgres-init-datum-export.sql
 \i init/postgres-init-user-datum-export.sql
 \i init/postgres-init-user-datum-expire.sql
 \i init/postgres-init-user-datum-flux.sql
