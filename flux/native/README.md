@@ -146,6 +146,39 @@ replaced regularly, not grow monotonically for weeks:
 ls -l /var/lib/vernemq/swc_meta/*/*.log
 ```
 
+## Inspecting the webhook heap
+
+There is no actuator endpoint in this build (`spring-boot-starter-actuator` is not a dependency, so
+`/actuator/*` returns 404), and `jcmd` / `jmap` do not work against a native image. GC logging is
+the only window in. It is deliberately **not** enabled by default — add it temporarily when
+investigating, then remove it.
+
+A drop-in cannot *append* to `ExecStart`, and a second `ExecStart=` on a `Type=simple` unit is an
+error. Clear it first, then restate the whole command:
+
+```sh
+systemctl edit fluxhook
+```
+
+```ini
+[Service]
+ExecStart=
+ExecStart=/var/lib/fluxhook/solarflux-webhook -Xms48m -Xmx160m -XX:+ExitOnOutOfMemoryError -XX:+PrintGC -XX:+VerboseGC -Djava.awt.headless=true -Djava.security.egd=file:/dev/./urandom -Djava.net.preferIPv4Stack=true -Dserver.contextPath=/ -Dserver.port=8280
+```
+
+```sh
+systemctl daemon-reload && systemctl restart fluxhook
+journalctl -u fluxhook -f | grep -i gc
+```
+
+Reading it: the unit passes `-Xms48m` specifically to override the `-R:MinHeapSize=128m` floor baked
+into the image at build time — without it the heap cannot drop below 128 MB and RSS growth tells you
+nothing. With it, a heap settling near 48 MB after collection is healthy; one climbing steadily
+toward the 160 MB ceiling is a genuine leak, and the unbounded `Actor` cache (a JCache `MutableConfiguration`
+with a 900 s TTL and no size limit, backed by Ehcache's unbounded heap tier) is the first suspect.
+
+Object-level detail requires rebuilding the image with `--enable-monitoring=heapdump`.
+
 ## Verifying the LevelDB settings are live
 
 Four layers, cheapest first. The first two reflect what is **on disk**; the last two reflect what
@@ -273,12 +306,13 @@ line with the values here:
 
 ## Open items
 
-- **Webhook heap visibility — in this repo, not yet on the server.** `fluxhook-native.service` now
-  passes `-Xms48m -XX:+PrintGC -XX:+VerboseGC` alongside `-Xmx160m`. The `-Xms` matters because the
-  native image bakes in `-R:MinHeapSize=128m` as a floor, so without it the effective range is only
-  128–160 MB. There is no actuator endpoint in this build, so GC logging (`journalctl -u fluxhook |
-  grep -i gc`) is the only window into the heap. `solarflux-a` is still running without these flags
-  until the unit is redeployed.
+- **Webhook heap growth is still uncharacterised.** Before the `-Xmx` reduction the webhook's
+  anonymous RSS grew ~5 MB/day with no observed plateau. That is consistent with a real leak *and*
+  with the collector simply walking up to the 128 MB floor baked into the image — the two have
+  opposite conclusions and RSS alone cannot separate them. `-Xms48m` (in the unit) removes the
+  floor; GC logging (see [Inspecting the webhook heap](#inspecting-the-webhook-heap)) settles the
+  rest, on demand. `solarflux-a` is still running the pre-`-Xms` command line until the unit is
+  redeployed.
 - **Reconnect churn.** ~8,000 `queue_setup` events per day for 75–100 sessions means clients are
   reconnecting roughly every 16 minutes, which generated 1.87M SWC metadata writes over 16 days and
   is why 257 MB of LevelDB data describes 37 subscriptions. Client-side issue; harmless to memory
