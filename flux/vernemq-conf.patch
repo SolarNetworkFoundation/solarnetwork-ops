@@ -121,10 +121,10 @@
 +#leveldb.maximum_memory.percent = 20
 +
 +# See discussion at https://github.com/vernemq/vernemq/issues/591
-+# Setting to 200/30/60 MB
++# Sized for a small (1-2GB) stand-alone instance; see flux/native/README.md
 +leveldb.maximum_memory = 104857600
-+leveldb.write_buffer_size_min = 31457280
-+leveldb.write_buffer_size_max = 62914560
++leveldb.write_buffer_size_min = 2MB
++leveldb.write_buffer_size_max = 4MB
 +
 +
 +erlang.distribution.port_range.minimum = 6000

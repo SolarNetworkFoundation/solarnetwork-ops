@@ -97,8 +97,8 @@
 -leveldb.maximum_memory.percent = 70
 +#leveldb.maximum_memory.percent = 70
 +leveldb.maximum_memory = 104857600
-+leveldb.write_buffer_size_min = 31457280
-+leveldb.write_buffer_size_max = 62914560
++leveldb.write_buffer_size_min = 2MB
++leveldb.write_buffer_size_max = 4MB
 +
 +# Cluster inter-comm configuration
 +erlang.distribution.port_range.minimum = 6000
