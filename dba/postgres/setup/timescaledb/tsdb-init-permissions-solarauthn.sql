@@ -2,6 +2,9 @@ GRANT USAGE ON SCHEMA public TO solarauthn;
 GRANT USAGE ON SCHEMA solaruser TO solarauthn;
 GRANT USAGE ON SCHEMA solarcommon TO solarauth;
 
+ALTER FUNCTION solarnet.get_node_public_ssh_key(BIGINT) SECURITY DEFINER;
+GRANT EXECUTE ON FUNCTION solarnet.get_node_public_ssh_key(BIGINT) TO solarauthn;
+
 GRANT SELECT(auth_token, user_id, status, token_type, jpolicy) ON solaruser.user_auth_token TO solarauthn;
 GRANT SELECT(user_id, node_id, archived) ON solaruser.user_node TO solarauthn;
 GRANT SELECT ON TABLE solaruser.user_auth_token_node_ids TO solarauthn;
