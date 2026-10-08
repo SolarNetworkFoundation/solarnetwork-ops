@@ -1,4 +1,5 @@
 GRANT USAGE ON SCHEMA public TO solarauthn;
+GRANT USAGE ON SCHEMA solarnet TO solarauthn;
 GRANT USAGE ON SCHEMA solaruser TO solarauthn;
 GRANT USAGE ON SCHEMA solarcommon TO solarauth;
 
