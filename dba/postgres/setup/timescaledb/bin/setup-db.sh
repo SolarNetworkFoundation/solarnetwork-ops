@@ -39,7 +39,7 @@ WARM_TABLESPACE_OPTS="seq_page_cost=1, random_page_cost=4, effective_io_concurre
 DRY_RUN=""
 VERBOSE=""
 
-while getopts ":a:c:d:D:e:E:f:g:G:i:I:j:L:mO:rtT:u:U:vw:W:x:" opt; do
+while getopts ":a:c:d:D:e:E:f:g:G:H:i:I:j:L:mO:rtT:u:U:vw:W:x:" opt; do
 	case $opt in
 		c) PSQL_CONN_ARGS="${OPTARG}";;
 		d) PG_DB="${OPTARG}";;
