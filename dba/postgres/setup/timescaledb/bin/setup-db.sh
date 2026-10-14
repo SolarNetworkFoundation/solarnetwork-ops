@@ -22,6 +22,9 @@ PG_DB_TABLESPACE_OPTS=""
 PG_ADMIN_USER="postgres"
 PG_ADMIN_DB="postgres"
 PG_TEMPLATE_DB="template0"
+GNC_DB=""
+GNC_USER=""
+GNC_USER_PASSWORD="gnucash"
 USER_ROLE_SCRIPT="tsdb-init-roles.sql"
 USER_SCRIPT=""
 PERMISSION_SCRIPT="tsdb-init-permissions.sql"
@@ -36,7 +39,7 @@ WARM_TABLESPACE_OPTS="seq_page_cost=1, random_page_cost=4, effective_io_concurre
 DRY_RUN=""
 VERBOSE=""
 
-while getopts ":a:c:d:D:e:E:f:i:I:j:L:mO:rtT:u:U:vw:W:x:" opt; do
+while getopts ":a:c:d:D:e:E:f:g:G:i:I:j:L:mO:rtT:u:U:vw:W:x:" opt; do
 	case $opt in
 		c) PSQL_CONN_ARGS="${OPTARG}";;
 		d) PG_DB="${OPTARG}";;
@@ -44,6 +47,9 @@ while getopts ":a:c:d:D:e:E:f:i:I:j:L:mO:rtT:u:U:vw:W:x:" opt; do
 		e) PG_DB_TABLESPACE="${OPTARG}";;
 		E) PG_DB_TABLESPACE_PATH="${OPTARG}";;
 		f) PG_DB_TABLESPACE_OPTS="${OPTARG}";;
+		g) GNC_DB="${OPTARG}";;
+		G) GNC_USER="${OPTARG}";;
+		H) GNC_USER_PASSWORD="${OPTARG}";;
 		i) INDEX_TABLESPACE="${OPTARG}";;
 		I) INDEX_TABLESPACE_PATH="${OPTARG}";;
 		j) INDEX_TABLESPACE_OPTS="${OPTARG}";;
@@ -91,8 +97,14 @@ if [ -n "$RECREATE_DB" ]; then
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'DROP DATABASE IF EXISTS $PG_DB'"
+		if [ -n "$GNC_DB" ]; then
+			echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'DROP DATABASE IF EXISTS $GNC_DB'"
+		fi
 	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c "DROP DATABASE IF EXISTS $PG_DB" || exit 3
+		if [ -n "$GNC_DB" ]; then
+			psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c "DROP DATABASE IF EXISTS $GNC_DB" || exit 3
+		fi
 	fi
 fi
 
@@ -103,13 +115,25 @@ if [ -n "$CREATE_USER" ]; then
 	fi
 	if [ -n "$DRY_RUN" ]; then
 		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE USER $PG_DB_OWNER WITH LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION'"
+		if [ -n "$GNC_USER" ]; then
+			echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE USER $GNC_USER WITH LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION'"
+		fi
 	else
 		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtc "CREATE USER $PG_DB_OWNER WITH LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION"
+		if [ -n "$GNC_USER" ]; then
+			psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtc  "CREATE USER $GNC_USER WITH LOGIN NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION"
+		fi
 		if [ -n "$PG_DB_OWNER_PASSWORD" ]; then
 			if [ -n "$VERBOSE" ]; then
 				echo "Setting database owner [$PG_DB_OWNER] password..."
 			fi
 			psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtc "ALTER USER $PG_DB_OWNER WITH PASSWORD '$PG_DB_OWNER_PASSWORD'"
+		fi
+		if [ -n "$GNC_USER" -a -n "$GNC_USER_PASSWORD" ]; then
+			if [ -n "$VERBOSE" ]; then
+				echo "Setting database owner [$GNC_USER] password..."
+			fi
+			psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -P pager=off -qAtc "ALTER USER $GNC_USER WITH PASSWORD '$GNC_USER_PASSWORD'"
 		fi
 	fi
 
@@ -170,6 +194,17 @@ else
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS "'"uuid-ossp"'" WITH SCHEMA public" || exit 8
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS timescaledb WITH SCHEMA public" || exit 9
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -c "CREATE EXTENSION IF NOT EXISTS aggs_for_vecs WITH SCHEMA public" || exit 10
+fi
+
+if [ -n "$GNC_DB" -a -n "$GNC_USER" ]; then
+	if [ -n "$VERBOSE" ]; then
+		echo "Creating database [$GNC_DB] with owner [$GNC_USER]..."
+	fi
+	if [ -n "$DRY_RUN" ]; then
+		echo "psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c 'CREATE DATABASE $GNC_DB WITH ENCODING='UTF8' OWNER=$GNC_USER TEMPLATE=$PG_TEMPLATE_DB LC_COLLATE='C' LC_CTYPE='C''"
+	else
+		psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_ADMIN_DB -c "CREATE DATABASE $GNC_DB WITH ENCODING='UTF8' OWNER=$GNC_USER TEMPLATE=$PG_TEMPLATE_DB LC_COLLATE='C' LC_CTYPE='C'" || exit 5
+	fi
 fi
 
 if [ -n "$INDEX_TABLESPACE" -a -n "$INDEX_TABLESPACE_PATH" ]; then
@@ -284,6 +319,17 @@ if [ -n "$INDEX_TABLESPACE" ]; then
 			SELECT stmt || ';' FROM (SELECT unnest(ARRAY['solarbill', 'solardatm', 'solardin', 'solardnp3', 'solarev', 'solarnet', 'solaroscp', 'solaruser']) AS schem) AS s,
 			LATERAL (SELECT * FROM public.set_index_tablespace(s.schem, '$INDEX_TABLESPACE')) AS res;
 		EOF
+	fi
+fi
+
+if [ -n "$GNC_DB" -a -n "$GNC_USER" ]; then
+	if [ -n "$VERBOSE" ]; then
+		echo "Creating GnuCash database tables"
+	fi
+	if [ -n "$DRY_RUN" ]; then
+		echo "psql $PSQL_CONN_ARGS -U $GNC_USER -d $GNC_DB -f gnucash-init.sql"
+	else
+		psql $PSQL_CONN_ARGS -U $GNC_USER -d $GNC_DB -P pager=off -Atf gnucash-init.sql
 	fi
 fi
 
