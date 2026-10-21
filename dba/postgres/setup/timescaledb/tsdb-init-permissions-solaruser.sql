@@ -47,3 +47,7 @@ ON TABLE solaroscp.oscp_fp_token TO solaruser;
 -- allow updating datum audit counts on query
 GRANT ALL(stream_id, ts_start, datum_q_count) ON solardatm.aud_datm_io TO solaruser;
 GRANT INSERT, UPDATE ON TABLE solardatm.aud_stale_datm TO solaruser;
+
+GRANT INSERT, SELECT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE solarbill.bill_account TO solaruser;
+GRANT INSERT, SELECT, UPDATE, DELETE, TRUNCATE, REFERENCES ON TABLE solarbill.bill_address TO solaruser;
+
