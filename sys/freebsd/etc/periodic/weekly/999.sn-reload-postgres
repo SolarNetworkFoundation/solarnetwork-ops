@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# reload Postgres to pick up SSL cert updates
+/usr/sbin/service postgresql reload
