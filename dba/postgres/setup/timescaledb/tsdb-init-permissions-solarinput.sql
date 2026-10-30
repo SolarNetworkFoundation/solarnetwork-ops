@@ -12,3 +12,5 @@ GRANT ALL ON TABLE solarev.ocpp_charge_sess_reading TO solarinput;
 
 REVOKE ALL ON TABLE solardatm.da_datm_alias FROM solarinput;
 GRANT SELECT ON TABLE solardatm.da_datm_alias TO solarinput;
+REVOKE ALL ON TABLE solardatm.da_datm_alias_del FROM solarinput;
+GRANT SELECT ON TABLE solardatm.da_datm_alias_del TO solarinput;

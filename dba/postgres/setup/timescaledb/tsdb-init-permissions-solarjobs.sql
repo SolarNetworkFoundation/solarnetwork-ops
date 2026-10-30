@@ -3,6 +3,7 @@ GRANT ALL     ON SEQUENCE solaruser.user_alert_seq TO solarjobs;
 GRANT ALL     ON TABLE solarcommon.app_setting TO solarjobs;
 GRANT ALL     ON TABLE solardatm.da_datm TO solarjobs;
 GRANT ALL     ON TABLE solardatm.da_datm_alias TO solarjobs;
+GRANT ALL     ON TABLE solardatm.da_datm_alias_del TO solarjobs;
 GRANT ALL     ON TABLE solardatm.da_datm_meta TO solarjobs;
 GRANT ALL     ON TABLE solaruser.user_adhoc_export_task TO solarjobs;
 GRANT ALL     ON TABLE solaruser.user_alert TO solarjobs;

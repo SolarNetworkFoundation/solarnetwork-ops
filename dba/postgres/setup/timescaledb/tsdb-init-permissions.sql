@@ -18,6 +18,9 @@ END;$$;
 
 GRANT SELECT ON TABLE solarcommon.messages TO solar;
 
+-- datum stream alias access uses node ownership, for all roles that query aliases
+ALTER FUNCTION solardatm.da_datm_alias_allowed(BIGINT, TEXT, BIGINT) SECURITY DEFINER;
+
 \i tsdb-init-permissions-solarauthn.sql
 \i tsdb-init-permissions-solardin.sql
 \i tsdb-init-permissions-solardnp3.sql

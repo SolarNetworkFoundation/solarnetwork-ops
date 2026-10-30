@@ -22,6 +22,7 @@ GRANT UPDATE(node_id, source_id, names_i, names_a, names_s, jdata, updated) ON s
 
 -- allow managing datum stream aliases
 GRANT ALL ON TABLE solardatm.da_datm_alias TO solaruser;
+GRANT ALL ON TABLE solardatm.da_datm_alias_del TO solaruser;
 
 -- allow read datum stream aliases
 GRANT SELECT ON TABLE solaruser.da_datm_meta_aliased TO solar;
