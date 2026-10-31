@@ -23,3 +23,5 @@ ALTER FUNCTION solardatm.da_datm_alias_allowed(BIGINT, TEXT, BIGINT) SECURITY DE
 
 GRANT ALL ON TABLE solaruser.da_datm_alias_grant TO solaruser;
 GRANT SELECT ON TABLE solaruser.da_datm_alias_grant TO solarjobs;
+GRANT ALL ON SEQUENCE solaruser.da_datm_alias_grant_id_seq TO solaruser;
+GRANT SELECT ON SEQUENCE solaruser.da_datm_alias_grant_id_seq TO solarjobs;
