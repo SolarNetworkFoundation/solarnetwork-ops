@@ -1,0 +1,24 @@
+#!/bin/sh
+
+set -e
+
+postgres_cert_root="/sndb/home/17/tls"
+support_root="/mnt/cert-support/tls"
+cert_file="db.solarnetwork.net.fullchain"
+cert_key="db.solarnetwork.net.key"
+
+updated=""
+
+if [ -e "${support_root}/${cert_file}" -a -e "${support_root}/${cert_key}" ]; then
+	for f in "$cert_file" "$cert_key"; do
+		if [ ! -e "${postgres_cert_root}/${f}" -o "${support_root}/${f}" -nt "${postgres_cert_root}/${f}" ]; then
+			cp -a "${support_root}/${f}" "${postgres_cert_root}/"
+			updated=1
+		fi
+	done
+fi
+
+if [ -n "${updated}" ]; then
+	# reload Postgres to pick up SSL cert updates
+	/usr/sbin/service postgresql reload
+fi

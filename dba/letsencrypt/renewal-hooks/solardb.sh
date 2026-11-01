@@ -2,7 +2,8 @@
 
 set -e
 
-daemon_cert_root=/sndb/home/12/tls
+daemon_cert_root=/sndb/home/17/tls
+support_root=/mnt/cert-support/tls
 for domain in $RENEWED_DOMAINS; do
 		# Make sure the certificate and private key files are
 		# never world readable, even just for an instant while
@@ -19,5 +20,11 @@ for domain in $RENEWED_DOMAINS; do
 
 		chgrp postgres "$daemon_cert_root/$domain.fullchain" \
 				"$daemon_cert_root/$domain.key"
+
+		if [ -d "${support_root}" ]; then
+			cp -a "$daemon_cert_root/$domain.fullchain" \
+				"$daemon_cert_root/$domain.key" \
+				"${support_root}/" 2>/dev/null
+		fi
 done
 service postgresql reload >/dev/null
