@@ -9,8 +9,8 @@
 #
 # Usage:
 #
-#   PGSSLCERT=the.crt PGSSLKEY=the.key sh net538-collect.sh \
-#       -h db.solarnetwork.net -p 5432 -U solarnet -d solarnetwork
+#   PGSSLCERT=superuser.crt PGSSLKEY=superuser.key sh net538-collect.sh \
+#       -h db.solarnetwork.net -p 5432 -U postgres -d solarnetwork
 #
 # Connection options are the same as psql's, and anything libpq reads from the
 # environment (PGSSLCERT, PGSSLKEY, PGSSLROOTCERT, PGPASSWORD, ~/.pgpass, ...)
