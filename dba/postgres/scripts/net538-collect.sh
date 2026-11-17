@@ -23,6 +23,9 @@
 #   -k COUNT    streams of each kind to run EXPLAIN ANALYZE for (default 3)
 #   -m COUNT    most active suspect streams to classify (default 100)
 #   -t SECONDS  statement timeout for every query (default 300)
+#   -l FILE     a SolarJobs log, as written or as exported from CloudWatch; the
+#               streams named in its "Slow aggregate processed" WARN lines are
+#               classified and explained too. Other lines are ignored.
 #   -x          skip the EXPLAIN ANALYZE step
 #
 # Connect as a superuser, or a role with pg_read_all_stats: without that,
@@ -39,7 +42,10 @@
 #                 between them is production's own work over that time.
 #   4. snapshot 2
 #   5. streams    streams that declare accumulating properties but are not
-#                 posting them (the suspected cause), and some control streams
+#                 posting them (the suspected cause), and some control streams.
+#                 With -l, also the streams the log names as slow: how often
+#                 and for how long, and whether the suspect search explains
+#                 each one.
 #   6. explain    EXPLAIN (ANALYZE, BUFFERS) of the datum lookup of one hourly
 #                 rollup, for a few streams of each kind. If the function
 #                 solardatm.find_datm_for_time_slot_pre538 has been installed
@@ -52,12 +58,13 @@
 set -u
 umask 077
 
-SCRIPT_VERSION=1
+SCRIPT_VERSION=2
 SAMPLES=5
 INTERVAL=60
 STREAMS=3
 MAX_CLASSIFY=100
 STMT_TIMEOUT=300
+SLOW_LOG=
 DO_EXPLAIN=1
 OUTBASE=.
 PSQL=${PSQL:-psql}
@@ -79,7 +86,7 @@ is_number() {
 	return 0
 }
 
-while getopts 'h:p:U:d:o:n:i:k:m:t:x' opt; do
+while getopts 'h:p:U:d:o:n:i:k:m:t:l:x' opt; do
 	case $opt in
 		h) PGHOST=$OPTARG; export PGHOST ;;
 		p) PGPORT=$OPTARG; export PGPORT ;;
@@ -91,6 +98,7 @@ while getopts 'h:p:U:d:o:n:i:k:m:t:x' opt; do
 		k) STREAMS=$OPTARG ;;
 		m) MAX_CLASSIFY=$OPTARG ;;
 		t) STMT_TIMEOUT=$OPTARG ;;
+		l) SLOW_LOG=$OPTARG ;;
 		x) DO_EXPLAIN=0 ;;
 		*) usage ;;
 	esac
@@ -102,6 +110,7 @@ for v in "$SAMPLES" "$INTERVAL" "$STREAMS" "$MAX_CLASSIFY" "$STMT_TIMEOUT"; do
 	is_number "$v" || die "options -n, -i, -k, -m and -t take a whole number"
 done
 [ "$SAMPLES" -ge 1 ] || die "-n must be at least 1"
+[ -z "$SLOW_LOG" ] || [ -r "$SLOW_LOG" ] || die "cannot read the log file $SLOW_LOG"
 
 command -v "$PSQL" >/dev/null 2>&1 || die "psql not found (set PSQL=/path/to/psql)"
 PSQL_MAJOR=$("$PSQL" -V | sed -n 's/^[^0-9]*\([0-9][0-9]*\).*/\1/p')
@@ -249,7 +258,7 @@ SQL
 # GROUP BY ROLLUP gives a '*' total row even when the queue is empty, so every
 # sample leaves a row.
 cat >"$OUT/sql/sample-stale-agg.sql" <<'SQL'
-SELECT clock_timestamp() AS sample_ts
+SELECT statement_timestamp() AS sample_ts
 	, COALESCE(agg_kind::text, '*') AS agg_kind
 	, count(*) AS stale_rows
 	, count(DISTINCT stream_id) AS streams
@@ -264,7 +273,7 @@ ORDER BY 2;
 SQL
 
 cat >"$OUT/sql/sample-stale-aud.sql" <<'SQL'
-SELECT clock_timestamp() AS sample_ts
+SELECT statement_timestamp() AS sample_ts
 	, COALESCE(aud_kind::text, '*') AS aud_kind
 	, count(*) AS stale_rows
 	, min(created) AS oldest_created
@@ -276,19 +285,19 @@ ORDER BY 2;
 SQL
 
 cat >"$OUT/sql/sample-database.sql" <<'SQL'
-SELECT clock_timestamp() AS sample_ts, d.*
+SELECT statement_timestamp() AS sample_ts, d.*
 FROM pg_stat_database d
 WHERE d.datname = current_database();
 SQL
 
 cat >"$OUT/sql/sample-io.sql" <<'SQL'
-SELECT clock_timestamp() AS sample_ts, i.*
+SELECT statement_timestamp() AS sample_ts, i.*
 FROM pg_stat_io i
 WHERE i.reads > 0 OR i.hits > 0 OR i.writes > 0 OR i.extends > 0;
 SQL
 
 cat >"$OUT/sql/sample-activity.sql" <<'SQL'
-SELECT clock_timestamp() AS sample_ts, usename, state, wait_event_type, wait_event
+SELECT statement_timestamp() AS sample_ts, usename, state, wait_event_type, wait_event
 	, count(*) AS sessions
 	, round(max(EXTRACT(epoch FROM clock_timestamp() - query_start))::numeric, 1) AS max_query_age_s
 FROM pg_stat_activity
@@ -298,23 +307,23 @@ ORDER BY usename, state, sessions DESC;
 SQL
 
 cat >"$OUT/sql/snap-tables.sql" <<'SQL'
-SELECT clock_timestamp() AS snap_ts, t.* FROM pg_stat_user_tables t;
+SELECT statement_timestamp() AS snap_ts, t.* FROM pg_stat_user_tables t;
 SQL
 
 cat >"$OUT/sql/snap-statio.sql" <<'SQL'
-SELECT clock_timestamp() AS snap_ts, t.* FROM pg_statio_user_tables t;
+SELECT statement_timestamp() AS snap_ts, t.* FROM pg_statio_user_tables t;
 SQL
 
 cat >"$OUT/sql/snap-functions.sql" <<'SQL'
-SELECT clock_timestamp() AS snap_ts, f.* FROM pg_stat_user_functions f;
+SELECT statement_timestamp() AS snap_ts, f.* FROM pg_stat_user_functions f;
 SQL
 
 cat >"$OUT/sql/snap-pss.sql" <<'SQL'
-SELECT clock_timestamp() AS snap_ts, s.* FROM :"pss_schema".pg_stat_statements s;
+SELECT statement_timestamp() AS snap_ts, s.* FROM :"pss_schema".pg_stat_statements s;
 SQL
 
 cat >"$OUT/sql/snap-pss-info.sql" <<'SQL'
-SELECT clock_timestamp() AS snap_ts, i.* FROM :"pss_schema".pg_stat_statements_info i;
+SELECT statement_timestamp() AS snap_ts, i.* FROM :"pss_schema".pg_stat_statements_info i;
 SQL
 
 # Streams that declare accumulating property names, are posting now, and whose
@@ -465,6 +474,66 @@ UNION ALL
 		AND n.rows_slot >= 30
 	LIMIT :streams
 );
+SQL
+
+# The streams a SolarJobs log names as slow. The script puts a VALUES list of
+# them, WITH l(stream_id, log_lines, hour_lines, total_s, max_s), in front of
+# this. The search for accumulating values is skipped for streams that declare
+# none, as it could only scan and find nothing.
+cat >"$OUT/sql/streams-slowlog-tail.sql" <<'SQL'
+, m AS (
+	SELECT l.stream_id, l.log_lines, l.hour_lines, l.total_s, l.max_s
+		, CASE WHEN n.stream_id IS NOT NULL THEN 'n' WHEN lo.stream_id IS NOT NULL THEN 'l' END AS kind
+		, COALESCE(n.node_id, lo.loc_id) AS obj_id
+		, COALESCE(cardinality(COALESCE(n.names_a, lo.names_a)), 0) AS names_a_count
+	FROM l
+	LEFT JOIN solardatm.da_datm_meta n ON n.stream_id = l.stream_id
+	LEFT JOIN solardatm.da_loc_datm_meta lo ON lo.stream_id = l.stream_id
+)
+SELECT m.stream_id, m.kind, m.obj_id, m.log_lines, m.hour_lines, m.total_s, m.max_s
+	, m.names_a_count, d.rows_24h, s.rows_slot, la.latest_has_a, a.last_a_ts
+	, CASE
+		WHEN m.kind IS NULL THEN 'unknown_stream'
+		WHEN m.names_a_count = 0 THEN 'no_names_a'
+		WHEN a.last_a_ts IS NULL THEN 'none_in_14d'
+		WHEN la.latest_has_a THEN 'has_a'
+		ELSE 'mixed'
+		END AS a_0_14d
+FROM m
+CROSS JOIN LATERAL (
+	SELECT count(*) AS rows_24h
+	FROM solardatm.da_datm d
+	WHERE d.stream_id = m.stream_id
+		AND d.ts >= :'t1'::timestamptz - INTERVAL 'P1D'
+		AND d.ts < :'t1'::timestamptz
+) d
+CROSS JOIN LATERAL (
+	SELECT count(*) AS rows_slot
+	FROM solardatm.da_datm d
+	WHERE d.stream_id = m.stream_id
+		AND d.ts >= :'t0'::timestamptz
+		AND d.ts < :'t1'::timestamptz
+) s
+LEFT JOIN LATERAL (
+	SELECT d.data_a IS NOT NULL AS latest_has_a
+	FROM solardatm.da_datm d
+	WHERE d.stream_id = m.stream_id
+		AND d.ts >= :'t0'::timestamptz - INTERVAL 'PT2H'
+	ORDER BY d.ts DESC
+	LIMIT 1
+) la ON TRUE
+LEFT JOIN LATERAL (
+	SELECT d.ts AS last_a_ts
+	FROM solardatm.da_datm d
+	WHERE d.stream_id = m.stream_id
+		AND m.names_a_count > 0
+		AND d.ts < :'t0'::timestamptz
+		AND d.ts >= :'t14'::timestamptz
+		AND d.data_a IS NOT NULL
+	ORDER BY d.ts DESC
+	LIMIT 1
+) a ON TRUE
+ORDER BY m.total_s DESC, m.stream_id;
 SQL
 
 # The datum lookup of one hourly rollup, with literal arguments as production's
@@ -644,6 +713,108 @@ run psv streams-classified "$OUT/streams-classified.psv" \
 note "Control streams"
 run psv streams-controls "$OUT/streams-controls.psv" -v t0="$T0" -v t1="$T1" -v streams="$STREAMS"
 
+if [ -n "$SLOW_LOG" ]; then
+	note "Slow aggregate log"
+	# one row per "Slow aggregate processed in Ns: ObjectDatumId{...}" line;
+	# source_id is the last column because it is free text
+	{
+		printf 'log_ts|seconds|aggregation|stream_id|object_id|slot_ts|kind|source_id\n'
+		awk '
+			function field(s, name,    i, rest, j) {
+				i = index(s, name "=")
+				if (i == 0) return ""
+				rest = substr(s, i + length(name) + 1)
+				j = match(rest, /[,}]/)
+				return j == 0 ? rest : substr(rest, 1, j - 1)
+			}
+			/Slow aggregate processed in / {
+				sid = tolower(field($0, "streamId"))
+				if (length(sid) != 36 || sid !~ /^[0-9a-f-]+$/) next
+				# the application time stamp, [2026-11-16 19:15:49.544], wherever
+				# it is; else a leading CloudWatch one, 2026-11-16T19:15:49.544Z
+				logts = ""
+				if (match($0, /\[[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9:.]*\]/)) {
+					logts = substr($0, RSTART + 1, RLENGTH - 2)
+				} else if ($1 ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9]/) {
+					logts = $1
+					sub(/T/, " ", logts)
+					sub(/Z$/, "", logts)
+				}
+				rest = substr($0, index($0, "Slow aggregate processed in ") + 28)
+				secs = substr(rest, 1, index(rest, "s:") - 1)
+				if (secs !~ /^[0-9]+$/) secs = ""
+				src = ""
+				i = index($0, "sourceId=")
+				if (i > 0) {
+					src = substr($0, i + 9)
+					j = index(src, ", timestamp=")
+					if (j > 0) src = substr(src, 1, j - 1)
+				}
+				print logts "|" secs "|" field($0, "aggregation") "|" sid "|" field($0, "objectId") \
+					"|" field($0, "timestamp") "|" field($0, "kind") "|" src
+			}
+		' "$SLOW_LOG"
+	} >"$OUT/slow-log.psv"
+
+	# per stream, slowest in total first; at most MAX_CLASSIFY streams
+	{
+		printf 'stream_id|log_lines|hour_lines|total_s|max_s|first_log_ts|last_log_ts\n'
+		awk -F'|' '
+			NR > 1 {
+				k = $4
+				n[k]++
+				tot[k] += $2
+				if ($2 + 0 > mx[k] + 0) mx[k] = $2 + 0
+				if ($3 == "Hour") h[k]++
+				# the lines need not be in time order
+				if (!(k in first) || $1 < first[k]) first[k] = $1
+				if ($1 > last[k]) last[k] = $1
+			}
+			END {
+				for (k in n) print k "|" n[k] "|" h[k] + 0 "|" tot[k] + 0 "|" mx[k] + 0 "|" first[k] "|" last[k]
+			}
+		' "$OUT/slow-log.psv" | sort -t '|' -k4,4nr -k1,1 | head -n "$MAX_CLASSIFY"
+	} >"$OUT/slow-log-streams.psv"
+
+	# per hour of the log, to compare one period with another
+	{
+		printf 'log_hour|log_lines|hour_lines|total_s|max_s|streams\n'
+		awk -F'|' '
+			NR > 1 && $1 != "" {
+				k = substr($1, 1, 13)
+				n[k]++
+				tot[k] += $2
+				if ($2 + 0 > mx[k] + 0) mx[k] = $2 + 0
+				if ($3 == "Hour") h[k]++
+				if (!((k, $4) in seen)) {
+					seen[k, $4] = 1
+					streams[k]++
+				}
+			}
+			END {
+				for (k in n) print k "|" n[k] "|" h[k] + 0 "|" tot[k] + 0 "|" mx[k] + 0 "|" streams[k]
+			}
+		' "$OUT/slow-log.psv" | sort
+	} >"$OUT/slow-log-hours.psv"
+
+	SLOW_LINES=$(($(wc -l <"$OUT/slow-log.psv") - 1))
+	SLOW_STREAMS=$(($(wc -l <"$OUT/slow-log-streams.psv") - 1))
+	printf 'slow_log_lines=%s\nslow_log_streams=%s\n' "$SLOW_LINES" "$SLOW_STREAMS" >>"$OUT/run.txt"
+	note "Slow aggregate log: $SLOW_LINES lines, $SLOW_STREAMS streams"
+
+	if [ "$SLOW_STREAMS" -gt 0 ]; then
+		{
+			awk -F'|' '
+				BEGIN { print "WITH l(stream_id, log_lines, hour_lines, total_s, max_s) AS (VALUES" }
+				NR > 1 { printf "\t%s(\047%s\047::uuid, %d, %d, %d, %d)\n", (c++ ? ", " : "  "), $1, $2, $3, $4, $5 }
+				END { print ")" }
+			' "$OUT/slow-log-streams.psv"
+			cat "$OUT/sql/streams-slowlog-tail.sql"
+		} >"$OUT/sql/streams-slowlog.sql"
+		run psv streams-slowlog "$OUT/streams-slowlog.psv" -v t0="$T0" -v t1="$T1" -v t14="$T14"
+	fi
+fi
+
 if [ "$DO_EXPLAIN" -eq 1 ] && [ "$STREAMS" -ge 1 ]; then
 	TARGETS=$OUT/explain/targets.psv
 	: >"$TARGETS"
@@ -661,6 +832,28 @@ if [ "$DO_EXPLAIN" -eq 1 ] && [ "$STREAMS" -ge 1 ]; then
 	fi
 	if [ -s "$OUT/streams-controls.psv" ]; then
 		awk -F'|' 'NR > 1 { print $1 "|" $2 }' "$OUT/streams-controls.psv" >>"$TARGETS"
+	fi
+	if [ -s "$OUT/streams-slowlog.psv" ]; then
+		# from the slow log, slowest first and not already chosen: the streams
+		# the suspect search does not explain, then the ones it does; only
+		# streams with a slow Hour aggregate, as that is what is explained
+		for pick in other suspect; do
+			awk -F'|' -v k="$STREAMS" -v tf="$TARGETS" -v pick="$pick" '
+				BEGIN {
+					while ((getline line < tf) > 0) {
+						split(line, a, "|")
+						seen[a[2]] = 1
+					}
+				}
+				NR > 1 && !($1 in seen) && n < k && $5 > 0 && $NF != "unknown_stream" \
+						&& (($NF == "none_in_14d") == (pick == "suspect")) {
+					print "log_" pick "|" $1
+					n++
+				}
+			' "$OUT/streams-slowlog.psv" >"$OUT/explain/targets-log.psv"
+			cat "$OUT/explain/targets-log.psv" >>"$TARGETS"
+		done
+		rm -f "$OUT/explain/targets-log.psv"
 	fi
 
 	seq_no=0
