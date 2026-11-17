@@ -33,6 +33,8 @@ SELECT un.user_id AS owner FROM solaruser.user_node un WHERE un.node_id = :node 
 \endif
 \set ON_ERROR_STOP on
 
+\pset pager 0
+
 \echo == the stream, its owner, and its datum in the 90 days the statements cover
 SELECT m.stream_id, :owner AS owner_user_id
 	, (
