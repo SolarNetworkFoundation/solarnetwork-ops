@@ -1,6 +1,6 @@
 -- NET-540: read-only queries for production (run on the replica).
 --   psql -X -v day=2026-11-17 -f production-queries.sql
--- Q1 and Q2 read that day; Q4 reads the month holding it (use a day in a complete month).
+-- Q1, Q2 and Q5 read that day; Q4 reads the month holding it (use a day in a complete month).
 \pset pager 0
 
 \echo === Q1. status properties: hours where the most frequent of the 15m values differs from the most frequent raw value ===
@@ -136,3 +136,54 @@ INNER JOIN solaruser.user_node un ON un.node_id = m.node_id
 INNER JOIN tier t ON t.user_id = un.user_id
 GROUP BY 1, 2, 3, 4
 ORDER BY 1, 4;
+
+\echo === Q5. for the Q2 streams on :day: hourly reading differences against the first and last readings of the day ===
+-- Streams are numbered, so no stream IDs are output. One row for each property that is present in
+-- some datum and missing from others. If nothing is lost, reading_short_pct is 0.
+WITH day AS (
+	SELECT :'day'::timestamptz AS s, :'day'::timestamptz + INTERVAL 'P1D' AS e
+)
+, p AS (
+	SELECT d.stream_id
+		, i.idx
+		, count(*) FILTER (WHERE d.data_a[i.idx] IS NOT NULL) AS present
+		, count(*) FILTER (WHERE d.data_a[i.idx] IS NULL) AS missing
+	FROM day
+	INNER JOIN solardatm.da_datm d ON d.ts >= day.s AND d.ts < day.e
+	INNER JOIN solardatm.da_datm_meta m ON m.stream_id = d.stream_id
+	CROSS JOIN LATERAL generate_series(1, cardinality(m.names_a)) AS i(idx)
+	WHERE d.data_a IS NOT NULL
+		AND cardinality(m.names_a) > 1
+	GROUP BY 1, 2
+	HAVING count(*) FILTER (WHERE d.data_a[i.idx] IS NOT NULL) > 0
+		AND count(*) FILTER (WHERE d.data_a[i.idx] IS NULL) > 0
+)
+, h AS (
+	SELECT p.stream_id, p.idx, p.present, p.missing
+		, count(*) AS hours
+		, sum(a.read_a[p.idx][1]) AS reading_diff_sum
+		, sum(a.data_a[p.idx]) AS clock_sum
+		, (array_agg(a.read_a[p.idx][2] ORDER BY a.ts_start) FILTER (WHERE a.read_a[p.idx][2] IS NOT NULL))[1] AS first_start
+		, (array_agg(a.read_a[p.idx][3] ORDER BY a.ts_start DESC) FILTER (WHERE a.read_a[p.idx][3] IS NOT NULL))[1] AS last_end
+	FROM day, p
+	INNER JOIN solardatm.agg_datm_hourly a ON a.stream_id = p.stream_id
+	WHERE a.ts_start >= day.s AND a.ts_start < day.e
+	GROUP BY 1, 2, 3, 4
+)
+SELECT dense_rank() OVER (ORDER BY h.stream_id) AS stream
+	, h.idx AS property
+	, h.present
+	, h.missing
+	, h.hours
+	, h.last_end - h.first_start AS first_to_last
+	, h.reading_diff_sum
+	, h.clock_sum
+	, round(100 * (1 - h.reading_diff_sum / NULLIF(h.last_end - h.first_start, 0)), 2) AS reading_short_pct
+	, round(100 * (1 - h.clock_sum / NULLIF(h.last_end - h.first_start, 0)), 2) AS clock_short_pct
+	, EXISTS (
+		SELECT 1 FROM solardatm.da_datm_aux x, day
+		WHERE x.stream_id = h.stream_id AND x.ts >= day.s AND x.ts < day.e
+			AND x.atype = 'Reset'::solardatm.da_datm_aux_type
+	) AS has_reset
+FROM h
+ORDER BY 1, 2;
