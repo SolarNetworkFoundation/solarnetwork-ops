@@ -207,6 +207,8 @@ $$;
  *  - a reading difference goes to the slot of its row; a row exactly at the end of
  *    the hour counts in the last slot holding a row (or the last slot of the hour
  *    if none does)
+ *  - a slot whose rows have no value for a property gets NULL for it when another
+ *    slot of the hour has one, and zero when none has, as the hourly rollup reports
  *
  * @param sid 				the stream ID to find datm for
  * @param start_ts			the start of the hour (inclusive)
@@ -307,7 +309,8 @@ $$
 			, CASE WHEN wa.p_ts >= start_ts AND wa.p_ts < end_ts THEN time_bucket(INTERVAL 'PT15M', wa.p_ts) END AS p_slot
 		FROM wa
 	)
-	-- the earlier row's share of the hour's portion, when the two rows are in different slots of the hour
+	-- the earlier row's share of the hour's portion, when the two rows are in different slots of the hour;
+	-- rows without a value for the property have no difference to share out
 	, wc AS (
 		SELECT wb.*
 			, CASE
@@ -315,7 +318,7 @@ $$
 					THEN (EXTRACT('epoch' FROM c_slot - p_ts) / EXTRACT('epoch' FROM ts - p_ts))::numeric
 				END AS p_share
 		FROM wb
-		WHERE hp <> 0
+		WHERE hp <> 0 AND val IS NOT NULL
 	)
 	, alloc AS (
 		-- to the slot of the earlier row
@@ -356,15 +359,21 @@ $$
 		FROM wa, edge
 		WHERE wa.rinc
 	)
-	, ra AS (
+	, ra0 AS (
 		SELECT idx, slot
 			, sum(diff) AS rdiff
 			, solarcommon.first(val ORDER BY ts, rtype) AS rstart_first
 			, solarcommon.first(val - diff ORDER BY ts, rtype) AS rstart_later
 			, solarcommon.first(val ORDER BY ts DESC, rtype DESC) AS rend
-			, slot = min(slot) OVER (PARTITION BY idx) AS is_first
 		FROM rd
 		GROUP BY idx, slot
+	)
+	-- for each property: whether any slot of the hour has a value for it, and the first slot that does
+	, ra AS (
+		SELECT ra0.*
+			, bool_or(ra0.rend IS NOT NULL) OVER (PARTITION BY ra0.idx) AS hour_has
+			, ra0.slot = min(ra0.slot) FILTER (WHERE ra0.rend IS NOT NULL) OVER (PARTITION BY ra0.idx) AS is_first
+		FROM ra0
 	)
 	, slots AS (
 		SELECT slot FROM occ
@@ -373,11 +382,18 @@ $$
 		UNION
 		SELECT slot FROM ra
 	)
+	-- A slot whose rows have no value for a property gets NULL for it when another slot of the hour
+	-- has one, so that rolling the slots up takes the hour's first and last readings from slots that
+	-- have them. When no slot has a value the hourly rollup reports zero, and so does each slot.
 	, da_ary AS (
 		SELECT s.slot
 			, CASE WHEN count(ca.idx) + count(ra.idx) > 0 THEN
 				vec_trim_scale(array_agg(
-					CASE WHEN ca.cdiff IS NOT NULL THEN ca.cdiff WHEN ra.rend IS NOT NULL THEN 0 END
+					CASE
+						WHEN ra.rend IS NOT NULL OR ca.cdiff <> 0 THEN COALESCE(ca.cdiff, 0)
+						WHEN ra.hour_has THEN NULL
+						WHEN ra.idx IS NOT NULL THEN 0
+						END
 					ORDER BY p.idx))
 				END AS data_a
 			, CASE WHEN count(ra.idx) > 0 THEN

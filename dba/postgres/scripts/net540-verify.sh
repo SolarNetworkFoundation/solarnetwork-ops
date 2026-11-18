@@ -33,6 +33,9 @@
 #   -k COUNT    streams of each kind to run EXPLAIN ANALYZE for (default 2)
 #   -t SECONDS  statement timeout for every query (default 300)
 #   -x          skip the EXPLAIN ANALYZE step
+#   -T FILE     compare the streams and hours listed in FILE, the targets.psv of
+#               an earlier run, instead of choosing new ones; use it to repeat a
+#               run after the candidate functions have changed
 #
 # The kinds of stream sampled, by what they posted in the latest complete hour:
 #
@@ -90,19 +93,20 @@
 set -u
 umask 077
 
-SCRIPT_VERSION=1
+SCRIPT_VERSION=2
 HOURS=2
 SAMPLE=30
 STREAMS=2
 STMT_TIMEOUT=300
 DO_EXPLAIN=1
 OUTBASE=.
+TARGETS_FILE=
 PSQL=${PSQL:-psql}
 
 # md5 of the function bodies this script was written against
 LIVE_MD5=a183fe90ed6b25b4c804276f57681606
 HOURLY_MD5=6291c0c4841851ea80a61f6cc750c39f
-SLOTS_MD5=98b3edd8442b0b7a6b35966e30e18095
+SLOTS_MD5=86de4d374557737c0bc0ce23eeb8a90d
 AGG_MD5=9a7197e1b5956bb5e2ebe2fa262fc189
 
 usage() {
@@ -122,7 +126,7 @@ is_number() {
 	return 0
 }
 
-while getopts 'h:p:U:d:o:H:m:k:t:x' opt; do
+while getopts 'h:p:U:d:o:H:m:k:t:xT:' opt; do
 	case $opt in
 		h) PGHOST=$OPTARG; export PGHOST ;;
 		p) PGPORT=$OPTARG; export PGPORT ;;
@@ -134,6 +138,7 @@ while getopts 'h:p:U:d:o:H:m:k:t:x' opt; do
 		k) STREAMS=$OPTARG ;;
 		t) STMT_TIMEOUT=$OPTARG ;;
 		x) DO_EXPLAIN=0 ;;
+		T) TARGETS_FILE=$OPTARG ;;
 		*) usage ;;
 	esac
 done
@@ -145,6 +150,7 @@ for v in "$HOURS" "$SAMPLE" "$STREAMS" "$STMT_TIMEOUT"; do
 done
 [ "$HOURS" -ge 1 ] || die "-H must be at least 1"
 [ "$SAMPLE" -ge 1 ] || die "-m must be at least 1"
+[ -z "$TARGETS_FILE" ] || [ -r "$TARGETS_FILE" ] || die "cannot read $TARGETS_FILE"
 
 command -v "$PSQL" >/dev/null 2>&1 || die "psql not found (set PSQL=/path/to/psql)"
 PSQL_MAJOR=$("$PSQL" -V | sed -n 's/^[^0-9]*\([0-9][0-9]*\).*/\1/p')
@@ -615,6 +621,7 @@ EOF
 	printf 'hours=%s\nsample=%s\nexplain_streams=%s\nstatement_timeout_s=%s\n' \
 		"$HOURS" "$SAMPLE" "$STREAMS" "$STMT_TIMEOUT"
 	printf 'slot_start=%s\nslot_end=%s\n' "$T0" "$T1"
+	printf 'targets_file=%s\n' "$TARGETS_FILE"
 	printf 'live_md5=%s\nhourly_net540_md5=%s\nslots_net540_md5=%s\nagg_net540_md5=%s\n' \
 		"$HAVE_LIVE_MD5" "$HAVE_HOURLY_MD5" "$HAVE_SLOTS_MD5" "$HAVE_AGG_MD5"
 } >"$OUT/run.txt"
@@ -638,8 +645,13 @@ fi
 note "Context"
 run text context "$OUT/context.txt" -v t0="$T0"
 
-note "Choosing streams"
-run rows targets "$OUT/targets.psv" -v t0="$T0" -v t1="$T1" -v hours="$HOURS" -v sample="$SAMPLE"
+if [ -n "$TARGETS_FILE" ]; then
+	note "Using the streams and hours in $TARGETS_FILE"
+	awk -F'|' 'NF == 4 && length($2) == 36' "$TARGETS_FILE" >"$OUT/targets.psv"
+else
+	note "Choosing streams"
+	run rows targets "$OUT/targets.psv" -v t0="$T0" -v t1="$T1" -v hours="$HOURS" -v sample="$SAMPLE"
+fi
 TARGET_COUNT=$(($(wc -l <"$OUT/targets.psv")))
 [ "$TARGET_COUNT" -gt 0 ] || { finish; die "no streams found to compare, see $OUT/verify.log"; }
 awk -F'|' '{ n[$1]++; if (!(($1, $2) in s)) { s[$1, $2] = 1; st[$1]++ } }
