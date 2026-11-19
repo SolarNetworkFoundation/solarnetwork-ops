@@ -65,11 +65,14 @@
 #               day, and in the 24 hours before the latest complete hour has an
 #               hour where one 15 minute slot holds datum with a value for a
 #               property and another holds datum with none; compared for the
-#               latest two such hours. These hours are certain to have a
+#               latest two such hours. These hours nearly always have a
 #               "partial" 15 minute row (see below), which mixed_a only makes
-#               possible. Finding them reads a day of datum for each stream
-#               with two or more accumulating properties that is under the
-#               300 a day limit; denser streams are left out to keep that small.
+#               possible. The exception is when the slot without the property
+#               is the first with datum and the datum before the hour had the
+#               property: that datum's reading is counted in the first slot.
+#               Finding them reads a day of datum for each stream with two or
+#               more accumulating properties that is under the 300 a day limit;
+#               denser streams are left out to keep that small.
 #
 # For each stream and hour it makes two comparisons.
 #
