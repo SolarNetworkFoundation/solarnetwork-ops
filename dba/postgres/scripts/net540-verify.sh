@@ -61,6 +61,15 @@
 #   reset_pair  has two reset records at most an hour apart with no datum between
 #               them, at any time; compared for the hours around the pair. The
 #               reset-pair fix is meant to change some of these hours.
+#   partial_a   has two or more accumulating properties and at most 300 datum a
+#               day, and in the 24 hours before the latest complete hour has an
+#               hour where one 15 minute slot holds datum with a value for a
+#               property and another holds datum with none; compared for the
+#               latest two such hours. These hours are certain to have a
+#               "partial" 15 minute row (see below), which mixed_a only makes
+#               possible. Finding them reads a day of datum for each stream
+#               with two or more accumulating properties that is under the
+#               300 a day limit; denser streams are left out to keep that small.
 #
 # For each stream and hour it makes two comparisons.
 #
@@ -105,7 +114,7 @@
 set -u
 umask 077
 
-SCRIPT_VERSION=4
+SCRIPT_VERSION=5
 HOURS=2
 SAMPLE=30
 STREAMS=2
@@ -435,6 +444,58 @@ WITH hrs AS (
 	ORDER BY p.ts DESC, p.stream_id
 	LIMIT :sample
 )
+-- hours of the last day in which, for some accumulating property, one 15 minute slot has a
+-- datum with a value and another slot has datum but none with a value; the latest two for
+-- each stream. Only streams with at most 300 datum a day are read (the test is inside the
+-- subquery so that the datum of denser streams are never touched).
+, partial_hours AS MATERIALIZED (
+	SELECT m.stream_id, p.hr
+	FROM solardatm.da_datm_meta m
+	CROSS JOIN LATERAL (
+		SELECT max(a.datum_count) AS per_day
+		FROM solardatm.aud_datm_daily a
+		WHERE a.stream_id = m.stream_id
+			AND a.ts_start >= :'t0'::timestamptz - INTERVAL 'P2D'
+			AND a.ts_start < :'t0'::timestamptz
+	) c
+	CROSS JOIN LATERAL (
+		SELECT y.hr
+		FROM (
+			SELECT x.hr, x.idx
+				, count(*) FILTER (WHERE x.present > 0) AS slots_with
+				, count(*) FILTER (WHERE x.present = 0) AS slots_without
+			FROM (
+				SELECT date_trunc('hour', d.ts) AS hr
+					, time_bucket(INTERVAL 'PT15M', d.ts) AS slot
+					, i.idx
+					, count(d.data_a[i.idx]) AS present
+				FROM solardatm.da_datm d
+				CROSS JOIN generate_series(1, cardinality(m.names_a)) AS i(idx)
+				WHERE c.per_day BETWEEN 1 AND 300
+					AND d.stream_id = m.stream_id
+					AND d.ts >= :'t0'::timestamptz - INTERVAL 'P1D'
+					AND d.ts < :'t0'::timestamptz
+					AND d.data_a IS NOT NULL
+				GROUP BY 1, 2, 3
+			) x
+			GROUP BY x.hr, x.idx
+		) y
+		WHERE y.slots_with > 0 AND y.slots_without > 0
+		GROUP BY y.hr
+		ORDER BY y.hr DESC
+		LIMIT 2
+	) p
+	WHERE cardinality(m.names_a) > 1
+)
+, partial AS MATERIALIZED (
+	SELECT x.stream_id, x.hr
+	FROM (
+		SELECT p.stream_id, p.hr
+			, dense_rank() OVER (ORDER BY md5(p.stream_id::text || 'p' || :'t0'), p.stream_id) AS rn
+		FROM partial_hours p
+	) x
+	WHERE x.rn <= :sample
+)
 SELECT x.class, x.stream_id, x.t0, x.t0 + INTERVAL 'PT1H' AS t1
 FROM (
 	SELECT c.class, c.stream_id, h.t0 FROM cadence c CROSS JOIN hrs h
@@ -446,6 +507,8 @@ FROM (
 	SELECT 'mixed_a', s.stream_id, h.t0 FROM mixed s CROSS JOIN hrs h
 	UNION ALL
 	SELECT 'location', s.stream_id, h.t0 FROM loc s CROSS JOIN hrs h
+	UNION ALL
+	SELECT 'partial_a', s.stream_id, s.hr FROM partial s
 	UNION ALL
 	SELECT 'after_gap', g.stream_id, g.t0 + make_interval(hours => o.h)
 	FROM after_gap g CROSS JOIN (VALUES (-1), (0)) AS o(h)
@@ -703,7 +766,7 @@ awk -F'|' '{ n[$1]++; if (!(($1, $2) in s)) { s[$1, $2] = 1; st[$1]++ } }
 	END { for (k in n) printf "%s: %d streams, %d comparisons\n", k, st[k], n[k] }' \
 	"$OUT/targets.psv" | sort | while IFS= read -r line; do note "  $line"; done
 
-CLASSES='dense mid sparse status multi_a mixed_a location after_gap reset reset_pair'
+CLASSES='dense mid sparse status multi_a mixed_a partial_a location after_gap reset reset_pair'
 
 printf '%s\n' "$COMPARE_HEADER" >"$OUT/compare.psv"
 : >"$OUT/compare-errors.txt"
