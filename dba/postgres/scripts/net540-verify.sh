@@ -91,6 +91,13 @@
 # rollup_datm_for_time_span_slots(). Differences there are expected for streams
 # with gaps of more than 15 minutes between datum.
 #
+# And it counts the hours that have a "partial" 15 minute row: one with no value
+# for an accumulating property that another 15 minute row of the same hour has
+# a value for (rows_15m_partial_a in compare.psv, partial_a_hours in run.txt).
+# In those hours the roll-up has to pass over a row to find the hour's first or
+# last reading, so they are the ones that show that case is handled. A run with
+# none of them says nothing about it either way.
+#
 # The exit status is 1 if any comparison is DIFFERENT or failed, else 0.
 #
 # Needs psql 12 or later. Written for POSIX sh; also runs under zsh and bash.
@@ -98,7 +105,7 @@
 set -u
 umask 077
 
-SCRIPT_VERSION=3
+SCRIPT_VERSION=4
 HOURS=2
 SAMPLE=30
 STREAMS=2
@@ -536,6 +543,15 @@ WITH l AS MATERIALIZED (
 	FROM s
 	FULL OUTER JOIN q ON q.ts_start = s.ts_start
 )
+-- candidate 15 minute rows with no value for an accumulating property that another row of the
+-- hour has a value for
+, sn AS (
+	SELECT count(DISTINCT a.ts_start) AS n
+	FROM s a
+	CROSS JOIN generate_subscripts(a.data_a, 1) AS i(idx)
+	WHERE a.data_a[i.idx] IS NULL
+		AND EXISTS (SELECT 1 FROM s b WHERE b.data_a[i.idx] IS NOT NULL)
+)
 SELECT $1 AS class, $2 AS stream_id, $3 AS slot_start
 	, CASE
 		WHEN n.n_l = n.n_f
@@ -566,10 +582,11 @@ SELECT $1 AS class, $2 AS stream_id, $3 AS slot_start
 	, (SELECT r.read_a::text FROM r LIMIT 1) AS read_a_from_15m
 	, (SELECT f.data_s::text FROM f LIMIT 1) AS data_s_fixed
 	, (SELECT r.data_s::text FROM r LIMIT 1) AS data_s_from_15m
-FROM n, lf, rp, fr, di, sq;
+	, sn.n AS rows_15m_partial_a
+FROM n, lf, rp, fr, di, sq, sn;
 SQL
 
-COMPARE_HEADER='class|stream_id|slot_start|hour_verdict|slots_verdict|hour_rows_live|hour_rows_fixed|hour_rows_from_15m|rows_15m|rows_15m_query|rows_15m_differ_from_query|data_i_rel_diff|data_a_live|data_a_fixed|data_a_from_15m|read_a_fixed|read_a_from_15m|data_s_fixed|data_s_from_15m'
+COMPARE_HEADER='class|stream_id|slot_start|hour_verdict|slots_verdict|hour_rows_live|hour_rows_fixed|hour_rows_from_15m|rows_15m|rows_15m_query|rows_15m_differ_from_query|data_i_rel_diff|data_a_live|data_a_fixed|data_a_from_15m|read_a_fixed|read_a_from_15m|data_s_fixed|data_s_from_15m|rows_15m_partial_a'
 
 # What each function costs, with literal arguments as production's
 # EXECUTE ... USING gives them. The candidate 15 minute rollup runs first, so it
@@ -731,12 +748,13 @@ DIFFERENT=$(awk -F'|' 'NR > 1 && ($4 == "DIFFERENT" || $5 == "DIFFERENT") { n++ 
 
 # how the candidate 15 minute rows compare with today's 15 minute query
 {
-	printf 'class|comparisons|rows_15m|rows_15m_query|rows_15m_differ_from_query\n'
+	printf 'class|comparisons|rows_15m|rows_15m_query|rows_15m_differ_from_query|partial_a_hours\n'
 	awk -F'|' '
-		NR > 1 { c[$1]++; a[$1] += $9; b[$1] += $10; d[$1] += $11 }
-		END { for (k in c) print k "|" c[k] "|" a[k] + 0 "|" b[k] + 0 "|" d[k] + 0 }
+		NR > 1 { c[$1]++; a[$1] += $9; b[$1] += $10; d[$1] += $11; if ($20 + 0 > 0) e[$1]++ }
+		END { for (k in c) print k "|" c[k] "|" a[k] + 0 "|" b[k] + 0 "|" d[k] + 0 "|" e[k] + 0 }
 	' "$OUT/compare.psv" | sort
 } >"$OUT/query-summary.psv"
+PARTIAL=$(awk -F'|' 'NR > 1 && $20 + 0 > 0 { n++ } END { print n + 0 }' "$OUT/compare.psv")
 
 if [ "$DO_EXPLAIN" -eq 1 ] && [ "$STREAMS" -ge 1 ]; then
 	# the first STREAMS streams of each kind, at their first hour compared
@@ -804,8 +822,8 @@ fi
 
 trap - INT TERM
 {
-	printf 'targets=%s\ncompared=%s\nmissing=%s\ndifferent=%s\n' \
-		"$TARGET_COUNT" "$COMPARED" "$MISSING" "$DIFFERENT"
+	printf 'targets=%s\ncompared=%s\nmissing=%s\ndifferent=%s\npartial_a_hours=%s\n' \
+		"$TARGET_COUNT" "$COMPARED" "$MISSING" "$DIFFERENT" "$PARTIAL"
 } >>"$OUT/run.txt"
 finish
 
@@ -819,6 +837,7 @@ if [ -f "$OUT/explain-averages.psv" ]; then
 		| while IFS= read -r line; do note "$line"; done
 fi
 
+note "Hours with a 15 minute row lacking a property the hour has: $PARTIAL of $COMPARED"
 if [ "$MISSING" -gt 0 ]; then
 	note "WARNING: $MISSING of $TARGET_COUNT comparisons failed, see compare-errors.txt"
 fi
