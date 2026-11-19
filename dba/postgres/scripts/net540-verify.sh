@@ -44,6 +44,11 @@
 #   sparse      1 datum in the hour
 #   status      has status properties
 #   multi_a     has two or more accumulating properties
+#   mixed_a     has two or more accumulating properties, and in one of the hours
+#               compared one of them is carried by some datum and not by others.
+#               These are the hours where a 15 minute row can have no value for
+#               a property that the hour does have. Finding them reads the
+#               datum of those hours for every such stream.
 #   location    a location datum stream
 #
 # and by their history:
@@ -93,7 +98,7 @@
 set -u
 umask 077
 
-SCRIPT_VERSION=2
+SCRIPT_VERSION=3
 HOURS=2
 SAMPLE=30
 STREAMS=2
@@ -319,6 +324,27 @@ WITH hrs AS (
 	ORDER BY md5(a.stream_id::text || 'a' || :'t0')
 	LIMIT :sample
 )
+, mixed AS MATERIALIZED (
+	SELECT a.stream_id
+	FROM (SELECT * FROM act WHERE n_a > 1) a
+	CROSS JOIN LATERAL (
+		SELECT bool_or(x.present > 0 AND x.missing > 0) AS mixed
+		FROM (
+			SELECT count(*) FILTER (WHERE d.data_a[i.idx] IS NOT NULL) AS present
+				, count(*) FILTER (WHERE d.data_a[i.idx] IS NULL) AS missing
+			FROM solardatm.da_datm d
+			CROSS JOIN generate_series(1, a.n_a) AS i(idx)
+			WHERE d.stream_id = a.stream_id
+				AND d.ts >= :'t0'::timestamptz - make_interval(hours => :hours - 1)
+				AND d.ts < :'t1'::timestamptz
+				AND d.data_a IS NOT NULL
+			GROUP BY date_trunc('hour', d.ts), i.idx
+		) x
+	) m
+	WHERE m.mixed
+	ORDER BY md5(a.stream_id::text || 'm' || :'t0')
+	LIMIT :sample
+)
 , loc AS MATERIALIZED (
 	SELECT m.stream_id
 	FROM solardatm.da_loc_datm_meta m
@@ -409,6 +435,8 @@ FROM (
 	SELECT 'status', s.stream_id, h.t0 FROM status s CROSS JOIN hrs h
 	UNION ALL
 	SELECT 'multi_a', s.stream_id, h.t0 FROM multi s CROSS JOIN hrs h
+	UNION ALL
+	SELECT 'mixed_a', s.stream_id, h.t0 FROM mixed s CROSS JOIN hrs h
 	UNION ALL
 	SELECT 'location', s.stream_id, h.t0 FROM loc s CROSS JOIN hrs h
 	UNION ALL
@@ -658,7 +686,7 @@ awk -F'|' '{ n[$1]++; if (!(($1, $2) in s)) { s[$1, $2] = 1; st[$1]++ } }
 	END { for (k in n) printf "%s: %d streams, %d comparisons\n", k, st[k], n[k] }' \
 	"$OUT/targets.psv" | sort | while IFS= read -r line; do note "  $line"; done
 
-CLASSES='dense mid sparse status multi_a location after_gap reset reset_pair'
+CLASSES='dense mid sparse status multi_a mixed_a location after_gap reset reset_pair'
 
 printf '%s\n' "$COMPARE_HEADER" >"$OUT/compare.psv"
 : >"$OUT/compare-errors.txt"
