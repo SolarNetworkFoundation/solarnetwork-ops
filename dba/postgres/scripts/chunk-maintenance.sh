@@ -11,10 +11,8 @@
 # few each run. Install setup/timescaledb/tsdb-init-hypertables-maintenance.sql
 # first; it explains how each chunk's needs are worked out. The tasks:
 #
-#   reorder   rewrite a chunk in index order with reorder_chunk(), then ANALYZE
-#   move      the same with move_chunk(), into the tablespaces the chunk is
-#             already in, for a chunk that a move_chunks job moved out of main
-#             storage, to solarwarm or solarcold
+#   reorder   rewrite a chunk in index order with reorder_chunk(), where it is,
+#             then ANALYZE
 #   reindex   REINDEX INDEX CONCURRENTLY, when only the index is bloated
 #   analyze   ANALYZE a chunk whose statistics are out of date
 #
@@ -83,10 +81,9 @@
 #   -s NAME=VALUE  set chunk_maint.NAME for the script's sessions: one of the
 #                  thresholds listed in tsdb-init-hypertables-maintenance.sql.
 #                  May be given more than once.
-#   -C             use CLUSTER in place of reorder_chunk() and move_chunk(), to
-#                  test on a server without the TimescaleDB licence. CLUSTER
-#                  blocks reads of the chunk as well as writes: never use this
-#                  on production.
+#   -C             use CLUSTER in place of reorder_chunk(), to test on a server
+#                  without the TimescaleDB licence. CLUSTER blocks reads of the
+#                  chunk as well as writes: never use this on production.
 #   -v             say more: every check, and each candidate left for later
 #
 # Exit status:
@@ -403,7 +400,7 @@ watch_writes() {
 task_summary() {
 	ask "SELECT round(extract(epoch FROM l.finished - l.started)) || ' s'
 			|| CASE
-				WHEN l.action IN ('reorder', 'move', 'cluster') THEN format(', heap %s to %s, index %s to %s, correlation %s to %s'
+				WHEN l.action IN ('reorder', 'cluster') THEN format(', heap %s to %s, index %s to %s, correlation %s to %s'
 					, pg_size_pretty(l.heap_bytes_before), pg_size_pretty(l.heap_bytes_after)
 					, pg_size_pretty(l.index_bytes_before), pg_size_pretty(l.index_bytes_after)
 					, COALESCE(round(l.corr_before::NUMERIC, 3)::TEXT, 'unknown')
@@ -487,7 +484,7 @@ recheck() {
 	IFS='|' read -r r_action r_reason r_stmt r_astmt r_hts r_its r_tts r_hneed r_ineed r_tneed r_wneed \
 		r_abytes r_corr <"$WORK/recheck"
 	case $r_action in
-		reorder | move | cluster | reindex) ;;
+		reorder | cluster | reindex) ;;
 		*)
 			note "    no longer needed, now that it is analyzed: correlation ${r_corr:-unknown}"
 			return 1
@@ -613,8 +610,8 @@ if [ ! -s "$WORK/candidates" ]; then
 fi
 note "$(awk -F '|' '{ n[$6]++; t++ } END {
 	s = "work to do on " t (t == 1 ? " chunk:" : " chunks:")
-	split("reorder move cluster reindex analyze", a, " ")
-	for (i = 1; i <= 5; i++) if (a[i] in n) { s = s sep " " n[a[i]] " " a[i]; sep = "," }
+	split("reorder cluster reindex analyze", a, " ")
+	for (i = 1; i <= 4; i++) if (a[i] in n) { s = s sep " " n[a[i]] " " a[i]; sep = "," }
 	print s
 }' "$WORK/candidates")"
 

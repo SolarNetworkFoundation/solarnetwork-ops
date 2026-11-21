@@ -43,11 +43,12 @@
  * What each chunk gets, in chunk_maint_status.action:
  *
  *   reorder   rewrite the chunk in index order with reorder_chunk(), when it is
- *             out of order or has a lot of free space
- *   move      the same, but with move_chunk() into the tablespaces the chunk
- *             already uses, for a chunk whose indexes reorder_chunk() would put
- *             somewhere else: a chunk that a move_chunks job has moved out of
- *             its hypertable's tablespace, to solarwarm or solarcold
+ *             out of order or has a lot of free space. reorder_chunk() writes
+ *             the new copy where the chunk is: the heap in its tablespace, and
+ *             each index in the index's own tablespace. (An index in the
+ *             database's default tablespace may be put elsewhere, such as in one
+ *             of the hypertable's attached tablespaces, which the free space
+ *             check does not allow for.)
  *   cluster   the same with CLUSTER, for testing on a server without the
  *             TimescaleDB licence (chunk_maint.use_cluster)
  *   reindex   REINDEX INDEX CONCURRENTLY, when only the index is bloated
@@ -306,10 +307,9 @@ DROP VIEW IF EXISTS _timescaledb_solarnetwork.chunk_maint_storage;
  * decisions. It reads only the catalogs, the statistics and the size of each file.
  *
  * moved is true for a chunk whose heap is not in its hypertable's tablespace, as a move_chunks job
- * leaves one (in solarwarm or solarcold). reorder_keeps_indexes is true when reorder_chunk() would
- * rebuild every index of the chunk in the tablespace it is in now. move_due is when a move_chunks
- * job will move the chunk to another tablespace, reordering it as it does. analyzed_here is true
- * when this script analyzed the chunk since it was last rewritten.
+ * leaves one (in solarwarm or solarcold). move_due is when a move_chunks job will move the chunk to
+ * another tablespace, reordering it as it does. analyzed_here is true when this script analyzed the
+ * chunk since it was last rewritten.
  */
 CREATE VIEW _timescaledb_solarnetwork.chunk_maint_chunk AS
 WITH mv AS (
@@ -340,21 +340,6 @@ SELECT m.hypertable_schema
 	, ix.oid::regclass AS chunk_index
 	, ix.relname::TEXT AS chunk_index_name
 	, COALESCE(it.spcname, dbt.spcname)::TEXT AS index_tablespace
-	, ix.oid IS NOT NULL AND NOT EXISTS (
-		SELECT 1
-		FROM _timescaledb_catalog.chunk_index x
-		INNER JOIN pg_catalog.pg_class xi ON xi.relnamespace = cn.oid AND xi.relname = x.index_name
-		INNER JOIN pg_catalog.pg_class xt ON xt.relnamespace = htn.oid AND xt.relname = x.hypertable_index_name
-		WHERE x.chunk_id = cat.id
-			-- reorder_chunk() builds each index in its hypertable index's tablespace, or when that
-			-- is the default, in one of the hypertable's attached tablespaces if it has any
-			AND xi.reltablespace IS DISTINCT FROM CASE
-				WHEN xt.reltablespace <> 0 THEN xt.reltablespace
-				WHEN NOT EXISTS (
-					SELECT 1 FROM _timescaledb_catalog.tablespace a WHERE a.hypertable_id = cat.hypertable_id
-				) THEN 0::OID
-				END
-	) AS reorder_keeps_indexes
 	, pg_table_size(c.oid) AS heap_bytes
 	, pg_relation_size(c.oid) AS heap_main_bytes
 	, pg_indexes_size(c.oid) AS index_bytes
@@ -437,7 +422,7 @@ LEFT JOIN LATERAL (
 		AND NOT xs.inherited
 ) iw ON TRUE
 LEFT JOIN LATERAL (
-	SELECT max(l.finished) FILTER (WHERE l.action IN ('reorder', 'move', 'cluster')) AS last_rewrite
+	SELECT max(l.finished) FILTER (WHERE l.action IN ('reorder', 'cluster')) AS last_rewrite
 		, max(l.finished) FILTER (WHERE l.action = 'reindex') AS last_reindex
 		, bool_or(l.action <> 'reindex' AND l.relfilenode_after = c.relfilenode) AS analyzed_here
 	FROM _timescaledb_solarnetwork.chunk_maint_log l
@@ -482,7 +467,7 @@ SELECT d.hypertable_schema
 	, d.skip_reason
 	, d.action
 	, CASE
-		WHEN d.action IN ('reorder', 'move', 'cluster') THEN concat_ws('; '
+		WHEN d.action IN ('reorder', 'cluster') THEN concat_ws('; '
 			, CASE WHEN d.order_needed THEN
 				format('correlation %s', COALESCE(round(d.corr::NUMERIC, 3)::TEXT, 'unknown'))
 				|| CASE WHEN round((100 * d.mod_frac)::NUMERIC, 1) > 0
@@ -501,32 +486,28 @@ SELECT d.hypertable_schema
 	, CASE d.action
 		WHEN 'reorder' THEN format('SELECT %I.reorder_chunk(%L, %L)'
 			, d.tsdb_schema, format('%I.%I', d.chunk_schema, d.chunk_name), d.reorder_index)
-		WHEN 'move' THEN format('SELECT %I.move_chunk(chunk => %L, destination_tablespace => %L'
-			', index_destination_tablespace => %L, reorder_index => %L)'
-			, d.tsdb_schema, format('%I.%I', d.chunk_schema, d.chunk_name), d.heap_tablespace, d.index_tablespace
-			, d.reorder_index)
 		WHEN 'cluster' THEN format('CLUSTER %I.%I USING %I', d.chunk_schema, d.chunk_name, d.chunk_index_name)
 		WHEN 'reindex' THEN format('REINDEX INDEX CONCURRENTLY %I.%I', d.chunk_schema, d.chunk_index_name)
 		WHEN 'analyze' THEN format('ANALYZE %I.%I', d.chunk_schema, d.chunk_name)
 		END AS stmt
 	, format('ANALYZE %I.%I', d.chunk_schema, d.chunk_name) AS analyze_stmt
 	, d.temp_tablespace
-	, CASE WHEN d.action IN ('reorder', 'move', 'cluster') THEN d.heap_bytes ELSE 0 END AS heap_need
+	, CASE WHEN d.action IN ('reorder', 'cluster') THEN d.heap_bytes ELSE 0 END AS heap_need
 	, CASE
-		WHEN d.action IN ('reorder', 'move', 'cluster') THEN d.index_bytes
+		WHEN d.action IN ('reorder', 'cluster') THEN d.index_bytes
 		WHEN d.action = 'reindex' THEN d.reorder_index_bytes
 		ELSE 0 END AS index_need
 	, CASE
-		WHEN d.action IN ('reorder', 'move', 'cluster') THEN ceil(1.25 * d.heap_bytes)::BIGINT
+		WHEN d.action IN ('reorder', 'cluster') THEN ceil(1.25 * d.heap_bytes)::BIGINT
 		WHEN d.action = 'reindex' THEN d.reorder_index_bytes
 		ELSE 0 END AS temp_need
 	, CASE
-		WHEN d.action IN ('reorder', 'move', 'cluster') THEN d.heap_bytes + d.index_bytes
+		WHEN d.action IN ('reorder', 'cluster') THEN d.heap_bytes + d.index_bytes
 		WHEN d.action = 'reindex' THEN d.reorder_index_bytes
 		ELSE 0 END AS wal_need
 	, d.analyze_bytes
 	, CASE
-		WHEN d.action IN ('reorder', 'move', 'cluster') THEN d.heap_bytes + d.index_bytes + d.analyze_bytes
+		WHEN d.action IN ('reorder', 'cluster') THEN d.heap_bytes + d.index_bytes + d.analyze_bytes
 		WHEN d.action = 'reindex' THEN d.reorder_index_bytes
 		WHEN d.action = 'analyze' THEN d.analyze_bytes
 		ELSE 0 END
@@ -538,7 +519,7 @@ FROM (
 		-- analyze first when the statistics may predate the chunk's last rewrite, or when only the
 		-- rows changed since the last ANALYZE make the chunk look out of order
 		, CASE
-			WHEN a.action IN ('reorder', 'move', 'cluster') THEN NOT a.stats_current OR NOT (a.order_raw OR a.heap_needed)
+			WHEN a.action IN ('reorder', 'cluster') THEN NOT a.stats_current OR NOT (a.order_raw OR a.heap_needed)
 			WHEN a.action = 'reindex' THEN NOT a.stats_current
 			ELSE FALSE
 			END AS analyze_first
@@ -547,11 +528,7 @@ FROM (
 			, CASE
 				WHEN m.skip_reason IS NOT NULL THEN NULL
 				WHEN (m.order_needed OR m.heap_needed) AND NOT m.recently_rewritten THEN
-					CASE
-						WHEN m.use_cluster THEN 'cluster'
-						WHEN m.reorder_keeps_indexes THEN 'reorder'
-						ELSE 'move'
-					END
+					CASE WHEN m.use_cluster THEN 'cluster' ELSE 'reorder' END
 				WHEN m.bloat_needed AND NOT m.recently_rewritten AND NOT m.recently_reindexed THEN 'reindex'
 				WHEN m.mod_frac >= m.analyze_frac THEN 'analyze'
 				END AS action
@@ -807,7 +784,7 @@ SELECT 'pg_wal', current_setting('data_directory') || '/pg_wal';
  * Log the start of a task on a chunk, with the chunk's sizes and correlation before it.
  *
  * @param chunk 	the chunk
- * @param action 	the action: reorder, move, cluster, reindex or analyze
+ * @param action 	the action: reorder, cluster, reindex or analyze
  * @param reason 	why
  * @param stmt 		the statements run
  * @return the ID of the new chunk_maint_log row, or NULL if the chunk is not one of an enabled
