@@ -46,7 +46,8 @@
  *             out of order or has a lot of free space
  *   move      the same, but with move_chunk() into the tablespaces the chunk
  *             already uses, for a chunk whose indexes reorder_chunk() would put
- *             somewhere else: a chunk that move_chunks has moved to solarwarm
+ *             somewhere else: a chunk that a move_chunks job has moved out of
+ *             its hypertable's tablespace, to solarwarm or solarcold
  *   cluster   the same with CLUSTER, for testing on a server without the
  *             TimescaleDB licence (chunk_maint.use_cluster)
  *   reindex   REINDEX INDEX CONCURRENTLY, when only the index is bloated
@@ -80,6 +81,16 @@
  * index, ended less than chunk_maint.min_age ago, is due to be moved by a
  * move_chunks job within chunk_maint.move_margin (that move reorders it), or is
  * smaller than chunk_maint.min_chunk_mb.
+ *
+ * A chunk that a move_chunks job (OPS-38) has moved out of its hypertable's
+ * tablespace (moved), to solarwarm or, where there is one, solarcold, is
+ * maintained where it is, after the chunks on main storage. Nothing here names
+ * those tablespaces: the jobs' configurations say where chunks go and when,
+ * lag_max included. With a solarwarm job for chunks 5 to 8 years old and a
+ * solarcold job for older ones, a chunk on main storage is left alone once it is
+ * about 4.5 years old, and one in solarwarm once it is about 7.5, as each is then
+ * due to move within the default move_margin; one in solarcold is never due to
+ * move again.
  *
  * The thresholds can be changed for a session, without recreating the views (the
  * script does this with -s NAME=VALUE):
@@ -294,15 +305,16 @@ DROP VIEW IF EXISTS _timescaledb_solarnetwork.chunk_maint_storage;
  * Facts about every chunk of the enabled chunk_maint_hypertable hypertables: no thresholds, no
  * decisions. It reads only the catalogs, the statistics and the size of each file.
  *
- * warm is true for a chunk whose heap is not in its hypertable's tablespace, as move_chunks leaves
- * one. reorder_keeps_indexes is true when reorder_chunk() would rebuild every index of the chunk in
- * the tablespace it is in now. move_due is when a move_chunks job will move the chunk to another
- * tablespace, reordering it as it does. analyzed_here is true when this script analyzed the chunk
- * since it was last rewritten.
+ * moved is true for a chunk whose heap is not in its hypertable's tablespace, as a move_chunks job
+ * leaves one (in solarwarm or solarcold). reorder_keeps_indexes is true when reorder_chunk() would
+ * rebuild every index of the chunk in the tablespace it is in now. move_due is when a move_chunks
+ * job will move the chunk to another tablespace, reordering it as it does. analyzed_here is true
+ * when this script analyzed the chunk since it was last rewritten.
  */
 CREATE VIEW _timescaledb_solarnetwork.chunk_maint_chunk AS
 WITH mv AS (
-	-- the move_chunks jobs (OPS-38), which move each chunk older than lag to another tablespace
+	-- the move_chunks jobs (OPS-38): each moves the chunks older than lag (and, if it has a lag_max,
+	-- starting less than lag_max ago, as show_chunks(newer_than) does) to its destination tablespace
 	SELECT to_regclass(j.config->>'hypertable') AS ht
 		, (j.config->>'lag')::INTERVAL AS lag
 		, (j.config->>'lag_max')::INTERVAL AS lag_max
@@ -322,7 +334,7 @@ SELECT m.hypertable_schema
 	, ch.range_end
 	, ch.is_compressed
 	, c.relfilenode
-	, c.reltablespace <> htc.reltablespace AS warm
+	, c.reltablespace <> htc.reltablespace AS moved
 	, COALESCE(ct.spcname, dbt.spcname)::TEXT AS heap_tablespace
 	, format('%I.%I', m.hypertable_schema, m.reorder_index) AS reorder_index
 	, ix.oid::regclass AS chunk_index
@@ -450,7 +462,7 @@ SELECT d.hypertable_schema
 	, d.chunk
 	, d.range_start
 	, d.range_end
-	, d.warm
+	, d.moved
 	, d.heap_tablespace
 	, d.index_tablespace
 	, d.heap_bytes
@@ -654,14 +666,14 @@ FROM (
 
 /**
  * The chunks that need something, in the order chunk-maintenance.sh takes them (priority): rewrites
- * and reindexes before analyzes; chunks on main storage before warm ones; then the newest chunks
+ * and reindexes before analyzes; chunks on main storage before moved ones; then the newest chunks
  * first, as they are queried the most, and for analyzes the chunks whose statistics are furthest
  * behind first.
  */
 CREATE VIEW _timescaledb_solarnetwork.chunk_maint_candidates AS
 SELECT row_number() OVER (ORDER BY
 		s.action = 'analyze'
-		, s.warm
+		, s.moved
 		, CASE WHEN s.action = 'analyze' THEN s.mod_frac END DESC NULLS LAST
 		, s.range_end DESC
 		, s.chunk_name
@@ -772,9 +784,13 @@ GROUP BY cfg.in_recovery, cfg.max_lag;
  */
 CREATE VIEW _timescaledb_solarnetwork.chunk_maint_storage AS
 SELECT t.spcname::TEXT AS name
-	, CASE t.spcname
-		WHEN 'pg_default' THEN current_setting('data_directory') || '/base'
-		WHEN 'pg_global' THEN current_setting('data_directory') || '/global'
+	, CASE
+		WHEN t.spcname = 'pg_default' THEN current_setting('data_directory') || '/base'
+		WHEN t.spcname = 'pg_global' THEN current_setting('data_directory') || '/global'
+		-- an in-place tablespace (the allow_in_place_tablespaces developer option) is given relative to
+		-- the data directory
+		WHEN pg_tablespace_location(t.oid) NOT LIKE '/%'
+			THEN current_setting('data_directory') || '/' || pg_tablespace_location(t.oid)
 		ELSE pg_tablespace_location(t.oid)
 		END AS path
 FROM pg_catalog.pg_tablespace t

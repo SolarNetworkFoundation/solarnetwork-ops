@@ -13,7 +13,8 @@
 #
 #   reorder   rewrite a chunk in index order with reorder_chunk(), then ANALYZE
 #   move      the same with move_chunk(), into the tablespaces the chunk is
-#             already in, for a chunk that move_chunks moved to solarwarm
+#             already in, for a chunk that a move_chunks job moved out of main
+#             storage, to solarwarm or solarcold
 #   reindex   REINDEX INDEX CONCURRENTLY, when only the index is bloated
 #   analyze   ANALYZE a chunk whose statistics are out of date
 #
@@ -31,9 +32,11 @@
 #     is failing or behind, or a replica or replication slot is too far behind:
 #     the checks in the chunk_maint_preflight view.
 #  3. Takes the candidates in order: rewrites and reindexes, the newest chunk
-#     first and the chunks in solarwarm last, then ANALYZE for the chunks whose
-#     statistics are furthest behind. It rewrites or reindexes at most one chunk
-#     in solarwarm a run, because the replica's warm storage is slow to write.
+#     first and the chunks that move_chunks moved out of main storage last, then
+#     ANALYZE for the chunks whose statistics are furthest behind. It rewrites or
+#     reindexes at most one chunk in each tablespace chunks were moved to
+#     (solarwarm, and solarcold where there is one) a run, as the replica's
+#     storage for them is slow to write.
 #  4. Before rewriting a chunk:
 #     - if the chunk's statistics may be out of date, analyzes it and looks
 #       again;
@@ -161,6 +164,14 @@ is_number() {
 
 pretty() {
 	awk -v b="$1" "$AWK_PRETTY"' BEGIN { print pretty(b) }'
+}
+
+# in_list WORD LIST - true if WORD is one of the words of the space separated LIST
+in_list() {
+	case " $2 " in
+		*" $1 "*) return 0 ;;
+	esac
+	return 1
 }
 
 # plural COUNT WORD - print "1 WORD" or "COUNT WORDs"
@@ -516,8 +527,8 @@ do_task() {
 		note "stopping: not enough space to $c_action $c_chunk"
 		exit 3
 	fi
-	if [ "$c_warm" = t ]; then
-		WARM_DONE=1
+	if [ "$c_moved" = t ]; then
+		MOVED_DONE="$MOVED_DONE $c_hts"
 	fi
 	if [ "$c_action" = reindex ]; then
 		USED=$((USED + c_ineed))
@@ -589,7 +600,7 @@ done <"$WORK/preflight"
 
 ask "SELECT name, path FROM _timescaledb_solarnetwork.chunk_maint_storage" >"$WORK/storage" || exit 1
 
-ask "SELECT priority, chunk, hypertable_name, range_end::DATE, warm, action, reason, analyze_first
+ask "SELECT priority, chunk, hypertable_name, range_end::DATE, moved, action, reason, analyze_first
 		, stmt, analyze_stmt, heap_tablespace, index_tablespace, temp_tablespace
 		, heap_need, index_need, temp_need, wal_need, analyze_bytes, cost
 		, pg_size_pretty(heap_bytes), pg_size_pretty(index_bytes)
@@ -612,18 +623,22 @@ USED=0
 TASKS=0
 LATER=0
 FAILED=0
-WARM_DONE=0
-while IFS='|' read -r c_prio c_chunk c_ht c_end c_warm c_action c_reason c_afirst c_stmt c_astmt \
+MOVED_DONE=
+while IFS='|' read -r c_prio c_chunk c_ht c_end c_moved c_action c_reason c_afirst c_stmt c_astmt \
 	c_hts c_its c_tts c_hneed c_ineed c_tneed c_wneed c_abytes c_cost c_hsize c_isize <&3; do
 	interrupted
 	if [ "$USED" -ge "$BUDGET" ]; then
 		LATER=$((LATER + 1))
 		continue
 	fi
-	c_label="$c_action $c_chunk ($c_ht to $c_end, heap $c_hsize, index $c_isize)"
-	if [ "$c_warm" = t ] && [ "$c_action" != analyze ] && [ "$WARM_DONE" -eq 1 ]; then
+	c_where=
+	if [ "$c_moved" = t ]; then
+		c_where=" in $c_hts,"
+	fi
+	c_label="$c_action $c_chunk ($c_ht to $c_end,$c_where heap $c_hsize, index $c_isize)"
+	if [ "$c_moved" = t ] && [ "$c_action" != analyze ] && in_list "$c_hts" "$MOVED_DONE"; then
 		if [ "$VERBOSE" -eq 1 ]; then
-			note "[$c_prio] later: $c_label: one rewrite or reindex in warm storage a run"
+			note "[$c_prio] later: $c_label: one rewrite or reindex in $c_hts a run"
 		fi
 		LATER=$((LATER + 1))
 		continue
