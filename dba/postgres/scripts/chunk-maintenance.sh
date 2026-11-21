@@ -43,9 +43,13 @@
 #       it finishes;
 #     - checks the free space of each filesystem the task writes to: a new copy
 #       of the heap and indexes in their tablespaces, the sort spill in the -t
-#       tablespace, and WAL in pg_wal. Needs on one filesystem (or ZFS pool) are
-#       added up, and must leave -r percent of it free. If they would not, the
-#       run stops with "not enough space" (exit status 3).
+#       tablespace, and WAL in pg_wal. On ZFS, each need is divided by the
+#       compression ratio (refcompressratio) of the dataset it is written to,
+#       whatever compression the dataset uses, as a new file there should
+#       compress about as well as the data already in it; a dataset with
+#       compression off counts the full size. Needs on one filesystem (or ZFS
+#       pool) are added up, and must leave -r percent of it free. If they would
+#       not, the run stops with "not enough space" (exit status 3).
 #  5. Rewrites the chunk and analyzes it, in one session with a lock_timeout
 #     (-l), so that it never waits long for a lock, nor holds up the queries
 #     queued behind it on the chunk. A task that times out on a lock is rolled
@@ -311,18 +315,31 @@ SELECT _timescaledb_solarnetwork.chunk_maint_log_finish(:id, NULLIF(:'err', ''))
 SQL
 }
 
-# fs_info PATH - print "KEY SIZE_KB AVAIL_KB MOUNT" for the filesystem holding PATH. KEY is the
-# ZFS pool for a ZFS dataset, as datasets in one pool share its space, and otherwise the device.
+# fs_info PATH - print "KEY SIZE_KB AVAIL_KB MOUNT RATIO" for the filesystem holding PATH. KEY is
+# the ZFS pool for a ZFS dataset, as datasets in one pool share its space, and otherwise the
+# device. RATIO is what a new file there is taken to compress by: the ZFS dataset's
+# refcompressratio, whatever its compression (lz4, zstd-9 and so on), as the data already in it
+# shows what that compression does to chunks; or 1 for a dataset with compression off, or a
+# filesystem that is not ZFS.
 fs_info() {
 	_fi=$(df -kP "$1" 2>/dev/null | awk 'NR == 2 { print $1, $2, $4, $NF }')
 	[ -n "$_fi" ] || return 1
+	_ratio=1
 	if command -v zfs >/dev/null 2>&1; then
-		_ds=$(zfs list -H -o name "$1" 2>/dev/null)
+		_ds= _comp= _zr=
+		read -r _ds _comp _zr <<EOF
+$(zfs list -H -p -o name,compression,refcompressratio "$1" 2>/dev/null)
+EOF
 		if [ -n "$_ds" ]; then
 			_fi="zfs:${_ds%%/*} ${_fi#* }"
+			_zr=${_zr%x}
+			case $_comp:$_zr in
+				off:* | *: | *:*[!0-9.]* | *:*.*.*) ;;
+				*) _ratio=$_zr ;;
+			esac
 		fi
 	fi
-	printf '%s\n' "$_fi"
+	printf '%s %s\n' "$_fi" "$_ratio"
 }
 
 # check_space - check that each filesystem the current task writes to has room for it, printing a
@@ -342,21 +359,26 @@ check_space() {
 			|| die "cannot read the free space of $_path ($_name): run this on the database server, as the postgres user"
 		printf '%s %s %s %s\n' "$_fs" "$_need" "$_role" "$_name" >>"$WORK/space"
 	done
+	# each line: KEY SIZE_KB AVAIL_KB MOUNT RATIO NEED ROLE TABLESPACE
 	awk -v reserve="$RESERVE_PCT" "$AWK_PRETTY"'
 		{
 			k = $1
-			w = $6
+			q = ($5 > 1) ? $5 : 1
+			w = $7
 			gsub(/_/, " ", w)
-			if (w != "WAL") w = w " in " $7
+			if (w != "WAL") w = w " in " $8
 			if (!(k in need)) {
-				order[++n] = k; size[k] = $2; avail[k] = $3; need[k] = 0; what[k] = w
+				order[++n] = k; size[k] = $2; avail[k] = $3; need[k] = 0; raw[k] = 0; what[k] = w
+				ratio[k] = q
 				fs[k] = (k ~ /^zfs:/) ? "ZFS pool " substr(k, 5) : $4
 			} else {
 				if ($2 > size[k]) size[k] = $2
 				if ($3 < avail[k]) avail[k] = $3
+				if (q != ratio[k]) ratio[k] = 0
 				what[k] = what[k] ", " w
 			}
-			need[k] += $5
+			need[k] += $6 / q
+			raw[k] += $6
 		}
 		END {
 			bad = 0
@@ -364,9 +386,15 @@ check_space() {
 				k = order[i]
 				a = avail[k] * 1024
 				r = size[k] * 1024 * reserve / 100
-				ok = (a - need[k] >= r)
-				printf "%s %s (%s): needs %s, %s free, keeping %s free\n", (ok ? "space ok on" : "NOT ENOUGH SPACE on"), \
-					fs[k], what[k], pretty(need[k]), pretty(a), pretty(r)
+				u = (a > r) ? a - r : 0
+				ok = (need[k] <= u)
+				# ratio 0: datasets with different compression ratios share the pool
+				c = ""
+				if (ratio[k] == 0) c = sprintf(" (%s before compression)", pretty(raw[k]))
+				else if (ratio[k] > 1) c = sprintf(" (%s at %.2fx compression)", pretty(raw[k]), ratio[k])
+				printf "%s %s (%s): needs %s%s, %s usable (%s free, less %s kept free)\n", \
+					(ok ? "space ok on" : "NOT ENOUGH SPACE on"), fs[k], what[k], pretty(need[k]), c, \
+					pretty(u), pretty(a), pretty(r)
 				if (!ok) bad = 1
 			}
 			exit bad

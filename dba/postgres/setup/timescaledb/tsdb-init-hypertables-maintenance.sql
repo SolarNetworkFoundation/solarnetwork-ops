@@ -123,6 +123,11 @@
  *                           the statistics target
  *   cost                    what the task counts against the script's budget:
  *                           the heap and indexes rewritten, plus each ANALYZE
+ *
+ * These are uncompressed sizes. On ZFS the script divides each space need by the
+ * compression ratio of the dataset it is written to (refcompressratio, or 1 where
+ * compression is off), so a chunk on an lz4 or zstd dataset needs less room than
+ * its size. The budget counts the uncompressed bytes.
  * ============================================================================
  */
 
