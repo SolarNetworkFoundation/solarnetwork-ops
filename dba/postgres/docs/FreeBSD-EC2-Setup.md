@@ -533,8 +533,7 @@ Once complete, can adjust `postgresql.conf` to suit the VM.
 
 # Setup periodic maintenance support
 
-Create `~postgres/bin/index-chunk-maintenance.sh` and `~postgres/bin/solar-jobs.sh` scripts. Create
-`~postgres/netrc/solarjobs-admin` file with:
+Create the `~postgres/bin/solar-jobs.sh` script. Create `~postgres/netrc/solarjobs-admin` file with:
 
 ```
 machine solarjobs.solarnetwork
@@ -548,6 +547,17 @@ Then set permissions:
 chmod 400 ~postgres/netrc/solarjobs-admin
 ```
 
+For the hypertable chunk maintenance (OPS-51), apply the maintenance DDL to the `solarnetwork`
+database, then copy the script, which runs daily from cron:
+
+```sh
+psql -X -U postgres -d solarnetwork -f dba/postgres/setup/timescaledb/tsdb-init-hypertables-maintenance.sql
+install -m 755 dba/postgres/scripts/chunk-maintenance.sh ~postgres/bin/chunk-maintenance.sh
+```
+
+Run `~postgres/bin/chunk-maintenance.sh -p 5432 -d solarnetwork` by hand first: without `-y` it only
+reports what it would do.
+
 # Cron jobs
 
 Set up some cronjobs for the `postgres` user:
@@ -560,8 +570,8 @@ echo 'cron_flags="$cron_flags -J 15"' >>/etc/rc.conf
 Then edit crontab  via `crontab -e -u postgres` with:
 
 ```
-# Update statistics weekly
-0 4 * * Mon /usr/local/bin/vacuumdb -p 5432 --all --analyze-only
+# Update statistics weekly: disabled for OPS-45, as chunk-maintenance.sh analyzes the hypertable chunks
+#0 4 * * Mon /usr/local/bin/vacuumdb -p 5432 --all --analyze-only
 
 # create base backup 1st and 15th of every month
 0 3 1,15 * * /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e backup-push /sndb/9.6/home
@@ -569,8 +579,8 @@ Then edit crontab  via `crontab -e -u postgres` with:
 # cleanup old backups every Sunday (keep last 9)
 0 3 5,20 * * /usr/local/bin/envdir /var/db/postgres/wal-e.d/env /var/db/postgres/.local/bin/wal-e delete --confirm retain 3
 
-# Run Hypertable reindex maintenance task weekly
-#0 4 * * Sun /var/db/postgres/bin/index-chunk-maintenance.sh -c '-p 5432 -d solarnetwork' -n
+# Reorder, reindex and analyze hypertable chunks daily (OPS-51)
+0 4 * * * /var/db/postgres/bin/chunk-maintenance.sh -p 5432 -d solarnetwork -y
 ```
 
 # Postfix MTA
