@@ -20,6 +20,9 @@ GRANT SELECT ON TABLE solaruser.user_meta TO solar;
 GRANT INSERT(stream_id, node_id, source_id, jdata, updated) ON solardatm.da_datm_meta TO solaruser;
 GRANT UPDATE(node_id, source_id, names_i, names_a, names_s, jdata, updated) ON solardatm.da_datm_meta TO solaruser;
 
+-- allow deleting datum by ID
+GRANT DELETE ON TABLE solardatm.da_datm TO solaruser;
+
 -- allow managing datum stream aliases
 GRANT ALL ON TABLE solardatm.da_datm_alias TO solaruser;
 GRANT ALL ON TABLE solardatm.da_datm_alias_del TO solaruser;
