@@ -35,12 +35,16 @@
 #     reindexes at most one chunk in each tablespace chunks were moved to
 #     (solarwarm, and solarcold where there is one) a run, as the replica's
 #     storage for them is slow to write.
-#  4. Before rewriting a chunk:
+#  4. Before rewriting or reindexing a chunk:
 #     - if the chunk's statistics may be out of date, analyzes it and looks
 #       again;
-#     - watches its write counters for -w seconds, and leaves it for another
-#       run if anything writes to it: a rewrite blocks writes to the chunk until
-#       it finishes;
+#     - makes the step 2 checks again. The run's own rewrites can leave WAL
+#       archiving, a replica or a replication slot behind: it waits up to -c
+#       seconds for them to catch up, and stops (exit status 2) if they have
+#       not. Any other check that fails stops it at once;
+#     - before a rewrite, watches its write counters for -w seconds, and leaves
+#       it for another run if anything writes to it: a rewrite blocks writes to
+#       the chunk until it finishes;
 #     - checks the free space of each filesystem the task writes to: a new copy
 #       of the heap and indexes in their tablespaces, the sort spill in the -t
 #       tablespace, and WAL in pg_wal. On ZFS, each need is divided by the
@@ -80,6 +84,9 @@
 #                  its size (default 20)
 #   -w SECONDS     how long to watch a chunk for writes before rewriting it
 #                  (default 60; 0 to not watch)
+#   -c SECONDS     how long to wait before a rewrite or reindex for WAL
+#                  archiving and the replicas to catch up (default 1800; 0 to
+#                  stop at once)
 #   -l SECONDS     lock_timeout for every statement (default 60)
 #   -m SIZE        maintenance_work_mem for the script's sessions, such as 1GB
 #                  (default: the server's setting)
@@ -95,7 +102,8 @@
 #
 #   0    finished, whether or not there was anything to do
 #   1    usage error, or an error running a query
-#   2    stopped by a check: another run holds the lock, or a step 2 check
+#   2    stopped by a check: another run holds the lock, a step 2 check, or
+#        WAL archiving or a replica still behind after -c seconds (step 4)
 #   3    not enough space for the next task
 #   4    a task failed; a task that timed out on a lock, or was cancelled,
 #        does not count
@@ -120,6 +128,7 @@ BUDGET_GB=40
 TEMP_TS=
 RESERVE_PCT=20
 WATCH=60
+CATCH_UP=1800
 LOCK_TIMEOUT=60
 MWM=
 USE_CLUSTER=0
@@ -199,7 +208,7 @@ add_guc() {
 	GUCS="$GUCS SET chunk_maint.$_name = '$_value';"
 }
 
-while getopts 'yh:p:U:d:b:t:r:w:l:m:s:Cv' opt; do
+while getopts 'yh:p:U:d:b:t:r:w:c:l:m:s:Cv' opt; do
 	case $opt in
 		y) DO_IT=1 ;;
 		h) PGHOST=$OPTARG; export PGHOST ;;
@@ -210,6 +219,7 @@ while getopts 'yh:p:U:d:b:t:r:w:l:m:s:Cv' opt; do
 		t) TEMP_TS=$OPTARG ;;
 		r) RESERVE_PCT=$OPTARG ;;
 		w) WATCH=$OPTARG ;;
+		c) CATCH_UP=$OPTARG ;;
 		l) LOCK_TIMEOUT=$OPTARG ;;
 		m) MWM=$OPTARG ;;
 		s) add_guc "$OPTARG" ;;
@@ -221,8 +231,8 @@ done
 shift $((OPTIND - 1))
 [ $# -eq 0 ] || usage
 
-for v in "$BUDGET_GB" "$RESERVE_PCT" "$WATCH" "$LOCK_TIMEOUT"; do
-	is_number "$v" || die "options -b, -r, -w and -l take a whole number"
+for v in "$BUDGET_GB" "$RESERVE_PCT" "$WATCH" "$CATCH_UP" "$LOCK_TIMEOUT"; do
+	is_number "$v" || die "options -b, -r, -w, -c and -l take a whole number"
 done
 [ "$BUDGET_GB" -ge 1 ] || die "-b must be at least 1"
 [ "$RESERVE_PCT" -le 90 ] || die "-r must be at most 90"
@@ -425,6 +435,54 @@ watch_writes() {
 	return 0
 }
 
+# catch_up - make the step 2 checks again, before a rewrite or reindex. The run's own rewrites can
+# fail the checks of how far WAL archiving and the replicas are behind (catch_up in the
+# chunk_maint_preflight view): wait up to -c seconds for those to pass, looking every 10 s, and stop
+# the run (exit status 2) if they do not. Any other check that fails stops the run at once. A dry
+# run only says that it would wait.
+catch_up() {
+	_start=$(date +%s)
+	_said=0
+	while :; do
+		ask "SELECT check_name, catch_up, detail FROM _timescaledb_solarnetwork.chunk_maint_preflight
+			WHERE NOT ok ORDER BY seq" >"$WORK/catch_up" || exit 1
+		_waited=$(($(date +%s) - _start))
+		if [ ! -s "$WORK/catch_up" ]; then
+			if [ "$_said" -eq 1 ]; then
+				note "    caught up after $_waited s"
+			fi
+			return 0
+		fi
+		_behind=
+		_failed=0
+		while IFS='|' read -r _check _catch _detail; do
+			if [ "$_catch" != t ]; then
+				note "    check $_check FAILED: $_detail"
+				_failed=1
+			else
+				_behind="${_behind:+$_behind; }$_check: $_detail"
+				if [ "$_said" -eq 0 ] || [ "$VERBOSE" -eq 1 ]; then
+					note "    check $_check behind: $_detail"
+				fi
+			fi
+		done <"$WORK/catch_up"
+		[ "$_failed" -eq 0 ] || stop "a check failed"
+		if [ "$DO_IT" -eq 0 ]; then
+			note "    (a real run waits up to $CATCH_UP s here for WAL archiving and the replicas to catch up)"
+			return 0
+		fi
+		[ "$_waited" -lt "$CATCH_UP" ] || stop "still behind after $_waited s (-c $CATCH_UP): $_behind"
+		if [ "$_said" -eq 0 ]; then
+			note "    waiting up to $CATCH_UP s for WAL archiving and the replicas to catch up"
+			_said=1
+		fi
+		_nap=$((CATCH_UP - _waited))
+		[ "$_nap" -le 10 ] || _nap=10
+		sleep "$_nap"
+		interrupted
+	done
+}
+
 # task_summary ID - describe the outcome of a logged task
 task_summary() {
 	ask "SELECT round(extract(epoch FROM l.finished - l.started)) || ' s'
@@ -545,6 +603,9 @@ do_task() {
 			note "    (a real run looks again here; taking the $c_action as still needed)"
 		fi
 	fi
+	# the run's earlier rewrites may have left WAL archiving or the replicas behind
+	catch_up
+	interrupted
 	if [ "$c_action" != reindex ] && [ "$WATCH" -gt 0 ]; then
 		watch_writes || return
 		interrupted

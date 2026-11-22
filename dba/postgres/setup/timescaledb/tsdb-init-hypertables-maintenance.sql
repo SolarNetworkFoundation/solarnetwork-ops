@@ -29,7 +29,8 @@
  *                            alone
  *   chunk_maint_candidates   the chunks that need something, in the order the
  *                            script takes them
- *   chunk_maint_preflight    the server checks the script makes before it starts
+ *   chunk_maint_preflight    the server checks the script makes before it starts,
+ *                            and again before each rewrite or reindex
  *   chunk_maint_storage      the directory of each tablespace and of pg_wal
  *
  *   SELECT chunk, range_end, corr, mod_pct, skip_reason, action, reason
@@ -669,8 +670,11 @@ FROM _timescaledb_solarnetwork.chunk_maint_status s
 WHERE s.action IS NOT NULL;
 
 /**
- * The checks chunk-maintenance.sh makes before it starts; it stops if any is not ok. It needs a
- * superuser, or a role with pg_monitor, to list the WAL archive status directory.
+ * The checks chunk-maintenance.sh makes before it starts; it stops if any is not ok. It makes them
+ * again before each rewrite or reindex. catch_up is true for the checks of how far WAL archiving and
+ * the replicas are behind, which the run's own rewrites can push past their limits: the script waits
+ * for those to be ok again, and stops if any other check is not. It needs a superuser, or a role
+ * with pg_monitor, to list the WAL archive status directory.
  */
 CREATE VIEW _timescaledb_solarnetwork.chunk_maint_preflight AS
 WITH cfg AS (
@@ -685,6 +689,7 @@ SELECT 1 AS seq
 	, 'primary' AS check_name
 	, NOT cfg.in_recovery AS ok
 	, CASE WHEN cfg.in_recovery THEN 'this server is a replica' ELSE 'not a replica' END AS detail
+	, FALSE AS catch_up
 FROM cfg
 UNION ALL
 SELECT 2
@@ -692,6 +697,7 @@ SELECT 2
 	, cfg.use_cluster OR COALESCE(current_setting('timescaledb.license', TRUE), '') = 'timescale'
 	, format('timescaledb.license is %s', COALESCE(current_setting('timescaledb.license', TRUE), 'not set'))
 		|| CASE WHEN cfg.use_cluster THEN ', but CLUSTER is used instead (chunk_maint.use_cluster)' ELSE '' END
+	, FALSE
 FROM cfg
 UNION ALL
 SELECT 3
@@ -699,6 +705,7 @@ SELECT 3
 	, count(j.job_id) = 0
 	, COALESCE('running: ' || string_agg(format('%s.%s [%s]', j.proc_schema, j.proc_name, j.job_id), ', ')
 		, 'no reorder or move_chunks job is running')
+	, FALSE
 FROM timescaledb_information.jobs j
 -- as timescaledb_information.job_stats finds a running job
 INNER JOIN pg_catalog.pg_stat_activity a ON a.datname = current_database()
@@ -716,6 +723,7 @@ SELECT 4
 				, COALESCE(date_trunc('second', a.last_archived_time)::TEXT, 'never'))
 		ELSE format('archiving %s failed at %s', a.last_failed_wal, date_trunc('second', a.last_failed_time))
 		END
+	, FALSE
 FROM cfg
 CROSS JOIN pg_catalog.pg_stat_archiver a
 UNION ALL
@@ -723,6 +731,7 @@ SELECT 5
 	, 'archive backlog'
 	, NOT cfg.archiving OR r.ready <= cfg.max_ready
 	, format('%s WAL segments waiting to be archived (at most %s)', r.ready, cfg.max_ready)
+	, TRUE
 FROM cfg
 CROSS JOIN LATERAL (
 	SELECT count(*) AS ready
@@ -739,6 +748,7 @@ SELECT 6
 		ELSE format('%s replica(s), the furthest %s behind (at most %s)'
 			, count(x.lag), pg_size_pretty(max(x.lag)), pg_size_pretty(cfg.max_lag))
 		END
+	, TRUE
 FROM cfg
 LEFT JOIN LATERAL (
 	SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), r.replay_lsn) AS lag
@@ -756,6 +766,7 @@ SELECT 7
 		ELSE format('%s slot(s), holding at most %s of WAL (at most %s)'
 			, count(x.retained), pg_size_pretty(max(x.retained)), pg_size_pretty(cfg.max_lag))
 		END
+	, TRUE
 FROM cfg
 LEFT JOIN LATERAL (
 	SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), s.restart_lsn) AS retained
