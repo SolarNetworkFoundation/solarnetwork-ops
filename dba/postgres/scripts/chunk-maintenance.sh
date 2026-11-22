@@ -24,7 +24,8 @@
 # Each run:
 #
 #  1. Takes a lock ($TMPDIR/chunk-maintenance.lock), or stops if another run
-#     holds it.
+#     holds it. It takes over a lock left by a run that died, such as one cut
+#     off by a reboot: one whose pid has gone, or is now another program's.
 #  2. Stops if the server is a replica, the TimescaleDB licence is not
 #     timescale, a reorder policy or move_chunks job is running, WAL archiving
 #     is failing or behind, or a replica or replication slot is too far behind:
@@ -267,13 +268,30 @@ cleanup() {
 	fi
 }
 
+# take_lock - take the lock: a directory holding the pid of the run that has it. A run only holds
+# it while its pid is a process running this script. After a reboot, or a kill -9, the pid of the
+# run that died can be another process's, such as a postgres backend's, so a lock it left is
+# taken over.
 take_lock() {
 	if ! mkdir "$LOCK_DIR" 2>/dev/null; then
 		_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null)
-		if [ -n "$_pid" ] && kill -0 "$_pid" 2>/dev/null; then
-			stop "another run (pid $_pid) holds $LOCK_DIR"
+		if [ -z "$_pid" ]; then
+			# a run that has just made the directory may not have written its pid yet
+			sleep 1
+			_pid=$(cat "$LOCK_DIR/pid" 2>/dev/null)
 		fi
-		# left by a run that died
+		case $_pid in
+			'' | *[!0-9]*) ;;
+			"$$") ;;
+			*)
+				# -ww, as FreeBSD's ps cuts the line to 79 columns when it does not write to a
+				# terminal, as from cron
+				case $(ps -ww -o args= -p "$_pid" 2>/dev/null) in
+					*"${SCRIPT##*/}"*) stop "another run (pid $_pid) holds $LOCK_DIR" ;;
+				esac
+				;;
+		esac
+		note "taking over $LOCK_DIR, left by a run that died${_pid:+ (pid $_pid)}"
 		rm -rf "$LOCK_DIR"
 		mkdir "$LOCK_DIR" 2>/dev/null || stop "cannot take the lock $LOCK_DIR"
 	fi
