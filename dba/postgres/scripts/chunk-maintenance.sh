@@ -56,7 +56,8 @@
 #     back, and tried again another run.
 #  6. Stops once its tasks reach the budget (-b). The first task always runs,
 #     and each later one only if it fits in what is left. A rewrite counts its
-#     heap and indexes, and an ANALYZE the pages it reads.
+#     heap and indexes, and an ANALYZE the pages it reads, except the ANALYZE
+#     after a rewrite, which is not counted.
 #
 # Every task is logged in _timescaledb_solarnetwork.chunk_maint_log.
 #
@@ -559,7 +560,8 @@ do_task() {
 		USED=$((USED + c_ineed))
 		run_task reindex "$c_reason" "$c_stmt"
 	else
-		USED=$((USED + c_hneed + c_ineed + c_abytes))
+		# the ANALYZE after the rewrite is not counted: it only reads the chunk just written
+		USED=$((USED + c_hneed + c_ineed))
 		run_task "$c_action" "$c_reason" "$c_stmt" "$c_astmt"
 	fi
 }

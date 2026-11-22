@@ -56,7 +56,9 @@
  *             ANALYZE
  *
  * After a rewrite the script always analyzes the chunk, as reorder_chunk() does
- * not.
+ * not. That ANALYZE is not counted against the script's budget, so a rewrite
+ * counts what it writes. An ANALYZE before a rewrite, or on its own, counts the
+ * pages it reads.
  *
  * How it decides:
  *
@@ -122,7 +124,8 @@
  *   analyze_bytes           the pages one ANALYZE of the chunk reads: up to 300 x
  *                           the statistics target
  *   cost                    what the task counts against the script's budget:
- *                           the heap and indexes rewritten, plus each ANALYZE
+ *                           the heap and indexes rewritten, plus the pages each
+ *                           ANALYZE reads, except the ANALYZE after a rewrite
  *
  * These are uncompressed sizes. On ZFS the script divides each space need by the
  * compression ratio of the dataset it is written to (refcompressratio, or 1 where
@@ -512,7 +515,8 @@ SELECT d.hypertable_schema
 		ELSE 0 END AS wal_need
 	, d.analyze_bytes
 	, CASE
-		WHEN d.action IN ('reorder', 'cluster') THEN d.heap_bytes + d.index_bytes + d.analyze_bytes
+		-- not the ANALYZE that follows a rewrite: it only reads the chunk just written
+		WHEN d.action IN ('reorder', 'cluster') THEN d.heap_bytes + d.index_bytes
 		WHEN d.action = 'reindex' THEN d.reorder_index_bytes
 		WHEN d.action = 'analyze' THEN d.analyze_bytes
 		ELSE 0 END
