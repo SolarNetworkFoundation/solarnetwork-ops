@@ -372,6 +372,7 @@ SELECT m.hypertable_schema
 	, iw.null_frac AS index_null_frac
 	, iw.has_stats AS index_has_stats
 	, st.n_mod_since_analyze AS mod_since_analyze
+	, st.n_live_tup AS live_tup
 	, st.n_tup_ins + st.n_tup_upd + st.n_tup_del AS writes
 	, GREATEST(st.last_analyze, st.last_autoanalyze) AS analyzed
 	-- ANALYZE samples 300 rows for each unit of the largest statistics target of any column
@@ -580,7 +581,11 @@ FROM (
 						, cfg.*
 						-- the fraction of the rows out of index order, from corr = (1 - f)^2
 						, CASE WHEN c.corr IS NOT NULL THEN 1 - sqrt(GREATEST(c.corr, 0)) END AS f_raw
-						, COALESCE(c.mod_since_analyze, 0) / GREATEST(c.reltuples, 1)::DOUBLE PRECISION AS mod_frac
+						-- the fraction of the rows changed since the last ANALYZE, at most 1. reltuples is -1
+						-- until a chunk is first vacuumed or analyzed, as a newly filled one is, so count
+						-- against its live rows when there are more of those
+						, LEAST(1, COALESCE(c.mod_since_analyze, 0)
+							/ GREATEST(c.reltuples, c.live_tup, 1)::DOUBLE PRECISION) AS mod_frac
 						-- a page holds its size less a 24 byte header, filled to the fillfactor; a row is a
 						-- 23 byte header and its null bitmap, padded to 8 bytes, then its columns, padded to
 						-- 8 bytes, plus a 4 byte pointer
