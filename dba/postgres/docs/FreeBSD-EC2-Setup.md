@@ -558,6 +558,24 @@ install -m 755 dba/postgres/scripts/chunk-maintenance.sh ~postgres/bin/chunk-mai
 Run `~postgres/bin/chunk-maintenance.sh -p 5432 -d solarnetwork` by hand first: without `-y` it only
 reports what it would do.
 
+When OPS-51 is first deployed, after the NET-540 backfill, there will be a large backlog of chunks
+to reorder. About 850 GB of chunks were out of order in the November 2026 survey, and each
+`agg_datm_15m` chunk the backfill fills will need a reorder too. At one 40 GB run a day that would
+take a month or more. So until the backlog is cleared, run the script every 30 minutes in place of
+the daily cron entry below. Send its output to a file, as cron mails whatever a job prints:
+
+```
+*/30 * * * * /var/db/postgres/bin/chunk-maintenance.sh -p 5432 -d solarnetwork -y >>/var/db/postgres/chunk-maintenance.log 2>&1
+```
+
+The runs don't overlap: one that starts while another is still going stops at once (exit status
+2). Each run stops if a reorder policy or move_chunks job is running, or if WAL archiving, a
+replica or a replication slot is behind when it starts. Before each rewrite it checks again, and
+waits up to 30 minutes (`-c`) for archiving and the replicas to catch up with its own rewrites. The
+40 GB budget, and the limit of one rewrite in each of `solarwarm` and `solarcold`, apply to each
+run. So at this rate the replica's slow storage for moved chunks can get a rewrite every 30
+minutes. Go back to the daily entry once the runs leave few candidates for later.
+
 # Cron jobs
 
 Set up some cronjobs for the `postgres` user:

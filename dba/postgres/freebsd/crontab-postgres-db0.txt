@@ -13,3 +13,6 @@
 
 # Reorder, reindex and analyze hypertable chunks daily, after the backup and the move_chunks job (OPS-51)
 0 4 * * * /var/db/postgres/bin/chunk-maintenance.sh -p 5432 -d solarnetwork -y
+# Until the backlog from when OPS-51 is first deployed is cleared, use this in place of the line
+# above (see docs/FreeBSD-EC2-Setup.md):
+#*/30 * * * * /var/db/postgres/bin/chunk-maintenance.sh -p 5432 -d solarnetwork -y >>/var/db/postgres/chunk-maintenance.log 2>&1
