@@ -198,7 +198,8 @@ $$;
  * order of.
  *
  * reorder_index is the name of an index on the hypertable, in the hypertable's schema. Set enabled
- * to FALSE to leave a hypertable alone.
+ * to FALSE to leave a hypertable alone. A row for a hypertable the database does not have is
+ * ignored.
  */
 CREATE TABLE IF NOT EXISTS _timescaledb_solarnetwork.chunk_maint_hypertable (
 	hypertable_schema	TEXT NOT NULL,
@@ -208,10 +209,12 @@ CREATE TABLE IF NOT EXISTS _timescaledb_solarnetwork.chunk_maint_hypertable (
 	CONSTRAINT chunk_maint_hypertable_pkey PRIMARY KEY (hypertable_schema, hypertable_name)
 );
 
--- the hypertables NET-266 gave reorder policies
+-- the hypertables NET-266 gave reorder policies, and agg_datm_15m (NET-540); running this again adds
+-- any row that is missing, and leaves the others as they are
 INSERT INTO _timescaledb_solarnetwork.chunk_maint_hypertable (hypertable_schema, hypertable_name, reorder_index)
 VALUES
 	('solardatm', 'da_datm', 				'da_datm_pkey'),
+	('solardatm', 'agg_datm_15m', 			'agg_datm_15m_pkey'),
 	('solardatm', 'agg_datm_hourly', 		'agg_datm_hourly_pkey'),
 	('solardatm', 'agg_datm_daily', 		'agg_datm_daily_pkey'),
 	('solardatm', 'agg_datm_monthly', 		'agg_datm_monthly_pkey'),
