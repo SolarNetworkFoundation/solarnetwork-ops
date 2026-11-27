@@ -94,7 +94,8 @@
 #   - Statements cancelled having run much less than
 #     max_standby_streaming_delay: replay was already behind, so the conflict
 #     had little or none of the delay left. The log summary counts these as
-#     cancels not tied to a wait.
+#     cancels not tied to a wait (judging only those after the first logged
+#     wait, as log_recovery_conflict_waits may have been off before it).
 #   - A longer max_standby_streaming_delay lets longer queries finish, but each
 #     conflict then holds up all of replay for up to that long, and every query
 #     on the replica sees data that much older meanwhile.
@@ -355,8 +356,8 @@ FROM pg_extension e
 INNER JOIN pg_namespace n ON n.oid = e.extnamespace
 ORDER BY e.extname;
 
-\echo == settings
-SELECT name, setting, unit, source
+\echo == settings (reset_val is the value from before the SETs this script makes, which show as source session)
+SELECT name, setting, unit, source, reset_val
 FROM pg_settings
 WHERE name IN ('hot_standby', 'hot_standby_feedback', 'max_standby_streaming_delay'
 		, 'max_standby_archive_delay', 'wal_receiver_status_interval', 'wal_receiver_timeout'
@@ -1193,7 +1194,7 @@ END {
 		b = eend[e] < n ? eend[e] + 1 : eend[e]
 		printf "  %s  %-20s seen %4.0fs", ts[estart[e]], ecls[e], elen[e]
 		if (elw[e] > 0)
-			printf "  waited %4.0fs on %s, held by %s", elw[e], erel[e], ehold[e] == "" ? "-" : ehold[e]
+			printf "  waited %4.0fs on %s, held by %s", elw[e], erel[e], (ehold[e] == "" ? "-" : ehold[e])
 		printf "  counted: %s\n", conflicts(a, b)
 	}
 	if (ne > 25)
@@ -1250,7 +1251,7 @@ END {
 			ended = conflicts(at[r], at[r + 1])
 		else
 			ended = "?"
-		printf "  %-19s %7.0f %7s %-10s %-28s %s; %s; %d locks; %s; %s\n", substr(tts[key], 1, 19), tage[key], tpid[key], short(tuser[key], 10), short(ended, 28), tstate[key], twait[key] == "" ? "no waits" : twait[key], tlocks[key], tqid[key], short(tq[key], 100)
+		printf "  %-19s %7.0f %7s %-10s %-28s %s; %s; %d locks; %s; %s\n", substr(tts[key], 1, 19), tage[key], tpid[key], short(tuser[key], 10), short(ended, 28), tstate[key], (twait[key] == "" ? "no waits" : twait[key]), tlocks[key], tqid[key], short(tq[key], 100)
 	}
 }
 
@@ -1918,7 +1919,7 @@ END {
 		c[ev[i] "|" rs[i]]++
 	for (k in c) {
 		split(k, a, "|")
-		printf "  %-14s %-20s %7d\n", a[1], a[2] == "" ? "-" : a[2], c[k] | "LC_ALL=C sort"
+		printf "  %-14s %-20s %7d\n", a[1], (a[2] == "" ? "-" : a[2]), c[k] | "LC_ALL=C sort"
 	}
 	close("LC_ALL=C sort")
 	print "  (cancel: a statement cancelled; terminate: a session ended, as it was idle in a"
@@ -1937,7 +1938,8 @@ END {
 			for (j = 1; j <= np; j++)
 				pw[ps[j]] = i
 			openw = i
-			waits++
+			if (waits++ == 0)
+				wfirst = ts[i]
 			wr = rs[i] "|" rec[i] "|" wait_rel(i)
 			wcount[wr]++
 		} else if (ev[i] == "wait_end") {
@@ -1964,7 +1966,9 @@ END {
 			if (w) {
 				cw[rs[w] "|" rec[w] "|" wait_rel(w)]++
 				tied[rs[i]]++
-			} else
+			} else if (waits == 0)
+				early[rs[i]]++
+			else
 				untied[rs[i]]++
 			sk = rs[i] "|" norm(st[i])
 			if (!(sk in sc))
@@ -2002,12 +2006,16 @@ END {
 	print ""
 
 	print "Cancellations tied to a logged wait, and not: a cancel with no wait going on"
-	print "when it came was made at once, as replay was already max_standby_streaming_delay"
-	print "behind (or log_recovery_conflict_waits is off, or the log is incomplete)."
+	print "when it came was made at once (or after a wait shorter than deadlock_timeout),"
+	print "as replay was already about max_standby_streaming_delay behind. Only cancels"
+	print "after the first logged wait are judged: log_recovery_conflict_waits may have"
+	print "been off before it."
+	if (waits > 0)
+		printf "  (the first wait was logged at %s)\n", wfirst
 	for (j = 1; j <= nr; j++) {
 		r = RL[j]
-		if ((r in tied) || (r in untied))
-			printf "  %-12s %6d tied, %6d not\n", r, tied[r], untied[r]
+		if ((r in tied) || (r in untied) || (r in early))
+			printf "  %-12s %6d tied, %6d not, %6d before the first logged wait\n", r, tied[r], untied[r], early[r]
 	}
 	print ""
 
@@ -2018,7 +2026,7 @@ END {
 		printf "  %6s %8s  %-10s %-28s %s\n", "waits", "cancels", "reason", "WAL record", "table"
 	for (k in wcount) {
 		split(k, a, "|")
-		printf "  %6d %8d  %-10s %-28s %s\n", wcount[k], cw[k], a[1], a[2] == "" ? "-" : a[2], a[3] | "LC_ALL=C sort -k1,1nr -k2,2nr | head -n 40"
+		printf "  %6d %8d  %-10s %-28s %s\n", wcount[k], cw[k], a[1], (a[2] == "" ? "-" : a[2]), a[3] | "LC_ALL=C sort -k1,1nr -k2,2nr | head -n 40"
 	}
 	close("LC_ALL=C sort -k1,1nr -k2,2nr | head -n 40")
 	print ""
@@ -2026,7 +2034,7 @@ END {
 	printf "Cancelled statements, by reason and the start of the statement (%d kinds):\n", nsk
 	for (k in sc) {
 		split(k, a, "|")
-		printf "  %6d  %-10s %s\n", sc[k], a[1], a[2] == "" ? "(no statement logged)" : a[2] | "LC_ALL=C sort -k1,1nr | head -n 40"
+		printf "  %6d  %-10s %s\n", sc[k], a[1], (a[2] == "" ? "(no statement logged)" : a[2]) | "LC_ALL=C sort -k1,1nr | head -n 40"
 	}
 	close("LC_ALL=C sort -k1,1nr | head -n 40")
 }
