@@ -42,6 +42,10 @@ CREATE USER solarquest WITH
 	CONNECTION LIMIT -1
 	ENCRYPTED PASSWORD 'solarquest';
 
+-- keep SolarQuery length on a tight leash
+ALTER ROLE solarquest SET statement_timeout = '5min';
+ALTER ROLE solarquest SET transaction_timeout = '15min';
+
 CREATE USER solarworker WITH
 	IN GROUP solarjobs
 	LOGIN

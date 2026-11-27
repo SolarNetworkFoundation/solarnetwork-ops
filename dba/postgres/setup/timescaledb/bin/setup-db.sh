@@ -285,6 +285,7 @@ else
 	psql $PSQL_CONN_ARGS -U $PG_ADMIN_USER -d $PG_DB -P pager=off -qAt <<-EOF
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'da_datm',				'ts',		'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 
+		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'agg_datm_15m',			'ts_start',	'60 days'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'agg_datm_hourly',		'ts_start',	'6 months'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'agg_datm_daily',		'ts_start',	'1 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
 		SELECT _timescaledb_solarnetwork.change_to_hypertable('solardatm',	'agg_datm_monthly',		'ts_start',	'5 years'${INDEX_TABLESPACE:+,'$INDEX_TABLESPACE'});
