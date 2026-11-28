@@ -1,12 +1,14 @@
 # SolarNet replica recovery conflicts: analysis and tuning
 
 - **Date:** 2026-11-28 (revisions 1 and 2: 2026-11-27)
-- **Revision:** 3, adding a run away from the daily backup (section 9.4), and the backups' move
-  to `start-fast` (section 9.3). Revision 2 added the first results after the change, and the
-  backup's hold on the primary's horizon.
+- **Revision:** 4, adding the first backup with `start-fast`, and production's `db-timeout`,
+  which left the 2026-11-27 backup 12 minutes to spare, not the 20 s that revision 3 gave
+  (section 9.3). Revision 3 added a run away from the daily backup (section 9.4), and revision 2
+  the first results after the change.
 - **Scope:** why SolarQuery's queries on the production streaming replica are cancelled by
   recovery conflicts, and how to have fewer of them without costing the primary much
-- **Data:** an hour of samples on each server in three runs, in folders beside this file:
+- **Data:** an hour of samples on each server in three runs. The collector's output folders are
+  kept outside this repo:
   - before the change, 2026-11-26 21:40–22:41 UTC: `replica-conflicts-primary-20261126T214044Z/`
     and `replica-conflicts-replica-20261126T214014Z/`, with the replica's log from 2026-11-25
     01:04 to 2026-11-26 22:38 UTC
@@ -20,8 +22,9 @@
 - **Status:** the change recommended in section 7 was made on 2026-11-27, shortly before the
   second runs started at 01:50 UTC, and `transaction_timeout` was added before the third, at
   18:14. The replica has had no conflicts since, and the primary's cost is as expected.
-  pgBackRest has had `start-fast` since 04:54 UTC, so the first backup with it is the next one,
-  at 02:00 UTC on 2026-11-28 (section 9.3). Section 9.5 has what is left to check.
+  pgBackRest has had `start-fast` since 04:54 UTC, and the first backup with it, at 02:00 UTC
+  on 2026-11-28, started in 2 s rather than 33 minutes (section 9.3). Section 9.5 has what is
+  left to watch.
 
 ## 1. Summary
 
@@ -53,9 +56,9 @@ statements can run with a `statement_timeout` for the `solarquest` role.** Keep
   (section 9).
 - **The daily backup held the primary's horizon back far longer than the replica can.** The
   02:00 UTC pgBackRest backup held it for 33 minutes, keeping about 466,000 dead row versions,
-  while `pg_backup_start` waited for a spread checkpoint. That wait also came within about 20 s
-  of pgBackRest's `db-timeout`, which would have failed the backup. pgBackRest now has
-  `start-fast=y`, so it asks for an immediate checkpoint, which should end both (section 9.3).
+  while `pg_backup_start` waited for a spread checkpoint. On some days that wait could also run
+  past pgBackRest's 45-minute `db-timeout` and fail the backup. With `start-fast=y`, the backup
+  now asks for an immediate checkpoint, and on 2026-11-28 its start took 2 s (section 9.3).
 
 ## 2. Setup
 
@@ -254,8 +257,7 @@ the queue first.
 
 Steps 1, 3 and 4 were done on 2026-11-27, shortly before 01:50 UTC, and step 2 later that day,
 before 18:14 UTC, with `transaction_timeout = 15min`. The role settings are recorded in
-`dba/postgres/setup/timescaledb/example/tsdb-init-users.sql` (commits `56d1623` and `9f15845`
-on solarnetwork-ops `feature/net-540`).
+`dba/postgres/setup/timescaledb/example/tsdb-init-users.sql` (commit `6f4ae68`).
 
 Why 5 minutes: today a query on the replica rarely gets past 60–120 s before a conflict cancels
 it, and the heaviest statements average 18–37 s. So the cap allows far longer queries than now,
@@ -376,7 +378,7 @@ feedback nor ruled out from this hour. Section 9.4 has a run away from the backu
 ### 9.3 The daily backup
 
 - pgBackRest's incremental backup runs from cron at 02:00 UTC every day
-  (`dba/postgres/freebsd/crontab-postgres-db0.txt`, line 11), as well as a differential at 06:00
+  (`dba/postgres/freebsd/crontab-postgres-db0.txt`, line 12), as well as a differential at 06:00
   on Sundays and a full backup every three months.
 - Its session called `pg_backup_start(..., false)` at 02:00:01. The `false` asks for a spread
   checkpoint, and a requested checkpoint first waits for any checkpoint in progress to finish.
@@ -388,21 +390,26 @@ feedback nor ruled out from this hour. Section 9.4 has a run away from the backu
   That is about 12 times what the longest replica query of the hour would have kept on its own,
   and about 6 times the most the 5-minute cap allows the replica. It happened on every backup,
   with feedback or without, until the backups used `start-fast`.
-- `pg_backup_start` took 1,978–1,983 s, and pgBackRest's `db-timeout` is 2,000 s
-  (`PGBACKREST_DB_TIMEOUT`, sized in `pgBackRest-Setup.md` for one 30-minute checkpoint). With
-  about 20 s more left on the checkpoint in progress at 02:00, the backup would have failed with
-  a timeout. That checkpoint could have up to about 27 minutes left, depending on when
-  checkpoints fell, so `pg_backup_start` could take up to about 54 minutes.
+- `pg_backup_start` took 1,978–1,983 s. pgBackRest's `db-timeout` in production was 2,700 s
+  on 2026-11-27, as in the next day's backup log. The repo's `PGBACKREST_DB_TIMEOUT` said
+  2,000 s, sized in `pgBackRest-Setup.md` for one 30-minute checkpoint, until `d08d219` brought
+  it in line with production. So the backup had about 12 minutes to spare: it would have timed
+  out only with more than about 18 minutes left on the checkpoint in progress at 02:00, and
+  that one had about 6. A checkpoint in progress could have up to about 27 minutes left,
+  depending on when checkpoints fell, so `pg_backup_start` could take up to about 54 minutes.
 - pgBackRest's `start-fast` option makes `pg_backup_start` ask for an immediate checkpoint,
   which also hurries one in progress. That ends both the long hold and the risk of the timeout.
   The price is a burst of checkpoint writes at the start of each backup, instead of writes
   spread over half an hour. Raising `db-timeout` to about an hour would have removed the risk of
   the timeout alone.
 - **pgBackRest has had `start-fast=y` since 2026-11-27 04:54 UTC**, recorded in
-  `PGBACKREST_START_FAST` (solarnetwork-ops commit `d172c3d` on `feature/net-540`). The first
-  backup with it is the next one, at 02:00 UTC on 2026-11-28. With it, `pg_backup_start` should
-  take seconds, or a minute or two at most, rather than half an hour, and the primary's horizon
-  should no longer be held for half an hour at 02:00 UTC.
+  `PGBACKREST_START_FAST` (commit `6f4ae68`).
+- **The first backup with it, at 02:00 UTC on 2026-11-28, started in 2 s.** pgBackRest asked
+  for the start at 02:00:00.812, to begin "after the requested immediate checkpoint completes",
+  and the backup began at 02:00:02.796. So `pg_backup_start` took 2 s rather than 1,978 s, and
+  neither the hold on the primary's horizon nor the burst of checkpoint writes lasted longer
+  than that. The files were then copied from 02:00 to 02:34, half an hour earlier than the day
+  before, and the backup completed successfully in 2,082 s.
 
 ### 9.4 Away from the backup
 
@@ -485,11 +492,6 @@ queue work shows no slowdown that can be put down to it.
 
 ### 9.5 Still to check
 
-- Check the backup at 02:00 UTC on 2026-11-28, the first with `start-fast` (section 9.3). In
-  pgBackRest's backup log, the backup start should now wait for a requested immediate
-  checkpoint rather than the next regular one, and the next line, with the backup's start LSN,
-  should follow within seconds rather than half an hour. The same log shows whether any earlier
-  backup failed with a timeout.
 - Watch for statement timeouts in the replica's log, as the diff query's longest run is now
   285 s. The collector counts them as `other_cancel`.
 - Optionally, find which client sends the hourly diff queries. They no longer cause cancels, but
@@ -518,6 +520,8 @@ queue work shows no slowdown that can be put down to it.
   fixing when `hot_standby_feedback` is recorded there.
 
 ## 11. Files
+
+The collector's outputs are kept outside this repo, in these folders and archives:
 
 | Path | What |
 |:-----|:-----|
